@@ -65,9 +65,10 @@
     otomatikRobot();
   }
   var sonRandevu = null, sonMesaj = null;
-  setInterval(function () { if (!$('#uygulama').hidden) rozetGuncelle(); }, 30000);
+  setInterval(function () { if (!$('#uygulama').hidden && document.visibilityState === 'visible') rozetGuncelle(); }, 60000);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && !$('#uygulama').hidden) rozetGuncelle(); });
   function rozetGuncelle() {
-    api('ozet', undefined, true).then(function (o) {
+    api('rozet', undefined, true).then(function (o) {
       var n = o.talep_yeni + o.talep_randevu, r = $('#yeniRozet');
       r.hidden = !n; r.textContent = n; r.title = o.talep_randevu + ' randevu isteği, ' + o.talep_yeni + ' yeni talep';
       r.classList.toggle('randevu-var', o.talep_randevu > 0);

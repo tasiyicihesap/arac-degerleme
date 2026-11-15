@@ -4,7 +4,30 @@ import { teklifHesapla, PARCALAR, DURUMLAR } from './fiyat.js';
 import { json, rastgeleHex } from './yardim.js';
 import { epostaGonder, whatsappGonder } from './bildirim.js';
 
+// Sık okunan, nadiren değişen cevaplar bellekte ve Cloudflare önbelleğinde tutulur (ücretsiz plandaki günlük okuma kotası için)
+const ONBELLEK_SURE = { firma: 60, metinler: 60, site_gorselleri: 60, markalar: 600, markayillar: 600, yilmodeller: 600, secenekler: 600, modeller: 600, yillar: 600, versiyonlar: 600 };
+const bellek = new Map();
+
 export async function siteApi(req, env, ctx) {
+  const sure = req.method === 'GET' ? ONBELLEK_SURE[new URL(req.url).searchParams.get('a')] : 0;
+  if (!sure) return siteApiIc(req, env, ctx);
+  const anahtar = new URL(req.url); anahtar.searchParams.delete('_');
+  const k = anahtar.toString();
+  const b = bellek.get(k);
+  if (b && b.son > Date.now()) return new Response(b.govde, { headers: b.basliklar });
+  const cache = typeof caches !== 'undefined' ? caches.default : null;
+  if (cache) { try { const c = await cache.match(k); if (c) return c; } catch (e) {} }
+  const r = await siteApiIc(req, env, ctx);
+  if (r.status !== 200) return r;
+  const govde = await r.text();
+  const basliklar = { 'Content-Type': r.headers.get('Content-Type') || 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=' + Math.min(sure, 60) };
+  if (bellek.size > 2000) bellek.clear();
+  bellek.set(k, { govde, basliklar, son: Date.now() + sure * 1000 });
+  if (cache && ctx) ctx.waitUntil(cache.put(k, new Response(govde, { headers: { ...basliklar, 'Cache-Control': 'public, max-age=' + sure } })).catch(() => {}));
+  return new Response(govde, { headers: basliklar });
+}
+
+async function siteApiIc(req, env, ctx) {
   const arkada = (p) => (ctx && ctx.waitUntil ? ctx.waitUntil(p.catch((e) => console.error(e))) : p);
   const url = new URL(req.url);
   const q = (k) => url.searchParams.get(k) ?? '';

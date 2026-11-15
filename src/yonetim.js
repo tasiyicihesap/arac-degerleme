@@ -89,9 +89,7 @@ export async function yonetimApi(req, env) {
     case 'ozet': {
       const b = bugun();
       const r = await D.batch([
-        D.prepare('SELECT COUNT(*) n FROM fiyatlar'),
-        D.prepare('SELECT COUNT(DISTINCT marka) n FROM fiyatlar'),
-        D.prepare("SELECT COUNT(DISTINCT marka || '|' || model) n FROM fiyatlar"),
+        D.prepare("SELECT COUNT(*) n, COUNT(DISTINCT marka) m, COUNT(DISTINCT marka || '|' || model) mm FROM fiyatlar"),
         D.prepare('SELECT COUNT(*) n FROM talepler WHERE tarih >= ?').bind(b),
         D.prepare("SELECT COUNT(*) n FROM talepler WHERE durum = 'Yeni'"),
         D.prepare("SELECT COUNT(*) n FROM talepler WHERE durum = 'Randevu İstedi'"),
@@ -102,8 +100,12 @@ export async function yonetimApi(req, env) {
         D.prepare('SELECT COUNT(*) n FROM mesajlar WHERE okundu = 0'),
       ]);
       const n = (i) => int(r[i].results[0].n);
-      return json({ satir: n(0), marka: n(1), model: n(2), talep_bugun: n(3), talep_yeni: n(4), talep_randevu: n(5), talep_toplam: n(6),
-        robot: r[7].results[0] || null, son_talepler: r[8].results, islem: r[9].results, mesaj_yeni: n(10) });
+      return json({ satir: n(0), marka: int(r[0].results[0].m), model: int(r[0].results[0].mm), talep_bugun: n(1), talep_yeni: n(2), talep_randevu: n(3), talep_toplam: n(4),
+        robot: r[5].results[0] || null, son_talepler: r[6].results, islem: r[7].results, mesaj_yeni: n(8) });
+    }
+    case 'rozet': { // menüdeki sayaçlar (panel açıkken dakikada bir) — hafif sorgu
+      const r = await D.prepare("SELECT (SELECT COUNT(*) FROM talepler WHERE durum = 'Yeni') y, (SELECT COUNT(*) FROM talepler WHERE durum = 'Randevu İstedi') r, (SELECT COUNT(*) FROM mesajlar WHERE okundu = 0) m").first();
+      return json({ talep_yeni: int(r.y), talep_randevu: int(r.r), mesaj_yeni: int(r.m) });
     }
 
     // --- fiyat tablosu ---

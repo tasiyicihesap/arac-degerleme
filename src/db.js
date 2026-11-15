@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS talep_foto (id INTEGER PRIMARY KEY AUTOINCREMENT, tal
 CREATE INDEX IF NOT EXISTS ix_talep_foto ON talep_foto(talep_id);
 CREATE TABLE IF NOT EXISTS metinler (k TEXT PRIMARY KEY, v TEXT);
 CREATE TABLE IF NOT EXISTS mesajlar (id INTEGER PRIMARY KEY AUTOINCREMENT, tarih TEXT, kaynak TEXT DEFAULT 'form', ad TEXT, tel TEXT, eposta TEXT, konu TEXT, mesaj TEXT, ip TEXT, okundu INTEGER DEFAULT 0, eposta_durum TEXT, wa_durum TEXT);
+CREATE INDEX IF NOT EXISTS ix_mesaj_okundu ON mesajlar(okundu);
+CREATE INDEX IF NOT EXISTS ix_talep_durum ON talepler(durum);
 CREATE TABLE IF NOT EXISTS gorsel_parca (tur TEXT, ad TEXT, sira INTEGER, veri BLOB, PRIMARY KEY(tur, ad, sira));
 `;
 
