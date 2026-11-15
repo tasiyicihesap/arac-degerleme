@@ -10,6 +10,8 @@
   },
   // Veritabanı ilk yayında Cloudflare tarafından otomatik oluşturulur
   // otokabul.com.tr ve www alan adları bu siteye bağlı
+  "workers_dev": true,
+  "preview_urls": true,
   "routes": [
     { "pattern": "otokabul.com.tr", "custom_domain": true },
     { "pattern": "www.otokabul.com.tr", "custom_domain": true }
