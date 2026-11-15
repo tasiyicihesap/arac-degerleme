@@ -41,8 +41,7 @@ CREATE TABLE IF NOT EXISTS fiyatlar (id INTEGER PRIMARY KEY AUTOINCREMENT, marka
 CREATE TABLE IF NOT EXISTS versiyonlar (marka TEXT, model TEXT, liste TEXT, PRIMARY KEY(marka, model));
 CREATE TABLE IF NOT EXISTS talepler (id INTEGER PRIMARY KEY AUTOINCREMENT, tarih TEXT, ad TEXT, tel TEXT, il TEXT, marka TEXT, model TEXT, yil INTEGER, versiyon TEXT, yakit TEXT, vites TEXT, kasa TEXT, km INTEGER, renk TEXT, hasar TEXT, tramer INTEGER DEFAULT 0, agir INTEGER DEFAULT 0, baz INTEGER, teklif_min INTEGER, teklif_max INTEGER, detay TEXT, durum TEXT DEFAULT 'Yeni', notlar TEXT DEFAULT '', ip TEXT, anahtar TEXT, kabul_tarih TEXT);
 CREATE TABLE IF NOT EXISTS islemler (id INTEGER PRIMARY KEY AUTOINCREMENT, tarih TEXT, aciklama TEXT, etkilenen INTEGER, yedek TEXT, geri_alindi INTEGER DEFAULT 0);
-CREATE TABLE IF NOT EXISTS katalog (id INTEGER PRIMARY KEY AUTOINCREMENT, marka TEXT, model TEXT, versiyon TEXT, tip TEXT, kod TEXT, kasa TEXT, yakit TEXT, vites TEXT, motor TEXT, beygir INTEGER DEFAULT 0, aktif INTEGER DEFAULT 1, degerler TEXT DEFAULT '{}');
-CREATE INDEX IF NOT EXISTS ix_katalog_mm ON katalog(marka, model);
+CREATE TABLE IF NOT EXISTS katalog_model (marka TEXT NOT NULL, model TEXT NOT NULL, v TEXT NOT NULL DEFAULT '[]', PRIMARY KEY(marka, model)) WITHOUT ROWID;
 CREATE TABLE IF NOT EXISTS model_eslestirme (id INTEGER PRIMARY KEY AUTOINCREMENT, marka TEXT, tsb TEXT, model TEXT);
 CREATE TABLE IF NOT EXISTS kalibrasyon (marka TEXT PRIMARY KEY, oran REAL, ornek INTEGER);
 CREATE TABLE IF NOT EXISTS robot_log (id INTEGER PRIMARY KEY AUTOINCREMENT, tarih TEXT, kaynak TEXT, kayit INTEGER, cozulen INTEGER, satir INTEGER, yeni INTEGER, degisim REAL, ozet TEXT);
@@ -85,8 +84,19 @@ export async function db(env) {
   return D;
 }
 
+// TSB kataloğu: her model tek satır (versiyonlar JSON dizisi). Ücretsiz planda 28.000+ versiyon
+// ayrı satır olarak yazılınca günlük yazma kotası doluyordu. Sorgular için aynı sütunları veren görünüm:
+const KATALOG_GORUNUM = `CREATE VIEW katalog AS SELECT CAST(json_extract(e.value,'$.id') AS INTEGER) id, m.marka marka, m.model model,
+  json_extract(e.value,'$.versiyon') versiyon, json_extract(e.value,'$.tip') tip, json_extract(e.value,'$.kod') kod, json_extract(e.value,'$.kasa') kasa,
+  json_extract(e.value,'$.yakit') yakit, json_extract(e.value,'$.vites') vites, json_extract(e.value,'$.motor') motor,
+  CAST(json_extract(e.value,'$.beygir') AS INTEGER) beygir, CAST(json_extract(e.value,'$.aktif') AS INTEGER) aktif, json_extract(e.value,'$.degerler') degerler
+  FROM katalog_model m, json_each(m.v) e`.replace(/\s*\n\s*/g, ' ');
+
 async function kur(D) {
   await D.exec(SEMA.trim().split('\n').filter(Boolean).join('\n'));
+  const kt = await D.prepare("SELECT type FROM sqlite_master WHERE name = 'katalog'").first();
+  if (kt && kt.type === 'table') await D.batch([D.prepare('DROP INDEX IF EXISTS ix_katalog_mm'), D.prepare('DROP TABLE katalog')]);
+  if (!kt || kt.type === 'table') await D.prepare(KATALOG_GORUNUM).run();
   const r = await D.prepare("SELECT v FROM ayarlar WHERE k = '_kurulum'").first();
   if (r) return;
   // ilk açılış: AraçRadar'dan hazırlanmış başlangıç piyasa verisi
@@ -161,20 +171,33 @@ export async function piyasaYaz(D, govde, logla = true) {
 // katalog.degerler sütunu {"yil": deger} JSON'u tutar (ücretsiz plan yazma kotası için tek satır/versiyon)
 export const KASKO_CTE = `ka AS (SELECT k.marka, k.model, CAST(d.key AS INTEGER) yil, AVG(d.value) ort FROM katalog k, json_each(k.degerler) d WHERE k.aktif = 1 GROUP BY k.marka, k.model, CAST(d.key AS INTEGER))`;
 
-export async function katalogTemizle(D) { await D.prepare('DELETE FROM katalog').run(); }
+export async function katalogTemizle(D) { await D.prepare('DELETE FROM katalog_model').run(); }
+
+// bir modelin versiyon dizisine yenilerini ekleyen ON CONFLICT parçası
+export const MODEL_EKLE = `ON CONFLICT(marka, model) DO UPDATE SET v = (SELECT json_group_array(json(x.value)) FROM
+  (SELECT value FROM json_each(katalog_model.v) UNION ALL SELECT value FROM json_each(excluded.v)) x)`;
+
+const GECERLI = `json_type(j.value) = 'object' AND trim(COALESCE(json_extract(j.value,'$.marka'),'')) <> '' AND trim(COALESCE(json_extract(j.value,'$.model'),'')) <> ''
+  AND json_type(j.value, '$.degerler') = 'object' AND (SELECT COUNT(*) FROM json_each(j.value, '$.degerler')) > 0`;
 
 export async function katalogParcaYaz(D, govde) {
-  const r = await D.prepare(`INSERT INTO katalog(marka, model, versiyon, tip, kod, kasa, yakit, vites, motor, beygir, degerler)
-    SELECT trim(COALESCE(json_extract(j.value,'$.marka'),'')), trim(COALESCE(json_extract(j.value,'$.model'),'')),
-      substr(COALESCE(json_extract(j.value,'$.versiyon'),''), 1, 120), substr(COALESCE(json_extract(j.value,'$.tip'),''), 1, 160),
-      COALESCE(json_extract(j.value,'$.kod'),''), COALESCE(json_extract(j.value,'$.kasa'),''), COALESCE(json_extract(j.value,'$.yakit'),''),
-      COALESCE(json_extract(j.value,'$.vites'),''), COALESCE(json_extract(j.value,'$.motor'),''), CAST(COALESCE(json_extract(j.value,'$.beygir'),0) AS INTEGER),
-      (SELECT json_group_object(CAST(y AS TEXT), v) FROM (SELECT CAST(d.key AS INTEGER) y, CAST(${R('d.value')} AS INTEGER) v, MAX(d.id) FROM json_each(j.value, '$.degerler') d
-        WHERE CAST(d.key AS INTEGER) >= 1950 AND ${R('d.value')} > 0 GROUP BY CAST(d.key AS INTEGER)))
-    FROM json_each(?1, '$.liste') j
-    WHERE json_type(j.value) = 'object' AND trim(COALESCE(json_extract(j.value,'$.marka'),'')) <> '' AND trim(COALESCE(json_extract(j.value,'$.model'),'')) <> ''
-      AND json_type(j.value, '$.degerler') = 'object' AND (SELECT COUNT(*) FROM json_each(j.value, '$.degerler')) > 0`).bind(govde).run();
-  return r.meta.changes || 0;
+  const c = await D.prepare(`SELECT COUNT(*) n FROM json_each(?1, '$.liste') j WHERE ${GECERLI}`).bind(govde).first();
+  const n = int(c && c.n); if (!n) return 0;
+  const taban = int(await gizliAyar(D, '_kid'));
+  await D.batch([
+    D.prepare(`WITH g AS (SELECT j.key k, trim(COALESCE(json_extract(j.value,'$.marka'),'')) marka, trim(COALESCE(json_extract(j.value,'$.model'),'')) model,
+        json_object('id', ?2 + ROW_NUMBER() OVER (ORDER BY j.key), 'versiyon', substr(COALESCE(json_extract(j.value,'$.versiyon'),''), 1, 120),
+          'tip', substr(COALESCE(json_extract(j.value,'$.tip'),''), 1, 160), 'kod', COALESCE(json_extract(j.value,'$.kod'),''),
+          'kasa', COALESCE(json_extract(j.value,'$.kasa'),''), 'yakit', COALESCE(json_extract(j.value,'$.yakit'),''), 'vites', COALESCE(json_extract(j.value,'$.vites'),''),
+          'motor', COALESCE(json_extract(j.value,'$.motor'),''), 'beygir', CAST(COALESCE(json_extract(j.value,'$.beygir'),0) AS INTEGER), 'aktif', 1,
+          'degerler', json((SELECT json_group_object(CAST(y AS TEXT), v) FROM (SELECT CAST(d.key AS INTEGER) y, CAST(${R('d.value')} AS INTEGER) v, MAX(d.id)
+            FROM json_each(j.value, '$.degerler') d WHERE CAST(d.key AS INTEGER) >= 1950 AND ${R('d.value')} > 0 GROUP BY CAST(d.key AS INTEGER))))) o
+        FROM json_each(?1, '$.liste') j WHERE ${GECERLI})
+      INSERT INTO katalog_model(marka, model, v) SELECT marka, model, json_group_array(json(o)) FROM (SELECT * FROM g ORDER BY k) WHERE 1 GROUP BY marka, model
+      ${MODEL_EKLE}`).bind(govde, taban),
+    D.prepare("INSERT INTO ayarlar(k, v) VALUES('_kid', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(String(taban + n)),
+  ]);
+  return n;
 }
 
 // İlan medyanı / kasko ortalaması oranını marka bazında hesaplar, sonra her model-yıl için
@@ -192,16 +215,19 @@ export async function kaskoFiyatlariniGuncelle(D) {
   const elle = elleS !== '' && elleN > 0 ? elleN : null;
   const kal = [['*', genelOran, genel.length]]; const mo = {};
   for (const [m, a] of Object.entries(oranlar)) if (a.length >= 5) { mo[m] = medyan(a); kal.push([m, mo[m], a.length]); }
+  // yalnızca fiyatı değişen satırlar yazılır (ücretsiz planda günlük yazma kotası için); sayı tüm uygun satırlardır
+  const H = `WITH ${KASKO_CTE}, h AS (SELECT ka.marka, ka.model, ka.yil, CAST(${R('ka.ort * COALESCE(?1, kb.oran, kg.oran) / 1000')} AS INTEGER) * 1000 p
+        FROM ka LEFT JOIN kalibrasyon kb ON kb.marka = ka.marka AND kb.marka <> '*' LEFT JOIN kalibrasyon kg ON kg.marka = '*')`;
   const res = await D.batch([
     D.prepare('DELETE FROM kalibrasyon'),
     D.prepare("INSERT INTO kalibrasyon(marka, oran, ornek) SELECT json_extract(value,'$[0]'), json_extract(value,'$[1]'), json_extract(value,'$[2]') FROM json_each(?1)").bind(JSON.stringify(kal)),
-    D.prepare(`WITH ${KASKO_CTE}, h AS (SELECT ka.marka, ka.model, ka.yil, CAST(${R('ka.ort * COALESCE(?1, kb.oran, kg.oran) / 1000')} AS INTEGER) * 1000 p
-        FROM ka LEFT JOIN kalibrasyon kb ON kb.marka = ka.marka AND kb.marka <> '*' LEFT JOIN kalibrasyon kg ON kg.marka = '*')
-      INSERT INTO fiyatlar(marka, model, yil, piyasa, onceki, adet, kaynak, guncelleme) SELECT marka, model, yil, p, 0, 0, 'kasko', ?2 FROM h WHERE p > 0
+    D.prepare(`${H} SELECT COUNT(*) n FROM h LEFT JOIN fiyatlar f ON f.marka = h.marka AND f.model = h.model AND f.yil = h.yil
+      WHERE h.p > 0 AND (f.id IS NULL OR (f.kaynak = 'kasko' AND f.kilit = 0))`).bind(elle),
+    D.prepare(`${H} INSERT INTO fiyatlar(marka, model, yil, piyasa, onceki, adet, kaynak, guncelleme) SELECT marka, model, yil, p, 0, 0, 'kasko', ?2 FROM h WHERE p > 0
       ON CONFLICT(marka, model, yil) DO UPDATE SET onceki = piyasa, piyasa = excluded.piyasa, guncelleme = excluded.guncelleme
-      WHERE fiyatlar.kaynak = 'kasko' AND fiyatlar.kilit = 0`).bind(elle, simdi()),
+      WHERE fiyatlar.kaynak = 'kasko' AND fiyatlar.kilit = 0 AND fiyatlar.piyasa <> excluded.piyasa`).bind(elle, simdi()),
   ]);
-  return { satir: res[2].meta.changes || 0, genel_oran: genelOran, marka_oran: mo };
+  return { satir: int(res[2].results[0].n), genel_oran: genelOran, marka_oran: mo };
 }
 
 // Motor/paket farkı: seçilen versiyonun kasko değeri / model-yıl ortalaması

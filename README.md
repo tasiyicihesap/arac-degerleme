@@ -26,4 +26,6 @@ Veritabanı (`otokabul-db`) ilk yayında otomatik oluşturulur; ilk açılışta
 - Veritabanı SQLite dosyası yerine Cloudflare D1. Yedek: Ayarlar → "Veritabanı yedeğini indir" (JSON;
   TSB kataloğu yedeğe girmez, TSB'den yeniden alınır). D1 ayrıca son 7 günü otomatik saklar.
 - Yüklenen logo/model fotoğrafları veritabanında tutulur.
+- TSB kataloğu model başına tek satırda tutulur (ücretsiz planın günlük yazma kotası için). Kasko
+  kaynaklı fiyat satırları yalnızca fiyatı değiştiğinde yeniden yazılır.
 - Fiyat Tablosu'ndaki "fiyat aralığı" süzgeci artık çalışıyor (PHP sürümünde hiç sonuç döndürmüyordu).

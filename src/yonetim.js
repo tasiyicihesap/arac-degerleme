@@ -1,7 +1,7 @@
 // OTOKABUL — yönetim paneli API'si (eski yonetim/api.php)
 import {
   db, R, ayarlar, ayarKaydet, gizliAyar, simdi, bugun, buYil, buAy, int, flt, str, kes, yuvar, nf, VARSAYILAN_AYARLAR,
-  piyasaYaz, katalogTemizle, katalogParcaYaz, kaskoFiyatlariniGuncelle, gorselSlug, gorselHaritasi, logoUrl, modelGorselUrl,
+  piyasaYaz, katalogTemizle, katalogParcaYaz, kaskoFiyatlariniGuncelle, MODEL_EKLE, gorselSlug, gorselHaritasi, logoUrl, modelGorselUrl,
 } from './db.js';
 import { teklifHesapla, bazFiyat } from './fiyat.js';
 import { json, rastgeleHex, sifreOzet, sifreDogrula, CEREZ, oturumYaz, oturumOku, cerezAl, cerezBaslik } from './yardim.js';
@@ -295,22 +295,40 @@ export async function yonetimApi(req, env) {
           (SELECT group_concat(d.key || ':' || d.value) FROM json_each(k.degerler) d) degerler FROM katalog k WHERE ${w.join(' AND ')} ORDER BY marka, model, versiyon LIMIT 600`).bind(...p).all();
       return json(results);
     }
-    case 'katalog_satir': {
+    case 'katalog_satir': { // tek versiyonun model/kasa/yakıt/vites düzeltmesi
       const g = await girdi(); const izin = ['model', 'kasa', 'yakit', 'vites', 'motor', 'beygir', 'aktif'];
       const alan = str(g.alan); if (!izin.includes(alan)) return json({ hata: 'Alan değiştirilemez' }, 400);
-      await D.prepare(`UPDATE katalog SET ${alan} = ? WHERE id = ?`).bind(['beygir', 'aktif'].includes(alan) ? int(g.deger) : str(g.deger).trim(), int(g.id)).run();
+      const deger = ['beygir', 'aktif'].includes(alan) ? int(g.deger) : str(g.deger).trim();
+      const v = await D.prepare("SELECT m.marka, m.model, e.key i, e.value o FROM katalog_model m, json_each(m.v) e WHERE json_extract(e.value, '$.id') = ?").bind(int(g.id)).first();
+      if (!v) return json({ ok: 1 });
+      if (alan !== 'model') {
+        await D.prepare("UPDATE katalog_model SET v = json_set(v, '$[' || CAST(?3 AS INTEGER) || '].' || ?4, ?5) WHERE marka = ?1 AND model = ?2").bind(v.marka, v.model, v.i, alan, deger).run();
+      } else if (deger !== v.model) { // versiyonu başka modele taşı
+        await D.batch([
+          D.prepare("UPDATE katalog_model SET v = json_remove(v, '$[' || CAST(?3 AS INTEGER) || ']') WHERE marka = ?1 AND model = ?2").bind(v.marka, v.model, v.i),
+          D.prepare(`INSERT INTO katalog_model(marka, model, v) SELECT ?1, ?2, json_array(json(?3)) WHERE 1 ${MODEL_EKLE}`).bind(v.marka, deger, v.o),
+          D.prepare("DELETE FROM katalog_model WHERE marka = ? AND json_array_length(v) = 0").bind(v.marka),
+        ]);
+      }
       return json({ ok: 1 });
     }
     case 'eslestirme_ekle': {
       const g = await girdi(); const m = str(g.marka).trim(), t = str(g.tsb).trim(), mo = str(g.model).trim();
       if (!m || !t || !mo) return json({ hata: 'Marka, TSB başlangıcı ve site modeli gerekli.' }, 400);
       const T = t.toUpperCase();
-      const r = await D.batch([
+      // TSB tip adı bu başlangıçla eşleşen versiyonlar seçilen modele taşınır
+      const es = "(json_extract(e.value, '$.tip') = ?2 OR json_extract(e.value, '$.tip') LIKE ?3)";
+      const c = await D.prepare('SELECT COUNT(*) n FROM katalog WHERE marka = ? AND (tip = ? OR tip LIKE ?)').bind(m, T, T + ' %').first();
+      await D.batch([
         D.prepare('INSERT INTO model_eslestirme(marka, tsb, model) VALUES(?,?,?)').bind(m, t, mo),
-        D.prepare('UPDATE katalog SET model = ? WHERE marka = ? AND (tip = ? OR tip LIKE ?)').bind(mo, m, T, T + ' %'),
+        D.prepare(`INSERT INTO katalog_model(marka, model, v) SELECT ma, mo, l FROM (SELECT ?1 ma, ?4 mo, json_group_array(json(e.value)) l, COUNT(*) n
+            FROM katalog_model k, json_each(k.v) e WHERE k.marka = ?1 AND k.model <> ?4 AND ${es}) WHERE n > 0 ${MODEL_EKLE}`).bind(m, T, T + ' %', mo),
+        D.prepare(`UPDATE katalog_model SET v = (SELECT json_group_array(json(e.value)) FROM json_each(katalog_model.v) e WHERE NOT ${es})
+          WHERE marka = ?1 AND model <> ?4 AND EXISTS (SELECT 1 FROM json_each(katalog_model.v) e WHERE ${es})`).bind(m, T, T + ' %', mo),
+        D.prepare('DELETE FROM katalog_model WHERE marka = ? AND json_array_length(v) = 0').bind(m),
       ]);
       await kaskoFiyatlariniGuncelle(D);
-      return json({ ok: 1, guncellenen: int(r[1].meta.changes) });
+      return json({ ok: 1, guncellenen: int(c && c.n) });
     }
     case 'eslestirme_sil': { const g = await girdi(); await D.prepare('DELETE FROM model_eslestirme WHERE id = ?').bind(int(g.id)).run(); return json({ ok: 1 }); }
 
