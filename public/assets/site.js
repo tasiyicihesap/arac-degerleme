@@ -7,7 +7,12 @@
   var api = function (a, q, govde) {
     var url = 'api.php?a=' + a + (q ? '&' + Object.keys(q).map(function (k) { return k + '=' + encodeURIComponent(q[k]); }).join('&') : '');
     return fetch(url, govde ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(govde) } : {})
-      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.hata || 'Hata'); return j; }); });
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) { var e = new Error(r.status >= 500 || !j.hata ? 'SİSTEM' : j.hata); e.sistem = r.status >= 500 || !j.hata; throw e; }
+          return j;
+        });
+      }, function () { var e = new Error('SİSTEM'); e.sistem = true; throw e; });
   };
 
   var ILLER = 'Adana,Adıyaman,Afyonkarahisar,Ağrı,Aksaray,Amasya,Ankara,Antalya,Ardahan,Artvin,Aydın,Balıkesir,Bartın,Batman,Bayburt,Bilecik,Bingöl,Bitlis,Bolu,Burdur,Bursa,Çanakkale,Çankırı,Çorum,Denizli,Diyarbakır,Düzce,Edirne,Elazığ,Erzincan,Erzurum,Eskişehir,Gaziantep,Giresun,Gümüşhane,Hakkâri,Hatay,Iğdır,Isparta,İstanbul,İzmir,Kahramanmaraş,Karabük,Karaman,Kars,Kastamonu,Kayseri,Kilis,Kırıkkale,Kırklareli,Kırşehir,Kocaeli,Konya,Kütahya,Malatya,Manisa,Mardin,Mersin,Muğla,Muş,Nevşehir,Niğde,Ordu,Osmaniye,Rize,Sakarya,Samsun,Şanlıurfa,Siirt,Sinop,Sivas,Şırnak,Tekirdağ,Tokat,Trabzon,Tunceli,Uşak,Van,Yalova,Yozgat,Zonguldak'.split(',');
@@ -442,7 +447,7 @@
     btnI.disabled = true; btnI.textContent = 'Hesaplanıyor…';
     var g = { ad: S.ad, tel: S.tel, il: S.il, marka: S.marka, model: S.model, yil: S.yil, versiyon: S.versiyon || '', katalog_id: S.katalog_id || 0, yakit: S.yakit, vites: S.vites, kasa: S.kasa || '', km: S.km, renk: S.renk || '', hasar: S.hasar, tramer: S.tramerVar ? S.tramer : 0, agir: !!S.agir, donanim: S.donanim || [], aciklama: S.aciklama || '' };
     api('teklif', null, g).then(function (s) { sonuc = s; git(ADIMLAR.length - 1); })
-      .catch(function (e) { var h = $('#hata'); if (h) h.textContent = e.message; btnI.textContent = 'Teklifimi göster →'; guncelleBtn(); });
+      .catch(function (e) { var h = $('#hata'); if (h) h.textContent = hataMetni(e); btnI.textContent = 'Teklifimi göster →'; guncelleBtn(); });
   }
   function cizSonuc(k) {
     var s = sonuc || {}, arac = S.yil + ' ' + S.marka + ' ' + S.model + (S.versiyon ? ' ' + S.versiyon : '');
@@ -470,14 +475,23 @@
           '<p>Teklifimize güvendiğin için teşekkür ederiz. Uzmanımız <b>en kısa sürede</b> seni arayarak ekspertiz ve ödeme için sana en uygun saati planlayacak.</p>' +
           (firma.telefon ? '<p class="kucuk-not">Beklemek istemezsen: <a href="tel:' + firma.telefon.replace(/[^\d+]/g, '') + '">' + esc(firma.telefon) + '</a></p>' : '') + '</div>';
         var kutu = $('#randevuKutu', k); if (kutu && kutu.scrollIntoView) kutu.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }).catch(function (e) { b.disabled = false; b.textContent = '📅 RANDEVU AL'; alert(e.message); });
+      }).catch(function (e) { b.disabled = false; b.textContent = '📅 RANDEVU AL'; alert(hataMetni(e)); });
     };
     $('#yeni', k).onclick = function () { var ad = S.ad, tel = S.tel, il = S.il, kvkk = S.kvkk; S = { hasar: {}, tramerVar: null, agir: null, ad: ad, tel: tel, il: il, kvkk: kvkk }; sonuc = null; git(0); };
   }
-  function hataGoster(k) { return function (e) { k.innerHTML = '<div class="bos">Bağlantı hatası: ' + esc(e.message) + '</div>'; }; }
+  // sunucu sorunu olursa müşteriye teknik hata yerine bize ulaşma yolu gösterilir
+  function sistemMesaji() {
+    var tel = firma.telefon || YEDEK_FIRMA.telefon, wa = (firma.whatsapp || YEDEK_FIRMA.whatsapp).replace(/\D/g, '');
+    return '<div class="bos sistem-bakim"><b>Değerleme sistemimiz şu an kısa bir bakımda.</b><br>Teklifini beklemeden almak için bizi arayabilir ya da WhatsApp\'tan aracının bilgilerini yazabilirsin.' +
+      '<div class="bakim-butonlar"><a class="btn-ara" href="tel:' + tel.replace(/[^\d+]/g, '') + '">📞 ' + esc(tel) + '</a><a class="btn-wa" target="_blank" rel="noopener" href="https://wa.me/' + wa + '?text=' + encodeURIComponent('Merhaba, aracımı satmak istiyorum.') + '">WhatsApp\'tan yaz</a></div></div>';
+  }
+  function hataMetni(e) { return e && e.sistem ? 'Şu an bir bağlantı sorunu var. Lütfen bizi ' + (firma.telefon || YEDEK_FIRMA.telefon) + ' numarasından ara ya da WhatsApp\'tan yaz.' : (e && e.message) || 'Bir hata oluştu.'; }
+  function hataGoster(k) { return function (e) { k.innerHTML = e && e.sistem ? sistemMesaji() : '<div class="bos">' + esc(e.message) + '</div>'; }; }
 
   // firma bilgileri
-  api('firma').then(function (f) {
+  // sunucuya ulaşılamazsa da iletişim bilgileri görünsün
+  var YEDEK_FIRMA = { ad: 'OTOKABUL', alt: '', telefon: '0541 867 34 78', whatsapp: '905418673478', eposta: 'bilgi@otokabul.com.tr', adres: 'Yukarı Dudullu Mah. Göztepe Cad. No: 55-61A, Ümraniye / İstanbul', teklif_goster: true, donanimlar: [] };
+  api('firma').catch(function () { return YEDEK_FIRMA; }).then(function (f) {
     firma = f;
     document.querySelectorAll('#altFirma').forEach(function (e) { e.textContent = f.ad; });
     if ($('#firmaAlt')) $('#firmaAlt').textContent = f.alt || '';

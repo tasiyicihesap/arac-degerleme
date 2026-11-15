@@ -87,7 +87,7 @@
     if (d.mesaj.length < 5) return hata('Lütfen mesajını yaz.');
     btn.disabled = true; durum.className = 'mf-durum'; durum.textContent = 'Gönderiliyor…';
     fetch('api.php?a=mesaj', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) })
-      .then(function (r) { return r.json(); })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (r.status >= 500) throw new Error(); return j; }); })
       .then(function (j) {
         if (j.hata) { hata(j.hata); return; }
         mf.reset();

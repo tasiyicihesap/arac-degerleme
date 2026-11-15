@@ -1,5 +1,5 @@
 // OTOKABUL — müşteri sitesi API'si (eski api.php)
-import { db, ayarlar, simdi, int, str, kes, dolu, buYil, gorselHaritasi, logoUrl, modelGorselUrl, donanimlar } from './db.js';
+import { db, ayarlar, VARSAYILAN_AYARLAR, simdi, int, str, kes, dolu, buYil, gorselHaritasi, logoUrl, modelGorselUrl, donanimlar } from './db.js';
 import { teklifHesapla, PARCALAR, DURUMLAR } from './fiyat.js';
 import { json, rastgeleHex } from './yardim.js';
 import { epostaGonder, whatsappGonder } from './bildirim.js';
@@ -32,7 +32,8 @@ async function siteApiIc(req, env, ctx) {
   const url = new URL(req.url);
   const q = (k) => url.searchParams.get(k) ?? '';
   const a = q('a');
-  const D = await db(env);
+  let D;
+  try { D = await db(env); } catch (e) { if (a !== 'mesaj') throw e; D = env.DB; }
   switch (a) {
     case 'firma': {
       const A = await ayarlar(D);
@@ -140,18 +141,22 @@ async function siteApiIc(req, env, ctx) {
       if (eposta && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(eposta)) return json({ hata: 'E-posta adresi geçersiz görünüyor.' }, 400);
       if (Array.from(mesaj).length < 5) return json({ hata: 'Lütfen mesajını yaz.' }, 400);
       const ip = req.headers.get('CF-Connecting-IP') || '';
-      const c = await D.prepare("SELECT COUNT(*) n FROM mesajlar WHERE kaynak = 'form' AND ip = ? AND tarih > ?").bind(ip, simdi(Date.now() - 3600 * 1000)).first();
-      if (int(c.n) >= 5) return json({ hata: 'Çok fazla mesaj gönderildi, lütfen bizi telefonla ara.' }, 429);
-      const r = await D.prepare("INSERT INTO mesajlar(tarih, kaynak, ad, tel, eposta, konu, mesaj, ip) VALUES(?, 'form', ?, ?, ?, 'Site iletişim formu', ?, ?)").bind(simdi(), ad, tel, eposta, mesaj, ip).run();
-      const id = int(r.meta.last_row_id);
-      const A = await ayarlar(D);
+      // veritabanına ulaşılamasa bile mesaj e-posta ve WhatsApp ile yine gönderilir
+      let id = 0, A = { ...VARSAYILAN_AYARLAR };
+      try {
+        const c = await D.prepare("SELECT COUNT(*) n FROM mesajlar WHERE kaynak = 'form' AND ip = ? AND tarih > ?").bind(ip, simdi(Date.now() - 3600 * 1000)).first();
+        if (int(c.n) >= 5) return json({ hata: 'Çok fazla mesaj gönderildi, lütfen bizi telefonla ara.' }, 429);
+        const r = await D.prepare("INSERT INTO mesajlar(tarih, kaynak, ad, tel, eposta, konu, mesaj, ip) VALUES(?, 'form', ?, ?, ?, 'Site iletişim formu', ?, ?)").bind(simdi(), ad, tel, eposta, mesaj, ip).run();
+        id = int(r.meta.last_row_id);
+        A = await ayarlar(D);
+      } catch (e) { console.error('mesaj kaydı', e); }
       const bilgi = `${ad}${tel ? '\nTelefon: ' + tel : ''}${eposta ? '\nE-posta: ' + eposta : ''}`;
       arkada((async () => {
         const [ed, wd] = await Promise.all([
           epostaGonder(env, A, { konu: 'Siteden yeni mesaj: ' + ad, metin: `Siteden yeni mesaj var.\n\n${bilgi}\n\nMesaj:\n${mesaj}\n\nBu e-postayı yanıtlarsan cevabın doğrudan müşteriye gider${eposta ? '' : ' (müşteri e-posta yazmadı, telefonla dönmen gerekiyor)'}.`, yanitla: eposta }),
           whatsappGonder(A, `✉️ Siteden yeni mesaj\n${bilgi}\n\n${kes(mesaj, 600)}`),
         ]);
-        await D.prepare('UPDATE mesajlar SET eposta_durum = ?, wa_durum = ? WHERE id = ?').bind(ed, wd, id).run();
+        if (id) await D.prepare('UPDATE mesajlar SET eposta_durum = ?, wa_durum = ? WHERE id = ?').bind(ed, wd, id).run();
       })());
       return json({ ok: 1 });
     }
