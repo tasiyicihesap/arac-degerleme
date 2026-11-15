@@ -241,3 +241,7 @@ body.ana{background:#fff;color:var(--murekkep)}
   .yardim-kutu{padding:26px 22px}
   .alt-kolonlar{grid-template-columns:1fr}
 }
+/* Windows kaydırma çubuğunda yatay taşmayı önle */
+.ana .sb-govde{overflow-x:hidden}
+.ana .izgara > *{min-width:0}
+.ana .logo-kart span{overflow-wrap:anywhere}
