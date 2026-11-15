@@ -4,7 +4,7 @@ import {
   piyasaYaz, katalogTemizle, katalogParcaYaz, kaskoFiyatlariniGuncelle, MODEL_EKLE, gorselSlug, gorselHaritasi, logoUrl, modelGorselUrl,
 } from './db.js';
 import { teklifHesapla, bazFiyat } from './fiyat.js';
-import { epostaGonder, whatsappGonder } from './bildirim.js';
+import { epostaGonder, anlikBildir, telegramGonder } from './bildirim.js';
 import { json, rastgeleHex, sifreOzet, sifreDogrula, CEREZ, oturumYaz, oturumOku, cerezAl, cerezBaslik } from './yardim.js';
 
 const OTURUM_SURE = 12 * 3600 * 1000;
@@ -432,9 +432,24 @@ export async function yonetimApi(req, env) {
       const A = await ayarlar(D);
       const [ed, wd] = await Promise.all([
         epostaGonder(env, A, { konu: 'OTOKABUL deneme bildirimi', metin: 'Bu bir deneme e-postasıdır. Siteden gelen mesajlar ve yeni teklif talepleri bu adrese gelecek.' }),
-        whatsappGonder(A, '✅ OTOKABUL deneme bildirimi: WhatsApp bildirimleri çalışıyor.'),
+        anlikBildir(A, '✅ OTOKABUL deneme bildirimi: telefon bildirimleri çalışıyor.'),
       ]);
       return json({ eposta: ed, whatsapp: wd });
+    }
+    case 'tg_bagla': { // bota /start yazan sohbeti bulur ve kaydeder
+      const g = await girdi();
+      const A = await ayarlar(D);
+      const anahtar = str(g.token || A.tg_token).trim();
+      if (!/^\d+:[\w-]{20,}$/.test(anahtar)) return json({ hata: 'Bot anahtarı hatalı görünüyor. BotFather\'ın verdiği anahtarı (ör. 123456789:AAH...) eksiksiz yapıştır.' }, 400);
+      let j;
+      try { j = await (await fetch('https://api.telegram.org/bot' + anahtar + '/getUpdates', { signal: AbortSignal.timeout(15000) })).json(); } catch (e) { return json({ hata: 'Telegram\'a bağlanılamadı, tekrar dene.' }, 502); }
+      if (!j.ok) return json({ hata: 'Telegram anahtarı kabul etmedi: ' + str(j.description) }, 400);
+      const son = (j.result || []).map((u) => u.message || u.my_chat_member || u.edited_message).filter((m) => m && m.chat).pop();
+      if (!son) return json({ hata: 'Bota henüz mesaj gelmemiş. Telegram\'da botunu açıp BAŞLAT\'a (/start) bas, sonra tekrar dene.' }, 400);
+      const sohbet = String(son.chat.id);
+      await ayarKaydet(D, { tg_token: anahtar, tg_chat: sohbet });
+      const d = await telegramGonder({ tg_token: anahtar, tg_chat: sohbet }, '✅ OTOKABUL bildirimleri bu sohbete bağlandı. Siteden mesaj, yeni teklif talebi ya da bilgi@ adresine e-posta gelince burada haber vereceğim.');
+      return json({ ok: 1, ad: [son.chat.first_name, son.chat.last_name].filter(Boolean).join(' ') || son.chat.title || sohbet, durum: d });
     }
     case 'talep_sil': {
       const g = await girdi();

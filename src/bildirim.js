@@ -35,6 +35,31 @@ export async function whatsappGonder(A, metin) {
   }
 }
 
+// Telegram: @BotFather ile açılan botun anahtarı + bota /start yazınca bulunan sohbet numarası
+export async function telegramGonder(A, metin) {
+  const anahtar = str(A.tg_token).trim(), sohbet = str(A.tg_chat).trim();
+  if (!anahtar || !sohbet) return 'kapalı';
+  try {
+    const r = await fetch('https://api.telegram.org/bot' + anahtar + '/sendMessage', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000),
+      body: JSON.stringify({ chat_id: sohbet, text: metin.slice(0, 4000), disable_web_page_preview: true }),
+    });
+    const j = await r.json().catch(() => ({}));
+    return j.ok ? 'gönderildi' : 'hata: ' + String(j.description || r.status).slice(0, 150);
+  } catch (e) {
+    return 'hata: ' + String(e && e.message ? e.message : e).slice(0, 150);
+  }
+}
+
+// telefona anlık bildirim: ayarlı olan her kanaldan (Telegram, WhatsApp) gönderir
+export async function anlikBildir(A, metin) {
+  const [t, w] = await Promise.all([telegramGonder(A, metin), whatsappGonder(A, metin)]);
+  const p = [];
+  if (t !== 'kapalı') p.push('Telegram ' + t);
+  if (w !== 'kapalı') p.push('WhatsApp ' + w);
+  return p.length ? p.join(' · ') : 'kapalı';
+}
+
 // e-posta başlıklarındaki =?UTF-8?B?...?= / =?UTF-8?Q?...?= kodlamasını çözer
 export function baslikCoz(s) {
   return str(s).replace(/=\?([^?]+)\?([bBqQ])\?([^?]*)\?=\s*/g, (_, cs, k, v) => {

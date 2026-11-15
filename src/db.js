@@ -46,6 +46,8 @@ export const VARSAYILAN_AYARLAR = {
   bildirim_eposta: 'kaniirfanozcan@gmail.com',
   wa_bildirim_tel: '905418673478',
   wa_bildirim_anahtar: '',
+  tg_token: '',
+  tg_chat: '',
   bildirim_talep: '1',
   sifre: '',
 };

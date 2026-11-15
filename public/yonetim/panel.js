@@ -157,7 +157,7 @@
       var f = $('#mFiltre', k).value;
       var l = mesajCache.filter(function (m) { return !f || (f === 'yeni' ? !+m.okundu : m.kaynak === f); });
       $('#mListe', k).innerHTML = !l.length ? '<p class="soluk">Mesaj yok.</p>' :
-        '<div class="tablo-kap" style="max-height:none"><table class="xl"><tr><th>Tarih</th><th>Kaynak</th><th>Ad</th><th>Telefon / e-posta</th><th>Mesaj</th><th title="Gönderilen e-posta bildirimi">E-posta</th><th title="Gönderilen WhatsApp bildirimi">WhatsApp</th></tr>' +
+        '<div class="tablo-kap" style="max-height:none"><table class="xl"><tr><th>Tarih</th><th>Kaynak</th><th>Ad</th><th>Telefon / e-posta</th><th>Mesaj</th><th title="Gönderilen e-posta bildirimi">E-posta</th><th title="Telefona giden anlık bildirim (Telegram / WhatsApp)">Telefon</th></tr>' +
         l.map(function (m) {
           var ozet = (m.kaynak === 'eposta' ? m.konu : m.mesaj) || '';
           return '<tr data-mid="' + m.id + '" style="cursor:pointer' + (+m.okundu ? '' : ';font-weight:700') + '"><td>' + esc(String(m.tarih).slice(5, 16)) + '</td><td>' + (m.kaynak === 'eposta' ? '📧 E-posta' : '📝 Form') + (+m.okundu ? '' : ' <span class="rozet Yeni">yeni</span>') + '</td><td>' + esc(m.ad) + '</td><td>' + esc([m.tel, m.eposta].filter(Boolean).join(' · ')) + '</td>' +
@@ -178,7 +178,7 @@
       (m.eposta ? '<a class="btn" href="mailto:' + esc(m.eposta) + '?subject=' + encodeURIComponent('Re: ' + (m.konu || 'OTOKABUL')) + '">✉️ E-postayla yanıtla</a>' : '') + '</div>' +
       '<dl class="bilgi"><dt>Tarih</dt><dd>' + esc(m.tarih) + '</dd><dt>Kaynak</dt><dd>' + (m.kaynak === 'eposta' ? 'bilgi@otokabul.com.tr adresine gelen e-posta' : 'Site iletişim formu') + '</dd>' +
       (m.tel ? '<dt>Telefon</dt><dd>' + esc(m.tel) + '</dd>' : '') + (m.eposta ? '<dt>E-posta</dt><dd>' + esc(m.eposta) + '</dd>' : '') + (m.konu ? '<dt>Konu</dt><dd>' + esc(m.konu) + '</dd>' : '') +
-      '<dt>Mesaj</dt><dd style="white-space:pre-wrap">' + esc(m.mesaj) + '</dd><dt>E-posta bildirimi</dt><dd>' + esc(m.eposta_durum || '—') + '</dd><dt>WhatsApp bildirimi</dt><dd>' + esc(m.wa_durum || '—') + '</dd></dl>' +
+      '<dt>Mesaj</dt><dd style="white-space:pre-wrap">' + esc(m.mesaj) + '</dd><dt>E-posta bildirimi</dt><dd>' + esc(m.eposta_durum || '—') + '</dd><dt>Telefon bildirimi</dt><dd>' + esc(m.wa_durum || '—') + '</dd></dl>' +
       '<div class="satirlar" style="margin-top:12px"><button class="btn" id="mOk">' + (+m.okundu ? 'Okunmadı yap' : 'Okundu yap') + '</button><button class="btn kirmizi" id="mSil">Sil</button></div>';
     $('#cekmece').hidden = false;
     $('#kapat').onclick = kapat;
@@ -699,7 +699,7 @@
     ['Hasar', [['lokal_boya', 'Lokal boyalı parça başına −%'], ['boyali', 'Boyalı parça başına −%'], ['degisen', 'Değişen parça başına −%'], ['tavan_kat', 'Tavan / kaput çarpanı', 'Kritik parçalarda kesinti × bu sayı'],
       ['tramer_kat', 'Tramer katsayısı', 'Tramer/piyasa × 100 × katsayı = −%'], ['tramer_sinir', 'Tramer kesintisi en fazla %']]],
     ['Yakıt ve vites farkı (%)', [['yakit_Benzin', 'Benzin'], ['yakit_Dizel', 'Dizel'], ['yakit_LPG', 'LPG'], ['yakit_Hibrit', 'Hibrit'], ['yakit_Elektrik', 'Elektrik'], ['vites_Manuel', 'Manuel'], ['vites_Otomatik', 'Otomatik'], ['vites_Yarı Otomatik', 'Yarı Otomatik']]],
-    ['Bildirimler', [['bildirim_eposta', 'Bildirim e-postası', 'Mesajlar ve talepler buraya gelir; Cloudflare\'de doğrulanmış adres olmalı'], ['wa_bildirim_tel', 'WhatsApp bildirim numarası', '90 ile, ör. 905418673478'],
+    ['Bildirimler', [['bildirim_eposta', 'Bildirim e-postası', 'Mesajlar ve talepler buraya gelir; Cloudflare\'de doğrulanmış adres olmalı'], ['tg_token', 'Telegram bot anahtarı', 'Sağdaki "Telegram bildirimleri" kutusundaki adımlarla alınır'], ['wa_bildirim_tel', 'WhatsApp bildirim numarası', '90 ile, ör. 905418673478'],
       ['wa_bildirim_anahtar', 'WhatsApp bildirim anahtarı (CallMeBot)', 'Aşağıdaki kutudaki adımlarla alınır'], ['bildirim_talep', 'Yeni teklif talebinde de bildir', '1 = evet, 0 = hayır']]],
     ['Robot', [['robot_url', 'AraçRadar veri adresi'], ['robot_min_adet', 'En az ilan sayısı'], ['robot_oto', 'Panel açılınca otomatik tara', '1 = son tarama 24 saatten eskiyse tara ve kaydet']]]
   ];
@@ -807,7 +807,14 @@
               return '<td><input class="girdi kucuk-girdi" data-po="' + p + '|' + d + '" value="' + esc(v) + '" placeholder="' + String(Math.round(gen[d] * 100) / 100).replace('.', ',') + '"></td>';
             }).join('') + '</tr>';
           }).join('') + '</table></div><div class="satirlar" style="margin-top:10px"><button class="btn ana" id="poKaydet">Kesintileri kaydet</button><button class="btn" id="poTemizle">Hepsini boşalt</button></div></div>' +
-        '<div class="kutu"><h2>WhatsApp bildirimlerini aç</h2><p class="soluk" style="margin-top:0">Siteden mesaj, yeni teklif talebi ya da bilgi@ adresine e-posta gelince telefonuna WhatsApp mesajı gelir. Ücretsiz CallMeBot servisiyle çalışır, bir kez kurulur:</p>' +
+        '<div class="kutu"><h2>Telegram bildirimleri (önerilen)</h2><p class="soluk" style="margin-top:0">Siteden mesaj, yeni teklif talebi ya da bilgi@ adresine e-posta gelince telefonuna anında Telegram bildirimi gelir. Ücretsizdir, bir kez kurulur.' +
+          (A.tg_chat ? ' <b class="art">● Bağlı</b>' : ' <b class="azl">● Bağlı değil</b>') + '</p>' +
+          '<ol style="margin:0 0 12px;padding-left:20px;line-height:1.7"><li>Telefonuna <b>Telegram</b> uygulamasını kur, numaranla giriş yap.</li><li>Telegram\'da arama kısmına <b>@BotFather</b> yaz (yanında mavi onay işareti olan), aç ve <b>BAŞLAT</b>\'a bas.</li>' +
+          '<li><b>/newbot</b> yaz. Botuna bir ad ver (ör. <i>OTOKABUL Bildirim</i>), sonra sonu <b>bot</b> ile biten bir kullanıcı adı ver (ör. <i>otokabul_bildirim_bot</i>).</li>' +
+          '<li>BotFather\'ın gönderdiği mesajdaki uzun anahtarı (<i>123456789:AAH…</i> şeklinde) kopyala.</li><li>Aynı mesajdaki <b>t.me/…</b> bağlantısına dokunarak kendi botunu aç ve <b>BAŞLAT</b>\'a bas.</li>' +
+          '<li>Anahtarı aşağıya yapıştırıp <b>Telegram\'ı bağla</b>\'ya bas. Telefonuna "bağlandı" mesajı gelir.</li></ol>' +
+          '<div class="satirlar"><input class="girdi" id="tgAnahtar" placeholder="BotFather\'ın verdiği anahtar" style="flex:1;min-width:220px" value="' + esc(A.tg_token || '') + '"><button class="btn ana" id="tgBagla">Telegram\'ı bağla</button></div><div id="tgSonuc" class="soluk" style="margin-top:8px"></div></div>' +
+        '<div class="kutu"><h2>WhatsApp bildirimleri (CallMeBot)</h2><p class="soluk" style="margin-top:0">Siteden mesaj, yeni teklif talebi ya da bilgi@ adresine e-posta gelince telefonuna WhatsApp mesajı gelir. Ücretsiz CallMeBot servisiyle çalışır, bir kez kurulur:</p>' +
           '<ol style="margin:0 0 12px;padding-left:20px;line-height:1.7"><li>Bildirimin geleceği telefonda CallMeBot\'un WhatsApp numarasını rehbere kaydet (güncel numara: <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noopener">callmebot.com</a>).</li><li>Bu numaraya WhatsApp\'tan şu mesajı gönder: <b>I allow callmebot to send me messages</b></li><li>Birkaç dakika içinde gelen mesajdaki <b>APIKEY</b> sayısını yukarıdaki "WhatsApp bildirim anahtarı" kutusuna yaz, ayarları kaydet.</li></ol>' +
           '<div class="satirlar"><button class="btn koyu" id="bDene">Deneme bildirimi gönder</button></div><div id="bSonuc" class="soluk" style="margin-top:8px"></div></div>' +
         '<div class="kutu"><h2>Şifre değiştir</h2><div class="alanlar"><label>Mevcut şifre<input type="password" class="girdi" id="pEski"></label><label>Yeni şifre<input type="password" class="girdi" id="pYeni"></label></div><div class="satirlar" style="margin-top:10px"><button class="btn" id="pKaydet">Şifreyi değiştir</button></div></div>' +
@@ -815,12 +822,19 @@
       $('#aKaydet', k).onclick = function () {
         var d = {}; $$('[data-k]', k).forEach(function (i) { d[i.dataset.k] = i.value.replace(',', '.'); });
         if (d.robot_url !== undefined) d.robot_url = $('[data-k="robot_url"]', k).value.trim();
-        ['firma_adi', 'firma_alt', 'telefon', 'whatsapp', 'eposta', 'adres', 'bildirim_eposta', 'wa_bildirim_tel', 'wa_bildirim_anahtar'].forEach(function (x) { d[x] = $('[data-k="' + x + '"]', k).value; });
+        ['firma_adi', 'firma_alt', 'telefon', 'whatsapp', 'eposta', 'adres', 'bildirim_eposta', 'tg_token', 'wa_bildirim_tel', 'wa_bildirim_anahtar'].forEach(function (x) { d[x] = $('[data-k="' + x + '"]', k).value; });
         api('ayar_kaydet', d).then(function () { bildir('Ayarlar kaydedildi'); });
+      };
+      $('#tgBagla', k).onclick = function () {
+        var t = $('#tgAnahtar', k).value.trim(); $('#tgSonuc', k).textContent = 'Bağlanıyor…';
+        api('tg_bagla', { token: t }, true).then(function (r) {
+          $('#tgSonuc', k).innerHTML = '<b class="art">Bağlandı:</b> ' + esc(r.ad) + ' (' + esc(r.durum) + '). Telefonuna gelen mesajı kontrol et.';
+          var f = $('[data-k="tg_token"]', k); if (f) f.value = t;
+        }).catch(function (e) { $('#tgSonuc', k).innerHTML = '<span class="azl">' + esc(e.message) + '</span>'; });
       };
       $('#bDene', k).onclick = function () {
         $('#bSonuc', k).textContent = 'Gönderiliyor… (önce ayarları kaydettiğinden emin ol)';
-        api('bildirim_dene', {}).then(function (r) { $('#bSonuc', k).innerHTML = 'E-posta: <b>' + esc(r.eposta) + '</b><br>WhatsApp: <b>' + esc(r.whatsapp) + '</b>'; });
+        api('bildirim_dene', {}).then(function (r) { $('#bSonuc', k).innerHTML = 'E-posta: <b>' + esc(r.eposta) + '</b><br>Telefon: <b>' + esc(r.whatsapp) + '</b>'; });
       };
       $('#sHesap', k).onclick = function () {
         var h = {}, P = ['kaput', 'sol_on_kapi', 'sag_on_kapi', 'sol_arka_kapi', 'sag_arka_kapi', 'sol_on_camurluk', 'sag_on_camurluk', 'bagaj', 'on_tampon', 'arka_tampon'], i = 0;

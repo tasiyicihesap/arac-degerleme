@@ -3,7 +3,7 @@
 import { siteApi } from './site.js';
 import { yonetimApi } from './yonetim.js';
 import { db, ayarlar, simdi, kes, str } from './db.js';
-import { whatsappGonder, baslikCoz } from './bildirim.js';
+import { anlikBildir, baslikCoz } from './bildirim.js';
 import { json } from './yardim.js';
 
 async function gorselSun(req, env, yol) {
@@ -43,7 +43,7 @@ export default {
     if (D) ctx.waitUntil((async () => {
       const r = await D.prepare("INSERT INTO mesajlar(tarih, kaynak, ad, eposta, konu, mesaj, eposta_durum) VALUES(?, 'eposta', ?, ?, ?, ?, ?)")
         .bind(simdi(), kes(ad, 120), kes(adres, 120), kes(konu, 200), 'Tam metni ' + hedef + ' adresinde.', 'iletildi: ' + hedef).run();
-      const wd = await whatsappGonder(A, `📧 ${message.to} adresine yeni e-posta\nKimden: ${kimden}\nKonu: ${konu}`);
+      const wd = await anlikBildir(A, `📧 ${message.to} adresine yeni e-posta\nKimden: ${kimden}\nKonu: ${konu}`);
       await D.prepare('UPDATE mesajlar SET wa_durum = ? WHERE id = ?').bind(wd, r.meta.last_row_id).run();
     })().catch((e) => console.error(e)));
   },

@@ -2,7 +2,7 @@
 import { db, ayarlar, VARSAYILAN_AYARLAR, simdi, int, str, kes, dolu, buYil, gorselHaritasi, logoUrl, modelGorselUrl, donanimlar } from './db.js';
 import { teklifHesapla, PARCALAR, DURUMLAR } from './fiyat.js';
 import { json, rastgeleHex } from './yardim.js';
-import { epostaGonder, whatsappGonder } from './bildirim.js';
+import { epostaGonder, anlikBildir } from './bildirim.js';
 
 // Sık okunan, nadiren değişen cevaplar bellekte ve Cloudflare önbelleğinde tutulur (ücretsiz plandaki günlük okuma kotası için)
 const ONBELLEK_SURE = { firma: 60, metinler: 60, site_gorselleri: 60, markalar: 600, markayillar: 600, yilmodeller: 600, secenekler: 600, modeller: 600, yillar: 600, versiyonlar: 600 };
@@ -121,7 +121,7 @@ async function siteApiIc(req, env, ctx) {
         const ozet = `Yeni teklif talebi #${no}\n${ad} — ${tel}\n${str(g.marka)} ${str(g.model)} ${int(g.yil)} ${kes(g.versiyon, 80)}\n${tf(int(g.km))} km · ${hs ? hs + ' parça boya/değişen' : 'hatasız'}${int(g.tramer) ? ' · tramer ' + tf(int(g.tramer)) + ' TL' : ''}\nTeklif: ${s.min ? tf(s.min) + ' – ' + tf(s.max) + ' TL' : 'otomatik teklif yok'}`;
         arkada(Promise.all([
           epostaGonder(env, A, { konu: `Yeni teklif talebi #${no}: ${str(g.marka)} ${str(g.model)} ${int(g.yil)}`, metin: ozet + '\n\nDetaylar yönetim panelinde, Teklif Talepleri bölümünde.' }),
-          whatsappGonder(A, '🚗 ' + ozet),
+          anlikBildir(A, '🚗 ' + ozet),
         ]));
       }
       if (A.teklif_goster !== '1' && s.durum === 'ok') { s.durum = 'gizli'; s.min = s.max = 0; s.mesaj = 'Talebiniz alındı. Uzmanımız teklifimizle birlikte kısa süre içinde sizi arayacak.'; }
@@ -154,7 +154,7 @@ async function siteApiIc(req, env, ctx) {
       arkada((async () => {
         const [ed, wd] = await Promise.all([
           epostaGonder(env, A, { konu: 'Siteden yeni mesaj: ' + ad, metin: `Siteden yeni mesaj var.\n\n${bilgi}\n\nMesaj:\n${mesaj}\n\nBu e-postayı yanıtlarsan cevabın doğrudan müşteriye gider${eposta ? '' : ' (müşteri e-posta yazmadı, telefonla dönmen gerekiyor)'}.`, yanitla: eposta }),
-          whatsappGonder(A, `✉️ Siteden yeni mesaj\n${bilgi}\n\n${kes(mesaj, 600)}`),
+          anlikBildir(A, `✉️ Siteden yeni mesaj\n${bilgi}\n\n${kes(mesaj, 600)}`),
         ]);
         if (id) await D.prepare('UPDATE mesajlar SET eposta_durum = ?, wa_durum = ? WHERE id = ?').bind(ed, wd, id).run();
       })());
