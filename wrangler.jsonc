@@ -17,5 +17,7 @@
     { "pattern": "www.otokabul.com.tr", "custom_domain": true }
   ],
   "d1_databases": [{ "binding": "DB", "database_name": "otokabul-db" }],
+  // bildirim e-postaları bilgi@otokabul.com.tr adresinden, Cloudflare'de doğrulanmış adreslere gider
+  "send_email": [{ "name": "EPOSTA" }],
   "observability": { "enabled": true }
 }

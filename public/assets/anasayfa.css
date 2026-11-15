@@ -167,6 +167,24 @@ body.ana{background:#fff;color:var(--murekkep)}
 .ana .sss summary::-webkit-details-marker{display:none}
 .ana .sss summary::after{content:"+";font:700 22px/1 Manrope,sans-serif;color:var(--vurgu)}
 .ana .sss details[open] summary::after{content:"−"}
+.mesaj-form{margin-top:26px;background:#fff;border:1px solid #ece8df;border-radius:16px;padding:22px;box-shadow:0 10px 30px -18px rgba(15,23,42,.25)}
+.mesaj-form h3{margin:0 0 4px;font:800 19px Manrope,sans-serif;color:var(--murekkep)}
+.mesaj-form .mf-alt{margin:0 0 14px;font-size:14px;color:#64748b}
+.mesaj-form label{display:block;margin-bottom:11px}
+.mesaj-form label span{display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:5px}
+.mesaj-form label i{font-style:normal;font-weight:400;color:#94a3b8}
+.mesaj-form input,.mesaj-form textarea{width:100%;box-sizing:border-box;border:1.5px solid #e2ddd2;border-radius:10px;padding:11px 12px;font:inherit;font-size:15px;background:#fcfbf8;color:var(--murekkep);transition:border-color .15s,box-shadow .15s}
+.mesaj-form textarea{resize:vertical;min-height:96px}
+.mesaj-form input:focus,.mesaj-form textarea:focus{outline:0;border-color:var(--vurgu);box-shadow:0 0 0 3px rgba(255,90,31,.15);background:#fff}
+.mesaj-form .mf-iki{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mesaj-form .mf-tuzak{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.mesaj-form .mf-gonder{width:100%;border:0;border-radius:11px;padding:13px;font:700 15.5px Manrope,sans-serif;color:#fff;background:var(--vurgu);cursor:pointer;transition:filter .15s,transform .15s}
+.mesaj-form .mf-gonder:hover{filter:brightness(1.06)}
+.mesaj-form .mf-gonder:disabled{opacity:.6;cursor:wait}
+.mesaj-form .mf-durum{margin-top:10px;font-size:14px;min-height:0}
+.mesaj-form .mf-durum.hata{color:#dc2626}
+.mesaj-form .mf-durum.tamam{color:#15803d;background:#ecfdf3;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px}
+@media (max-width:620px){.mesaj-form .mf-iki{grid-template-columns:1fr;gap:0}.mesaj-form{padding:18px}}
 
 /* alt bilgi */
 .ana .alt-bilgi{background:var(--murekkep);color:#b8c6db;padding:56px 0 0}

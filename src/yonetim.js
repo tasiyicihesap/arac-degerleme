@@ -4,6 +4,7 @@ import {
   piyasaYaz, katalogTemizle, katalogParcaYaz, kaskoFiyatlariniGuncelle, MODEL_EKLE, gorselSlug, gorselHaritasi, logoUrl, modelGorselUrl,
 } from './db.js';
 import { teklifHesapla, bazFiyat } from './fiyat.js';
+import { epostaGonder, whatsappGonder } from './bildirim.js';
 import { json, rastgeleHex, sifreOzet, sifreDogrula, CEREZ, oturumYaz, oturumOku, cerezAl, cerezBaslik } from './yardim.js';
 
 const OTURUM_SURE = 12 * 3600 * 1000;
@@ -98,10 +99,11 @@ export async function yonetimApi(req, env) {
         D.prepare('SELECT * FROM robot_log ORDER BY id DESC LIMIT 1'),
         D.prepare('SELECT id, tarih, ad, tel, marka, model, yil, km, teklif_min, teklif_max, durum FROM talepler ORDER BY id DESC LIMIT 8'),
         D.prepare('SELECT id, tarih, aciklama, etkilenen, geri_alindi FROM islemler ORDER BY id DESC LIMIT 5'),
+        D.prepare('SELECT COUNT(*) n FROM mesajlar WHERE okundu = 0'),
       ]);
       const n = (i) => int(r[i].results[0].n);
       return json({ satir: n(0), marka: n(1), model: n(2), talep_bugun: n(3), talep_yeni: n(4), talep_randevu: n(5), talep_toplam: n(6),
-        robot: r[7].results[0] || null, son_talepler: r[8].results, islem: r[9].results });
+        robot: r[7].results[0] || null, son_talepler: r[8].results, islem: r[9].results, mesaj_yeni: n(10) });
     }
 
     // --- fiyat tablosu ---
@@ -408,6 +410,30 @@ export async function yonetimApi(req, env) {
       await D.prepare('UPDATE talepler SET durum = ?, notlar = ? WHERE id = ?').bind(kes(g.durum ?? 'Yeni', 30), kes(g.notlar ?? '', 2000), int(g.id)).run();
       return json({ ok: 1 });
     }
+    // --- iletişim formu ve gelen e-postalar ---
+    case 'mesajlar': {
+      const { results } = await D.prepare('SELECT id, tarih, kaynak, ad, tel, eposta, konu, mesaj, okundu, eposta_durum, wa_durum FROM mesajlar ORDER BY id DESC LIMIT 500').all();
+      return json(results);
+    }
+    case 'mesaj_okundu': {
+      const g = await girdi();
+      if (g.hepsi) await D.prepare('UPDATE mesajlar SET okundu = 1 WHERE okundu = 0').run();
+      else await D.prepare('UPDATE mesajlar SET okundu = ? WHERE id = ?').bind(g.okundu === 0 ? 0 : 1, int(g.id)).run();
+      return json({ ok: 1 });
+    }
+    case 'mesaj_sil': {
+      const g = await girdi();
+      await D.prepare('DELETE FROM mesajlar WHERE id = ?').bind(int(g.id)).run();
+      return json({ ok: 1 });
+    }
+    case 'bildirim_dene': {
+      const A = await ayarlar(D);
+      const [ed, wd] = await Promise.all([
+        epostaGonder(env, A, { konu: 'OTOKABUL deneme bildirimi', metin: 'Bu bir deneme e-postasıdır. Siteden gelen mesajlar ve yeni teklif talepleri bu adrese gelecek.' }),
+        whatsappGonder(A, '✅ OTOKABUL deneme bildirimi: WhatsApp bildirimleri çalışıyor.'),
+      ]);
+      return json({ eposta: ed, whatsapp: wd });
+    }
     case 'talep_sil': {
       const g = await girdi();
       await D.batch([D.prepare('DELETE FROM talep_foto WHERE talep_id = ?').bind(int(g.id)), D.prepare('DELETE FROM talepler WHERE id = ?').bind(int(g.id))]);
@@ -520,7 +546,7 @@ async function tsbIndir() {
 
 // Tüm fiyatlar, talepler, ayarlar ve işlem geçmişi tek JSON dosyasında (TSB kataloğu hariç: o TSB'den yeniden alınır)
 async function yedekIndir(D) {
-  const tablolar = { metinler: 500, ayarlar: 2000, fiyatlar: 3000, versiyonlar: 1000, talepler: 400, islemler: 5, model_eslestirme: 2000, kalibrasyon: 2000, robot_log: 200 };
+  const tablolar = { metinler: 500, ayarlar: 2000, fiyatlar: 3000, versiyonlar: 1000, talepler: 400, mesajlar: 500, islemler: 5, model_eslestirme: 2000, kalibrasyon: 2000, robot_log: 200 };
   const parcalar = [];
   for (const [t, boy] of Object.entries(tablolar)) {
     const { results: kol } = await D.prepare(`PRAGMA table_info(${t})`).all();

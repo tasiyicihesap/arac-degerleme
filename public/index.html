@@ -210,6 +210,19 @@
       <p class="ust-etiket" data-metin="sss_etiket" data-bolum="Sık sorulanlar" data-etiket="Küçük üst başlık">Sık sorulanlar</p>
       <h2 data-metin="sss_baslik" data-bolum="Sık sorulanlar" data-etiket="Bölüm başlığı">Merak ettiklerin</h2>
       <p data-metin="sss_alt" data-bolum="Sık sorulanlar" data-etiket="Bölüm açıklaması">Aradığın cevabı bulamazsan bize yazman yeterli.</p>
+      <form class="mesaj-form" id="mesajForm" novalidate>
+        <h3 data-metin="form_baslik" data-bolum="İletişim formu" data-etiket="Form başlığı">Bize yaz</h3>
+        <p class="mf-alt" data-metin="form_alt" data-bolum="İletişim formu" data-etiket="Form açıklaması">Mesajın doğrudan ekibimize ulaşır, en kısa sürede dönüş yaparız.</p>
+        <label><span>Adın soyadın</span><input name="ad" maxlength="80" autocomplete="name" required></label>
+        <div class="mf-iki">
+          <label><span>Telefon</span><input name="tel" type="tel" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="05xx xxx xx xx"></label>
+          <label><span>E-posta <i>(isteğe bağlı)</i></span><input name="eposta" type="email" maxlength="120" autocomplete="email"></label>
+        </div>
+        <label><span>Mesajın</span><textarea name="mesaj" rows="4" maxlength="2000" required></textarea></label>
+        <label class="mf-tuzak" aria-hidden="true">Web sitesi<input name="web" tabindex="-1" autocomplete="off"></label>
+        <button type="submit" class="mf-gonder" data-metin="form_buton" data-bolum="İletişim formu" data-etiket="Gönder butonu">Mesajı gönder</button>
+        <div class="mf-durum" id="mesajDurum" role="status"></div>
+      </form>
     </div>
     <div>
       <details open><summary data-metin="s1_s" data-bolum="Sık sorulanlar" data-etiket="1. soru">Ön teklif nasıl hesaplanıyor?</summary><p data-metin="s1_c" data-bolum="Sık sorulanlar" data-etiket="1. cevap">Ön teklif, OTOKABUL olarak kendi geliştirdiğimiz fiyatlama algoritmasıyla hesaplanır. Sistem her gün güncellenen piyasa verisini esas alır; aracının motoru, paketi, kilometresi, boya-değişen ve tramer bilgisi de bu değere göre fiyata yansıtılır.</p></details>

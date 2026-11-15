@@ -42,6 +42,11 @@ export const VARSAYILAN_AYARLAR = {
   ]),
   // parça bazlı boya-değişen kesintileri {"kaput":{"lokal":1,"boyali":3,"degisen":6}}; boş alan: genel formül
   parca_oranlari: '',
+  // bildirimler: iletişim formu, bilgi@ adresine gelen e-postalar ve yeni teklif talepleri
+  bildirim_eposta: 'kaniirfanozcan@gmail.com',
+  wa_bildirim_tel: '905418673478',
+  wa_bildirim_anahtar: '',
+  bildirim_talep: '1',
   sifre: '',
 };
 
@@ -59,6 +64,7 @@ CREATE TABLE IF NOT EXISTS gorseller (tur TEXT, ad TEXT, uz TEXT, mime TEXT, boy
 CREATE TABLE IF NOT EXISTS talep_foto (id INTEGER PRIMARY KEY AUTOINCREMENT, talep_id INTEGER NOT NULL, mime TEXT, boyut INTEGER, veri BLOB);
 CREATE INDEX IF NOT EXISTS ix_talep_foto ON talep_foto(talep_id);
 CREATE TABLE IF NOT EXISTS metinler (k TEXT PRIMARY KEY, v TEXT);
+CREATE TABLE IF NOT EXISTS mesajlar (id INTEGER PRIMARY KEY AUTOINCREMENT, tarih TEXT, kaynak TEXT DEFAULT 'form', ad TEXT, tel TEXT, eposta TEXT, konu TEXT, mesaj TEXT, ip TEXT, okundu INTEGER DEFAULT 0, eposta_durum TEXT, wa_durum TEXT);
 CREATE TABLE IF NOT EXISTS gorsel_parca (tur TEXT, ad TEXT, sira INTEGER, veri BLOB, PRIMARY KEY(tur, ad, sira));
 `;
 

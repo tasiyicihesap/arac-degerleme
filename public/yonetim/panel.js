@@ -48,7 +48,7 @@
   });
 
   // ---------- gezinme ----------
-  var SAYFALAR = { ozet: cizOzet, talepler: cizTalepler, fiyatlar: cizFiyatlar, toplu: cizToplu, robot: cizRobot, katalog: cizKatalog, icerik: cizIcerik, ayarlar: cizAyarlar };
+  var SAYFALAR = { ozet: cizOzet, talepler: cizTalepler, mesajlar: cizMesajlar, fiyatlar: cizFiyatlar, toplu: cizToplu, robot: cizRobot, katalog: cizKatalog, icerik: cizIcerik, ayarlar: cizAyarlar };
   var markaListesi = [];
   function sayfa(ad, veri) {
     $$('#menu a').forEach(function (a) { a.classList.toggle('aktif', a.dataset.s === ad); });
@@ -64,7 +64,7 @@
     rozetGuncelle();
     otomatikRobot();
   }
-  var sonRandevu = null;
+  var sonRandevu = null, sonMesaj = null;
   setInterval(function () { if (!$('#uygulama').hidden) rozetGuncelle(); }, 30000);
   function rozetGuncelle() {
     api('ozet', undefined, true).then(function (o) {
@@ -74,6 +74,9 @@
       document.title = (o.talep_randevu ? '(' + o.talep_randevu + ' randevu) ' : n ? '(' + n + ') ' : '') + 'Yönetim — OTOKABUL Araç Alım';
       if (sonRandevu !== null && o.talep_randevu > sonRandevu) bildir('📅 Yeni randevu isteği geldi!');
       sonRandevu = o.talep_randevu;
+      var mr = $('#mesajRozet'), mn = +o.mesaj_yeni || 0; mr.hidden = !mn; mr.textContent = mn; mr.title = mn + ' okunmamış mesaj';
+      if (sonMesaj !== null && mn > sonMesaj) bildir('✉️ Yeni mesaj geldi!');
+      sonMesaj = mn;
     }).catch(function () {});
   }
 
@@ -142,6 +145,46 @@
   }
   var PARCA_AD = { on_tampon: 'Ön Tampon', kaput: 'Motor Kaputu', tavan: 'Tavan', bagaj: 'Bagaj Kapağı', arka_tampon: 'Arka Tampon', sol_on_camurluk: 'Sol Ön Çamurluk', sol_on_kapi: 'Sol Ön Kapı', sol_arka_kapi: 'Sol Arka Kapı', sol_arka_camurluk: 'Sol Arka Çamurluk', sag_on_camurluk: 'Sağ Ön Çamurluk', sag_on_kapi: 'Sağ Ön Kapı', sag_arka_kapi: 'Sağ Arka Kapı', sag_arka_camurluk: 'Sağ Arka Çamurluk' };
   var DURUM_AD = { lokal: 'Lokal boyalı', boyali: 'Boyalı', degisen: 'Değişen' };
+  // ---------- MESAJLAR (iletişim formu + bilgi@ adresine gelen e-postalar) ----------
+  var mesajCache = [];
+  function waNo(t) { t = String(t || '').replace(/\D/g, ''); if (t.indexOf('0') === 0) t = '9' + t; if (t.length === 10) t = '90' + t; return t; }
+  function durumIkon(d) { d = String(d || ''); return !d || d === 'kapalı' ? '<span class="soluk">—</span>' : d.indexOf('hata') === 0 ? '<span class="azl" title="' + esc(d) + '">✗ hata</span>' : '<span class="art" title="' + esc(d) + '">✓</span>'; }
+  function cizMesajlar(k) {
+    k.innerHTML = '<h1 class="bas">Mesajlar</h1><p class="bas-alt">Sitedeki iletişim formundan gelen mesajlar ve bilgi@otokabul.com.tr adresine gelen e-postalar. Bildirim ayarları: Ayarlar → Bildirimler.</p>' +
+      '<div class="satirlar"><select class="girdi" id="mFiltre"><option value="">Tümü</option><option value="yeni">Okunmamış</option><option value="form">Site formu</option><option value="eposta">E-posta</option></select><button class="btn" id="mHepsi">Hepsini okundu yap</button></div><div id="mListe">Yükleniyor…</div>';
+    var ciz = function () {
+      var f = $('#mFiltre', k).value;
+      var l = mesajCache.filter(function (m) { return !f || (f === 'yeni' ? !+m.okundu : m.kaynak === f); });
+      $('#mListe', k).innerHTML = !l.length ? '<p class="soluk">Mesaj yok.</p>' :
+        '<div class="tablo-kap" style="max-height:none"><table class="xl"><tr><th>Tarih</th><th>Kaynak</th><th>Ad</th><th>Telefon / e-posta</th><th>Mesaj</th><th title="Gönderilen e-posta bildirimi">E-posta</th><th title="Gönderilen WhatsApp bildirimi">WhatsApp</th></tr>' +
+        l.map(function (m) {
+          var ozet = (m.kaynak === 'eposta' ? m.konu : m.mesaj) || '';
+          return '<tr data-mid="' + m.id + '" style="cursor:pointer' + (+m.okundu ? '' : ';font-weight:700') + '"><td>' + esc(String(m.tarih).slice(5, 16)) + '</td><td>' + (m.kaynak === 'eposta' ? '📧 E-posta' : '📝 Form') + (+m.okundu ? '' : ' <span class="rozet Yeni">yeni</span>') + '</td><td>' + esc(m.ad) + '</td><td>' + esc([m.tel, m.eposta].filter(Boolean).join(' · ')) + '</td>' +
+            '<td>' + esc(ozet.length > 70 ? ozet.slice(0, 70) + '…' : ozet) + '</td><td>' + (m.kaynak === 'eposta' ? '<span class="art" title="' + esc(m.eposta_durum) + '">↪ iletildi</span>' : durumIkon(m.eposta_durum)) + '</td><td>' + durumIkon(m.wa_durum) + '</td></tr>';
+        }).join('') + '</table></div>';
+      $$('tr[data-mid]', k).forEach(function (t) { t.onclick = function () { mesajDetay(+t.dataset.mid); }; });
+    };
+    var yukle = function () { api('mesajlar').then(function (l) { mesajCache = l; ciz(); }); };
+    $('#mFiltre', k).onchange = ciz;
+    $('#mHepsi', k).onclick = function () { api('mesaj_okundu', { hepsi: 1 }).then(function () { yukle(); rozetGuncelle(); }); };
+    yukle();
+  }
+  function mesajDetay(id) {
+    var m = mesajCache.find(function (x) { return +x.id === id; }); if (!m) return;
+    var tel = waNo(m.tel);
+    $('#cekmeceIc').innerHTML = '<div class="satirlar" style="justify-content:space-between"><h2>' + esc(m.ad) + '</h2><button class="btn kucuk" id="kapat">Kapat ✕</button></div>' +
+      '<div class="satirlar">' + (m.tel ? '<a class="btn koyu" href="tel:' + esc(m.tel) + '">📞 Ara</a><a class="btn" style="background:#25d366;color:#fff;border-color:#25d366" target="_blank" href="https://wa.me/' + tel + '?text=' + encodeURIComponent('Merhaba ' + m.ad + ', OTOKABUL\'dan yazıyoruz. Mesajınızı aldık.') + '">WhatsApp</a>' : '') +
+      (m.eposta ? '<a class="btn" href="mailto:' + esc(m.eposta) + '?subject=' + encodeURIComponent('Re: ' + (m.konu || 'OTOKABUL')) + '">✉️ E-postayla yanıtla</a>' : '') + '</div>' +
+      '<dl class="bilgi"><dt>Tarih</dt><dd>' + esc(m.tarih) + '</dd><dt>Kaynak</dt><dd>' + (m.kaynak === 'eposta' ? 'bilgi@otokabul.com.tr adresine gelen e-posta' : 'Site iletişim formu') + '</dd>' +
+      (m.tel ? '<dt>Telefon</dt><dd>' + esc(m.tel) + '</dd>' : '') + (m.eposta ? '<dt>E-posta</dt><dd>' + esc(m.eposta) + '</dd>' : '') + (m.konu ? '<dt>Konu</dt><dd>' + esc(m.konu) + '</dd>' : '') +
+      '<dt>Mesaj</dt><dd style="white-space:pre-wrap">' + esc(m.mesaj) + '</dd><dt>E-posta bildirimi</dt><dd>' + esc(m.eposta_durum || '—') + '</dd><dt>WhatsApp bildirimi</dt><dd>' + esc(m.wa_durum || '—') + '</dd></dl>' +
+      '<div class="satirlar" style="margin-top:12px"><button class="btn" id="mOk">' + (+m.okundu ? 'Okunmadı yap' : 'Okundu yap') + '</button><button class="btn kirmizi" id="mSil">Sil</button></div>';
+    $('#cekmece').hidden = false;
+    $('#kapat').onclick = kapat;
+    if (!+m.okundu) api('mesaj_okundu', { id: m.id }, true).then(function () { m.okundu = 1; $('#mOk').textContent = 'Okunmadı yap'; rozetGuncelle(); });
+    $('#mOk').onclick = function () { var y = +m.okundu ? 0 : 1; api('mesaj_okundu', { id: m.id, okundu: y }).then(function () { m.okundu = y; kapat(); yenile(); }); };
+    $('#mSil').onclick = function () { if (confirm('Bu mesaj silinsin mi?')) api('mesaj_sil', { id: m.id }).then(function () { bildir('Silindi'); kapat(); yenile(); }); };
+  }
   function talepDetay(id) {
     var go = function (t) {
       var h = {}, d = {}; try { h = JSON.parse(t.hasar || '{}'); d = JSON.parse(t.detay || '{}'); } catch (e) {}
@@ -655,6 +698,8 @@
     ['Hasar', [['lokal_boya', 'Lokal boyalı parça başına −%'], ['boyali', 'Boyalı parça başına −%'], ['degisen', 'Değişen parça başına −%'], ['tavan_kat', 'Tavan / kaput çarpanı', 'Kritik parçalarda kesinti × bu sayı'],
       ['tramer_kat', 'Tramer katsayısı', 'Tramer/piyasa × 100 × katsayı = −%'], ['tramer_sinir', 'Tramer kesintisi en fazla %']]],
     ['Yakıt ve vites farkı (%)', [['yakit_Benzin', 'Benzin'], ['yakit_Dizel', 'Dizel'], ['yakit_LPG', 'LPG'], ['yakit_Hibrit', 'Hibrit'], ['yakit_Elektrik', 'Elektrik'], ['vites_Manuel', 'Manuel'], ['vites_Otomatik', 'Otomatik'], ['vites_Yarı Otomatik', 'Yarı Otomatik']]],
+    ['Bildirimler', [['bildirim_eposta', 'Bildirim e-postası', 'Mesajlar ve talepler buraya gelir; Cloudflare\'de doğrulanmış adres olmalı'], ['wa_bildirim_tel', 'WhatsApp bildirim numarası', '90 ile, ör. 905418673478'],
+      ['wa_bildirim_anahtar', 'WhatsApp bildirim anahtarı (CallMeBot)', 'Aşağıdaki kutudaki adımlarla alınır'], ['bildirim_talep', 'Yeni teklif talebinde de bildir', '1 = evet, 0 = hayır']]],
     ['Robot', [['robot_url', 'AraçRadar veri adresi'], ['robot_min_adet', 'En az ilan sayısı'], ['robot_oto', 'Panel açılınca otomatik tara', '1 = son tarama 24 saatten eskiyse tara ve kaydet']]]
   ];
   // ---------- site içeriği: metinler, donanım listesi, görseller ----------
@@ -761,13 +806,20 @@
               return '<td><input class="girdi kucuk-girdi" data-po="' + p + '|' + d + '" value="' + esc(v) + '" placeholder="' + String(Math.round(gen[d] * 100) / 100).replace('.', ',') + '"></td>';
             }).join('') + '</tr>';
           }).join('') + '</table></div><div class="satirlar" style="margin-top:10px"><button class="btn ana" id="poKaydet">Kesintileri kaydet</button><button class="btn" id="poTemizle">Hepsini boşalt</button></div></div>' +
+        '<div class="kutu"><h2>WhatsApp bildirimlerini aç</h2><p class="soluk" style="margin-top:0">Siteden mesaj, yeni teklif talebi ya da bilgi@ adresine e-posta gelince telefonuna WhatsApp mesajı gelir. Ücretsiz CallMeBot servisiyle çalışır, bir kez kurulur:</p>' +
+          '<ol style="margin:0 0 12px;padding-left:20px;line-height:1.7"><li>Bildirimin geleceği telefonda CallMeBot\'un WhatsApp numarasını rehbere kaydet (güncel numara: <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noopener">callmebot.com</a>).</li><li>Bu numaraya WhatsApp\'tan şu mesajı gönder: <b>I allow callmebot to send me messages</b></li><li>Birkaç dakika içinde gelen mesajdaki <b>APIKEY</b> sayısını yukarıdaki "WhatsApp bildirim anahtarı" kutusuna yaz, ayarları kaydet.</li></ol>' +
+          '<div class="satirlar"><button class="btn koyu" id="bDene">Deneme bildirimi gönder</button></div><div id="bSonuc" class="soluk" style="margin-top:8px"></div></div>' +
         '<div class="kutu"><h2>Şifre değiştir</h2><div class="alanlar"><label>Mevcut şifre<input type="password" class="girdi" id="pEski"></label><label>Yeni şifre<input type="password" class="girdi" id="pYeni"></label></div><div class="satirlar" style="margin-top:10px"><button class="btn" id="pKaydet">Şifreyi değiştir</button></div></div>' +
         '<div class="kutu"><h2>Yedek</h2><p class="soluk" style="margin-top:0">Tüm fiyatlar, talepler ve ayarlar tek dosyada. Ayda bir indirip saklayın.</p><a class="btn" href="api.php?a=yedek_indir">⬇ Veritabanı yedeğini indir</a></div></div></div>';
       $('#aKaydet', k).onclick = function () {
         var d = {}; $$('[data-k]', k).forEach(function (i) { d[i.dataset.k] = i.value.replace(',', '.'); });
         if (d.robot_url !== undefined) d.robot_url = $('[data-k="robot_url"]', k).value.trim();
-        ['firma_adi', 'firma_alt', 'telefon', 'whatsapp', 'eposta', 'adres'].forEach(function (x) { d[x] = $('[data-k="' + x + '"]', k).value; });
+        ['firma_adi', 'firma_alt', 'telefon', 'whatsapp', 'eposta', 'adres', 'bildirim_eposta', 'wa_bildirim_tel', 'wa_bildirim_anahtar'].forEach(function (x) { d[x] = $('[data-k="' + x + '"]', k).value; });
         api('ayar_kaydet', d).then(function () { bildir('Ayarlar kaydedildi'); });
+      };
+      $('#bDene', k).onclick = function () {
+        $('#bSonuc', k).textContent = 'Gönderiliyor… (önce ayarları kaydettiğinden emin ol)';
+        api('bildirim_dene', {}).then(function (r) { $('#bSonuc', k).innerHTML = 'E-posta: <b>' + esc(r.eposta) + '</b><br>WhatsApp: <b>' + esc(r.whatsapp) + '</b>'; });
       };
       $('#sHesap', k).onclick = function () {
         var h = {}, P = ['kaput', 'sol_on_kapi', 'sag_on_kapi', 'sol_arka_kapi', 'sag_arka_kapi', 'sol_on_camurluk', 'sag_on_camurluk', 'bagaj', 'on_tampon', 'arka_tampon'], i = 0;

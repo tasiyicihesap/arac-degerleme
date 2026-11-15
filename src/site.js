@@ -2,8 +2,10 @@
 import { db, ayarlar, simdi, int, str, kes, dolu, buYil, gorselHaritasi, logoUrl, modelGorselUrl, donanimlar } from './db.js';
 import { teklifHesapla, PARCALAR, DURUMLAR } from './fiyat.js';
 import { json, rastgeleHex } from './yardim.js';
+import { epostaGonder, whatsappGonder } from './bildirim.js';
 
-export async function siteApi(req, env) {
+export async function siteApi(req, env, ctx) {
+  const arkada = (p) => (ctx && ctx.waitUntil ? ctx.waitUntil(p.catch((e) => console.error(e))) : p);
   const url = new URL(req.url);
   const q = (k) => url.searchParams.get(k) ?? '';
   const a = q('a');
@@ -89,8 +91,46 @@ export async function siteApi(req, env) {
         kes(g.versiyon, 80), str(g.yakit), str(g.vites), str(g.kasa), int(g.km), kes(g.renk, 30), Object.keys(hasar).length ? JSON.stringify(hasar) : '[]',
         int(g.tramer), dolu(g.agir) ? 1 : 0, s.baz, s.min, s.max, JSON.stringify(s), ip, anahtar, g.donanim.length ? JSON.stringify(g.donanim) : '', kes(str(g.aciklama).trim(), 1500)).run();
       const no = int(r.meta.last_row_id);
+      if (A.bildirim_talep === '1') {
+        const tf = (n) => new Intl.NumberFormat('tr-TR').format(n);
+        const hs = Object.keys(hasar).length;
+        const ozet = `Yeni teklif talebi #${no}\n${ad} — ${tel}\n${str(g.marka)} ${str(g.model)} ${int(g.yil)} ${kes(g.versiyon, 80)}\n${tf(int(g.km))} km · ${hs ? hs + ' parça boya/değişen' : 'hatasız'}${int(g.tramer) ? ' · tramer ' + tf(int(g.tramer)) + ' TL' : ''}\nTeklif: ${s.min ? tf(s.min) + ' – ' + tf(s.max) + ' TL' : 'otomatik teklif yok'}`;
+        arkada(Promise.all([
+          epostaGonder(env, A, { konu: `Yeni teklif talebi #${no}: ${str(g.marka)} ${str(g.model)} ${int(g.yil)}`, metin: ozet + '\n\nDetaylar yönetim panelinde, Teklif Talepleri bölümünde.' }),
+          whatsappGonder(A, '🚗 ' + ozet),
+        ]));
+      }
       if (A.teklif_goster !== '1' && s.durum === 'ok') { s.durum = 'gizli'; s.min = s.max = 0; s.mesaj = 'Talebiniz alındı. Uzmanımız teklifimizle birlikte kısa süre içinde sizi arayacak.'; }
       return json({ no, anahtar, durum: s.durum, min: s.min, max: s.max, mesaj: s.mesaj });
+    }
+    case 'mesaj': { // ana sayfadaki iletişim formu
+      if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);
+      let g = {}; try { g = (await req.json()) || {}; } catch (e) {}
+      if (typeof g !== 'object' || Array.isArray(g)) g = {};
+      if (str(g.web) !== '') return json({ ok: 1 }); // bot tuzağı
+      const ad = kes(str(g.ad).trim(), 80).trim();
+      const tel = kes(str(g.tel).replace(/[^\d+]/g, ''), 20);
+      const eposta = kes(str(g.eposta).trim(), 120);
+      const mesaj = kes(str(g.mesaj).trim(), 2000).trim();
+      if (ad === '') return json({ hata: 'Lütfen adını yaz.' }, 400);
+      if (tel.replace(/\D/g, '').length < 10 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(eposta)) return json({ hata: 'Sana dönebilmemiz için telefon ya da e-posta adresi gerekli.' }, 400);
+      if (eposta && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(eposta)) return json({ hata: 'E-posta adresi geçersiz görünüyor.' }, 400);
+      if (Array.from(mesaj).length < 5) return json({ hata: 'Lütfen mesajını yaz.' }, 400);
+      const ip = req.headers.get('CF-Connecting-IP') || '';
+      const c = await D.prepare("SELECT COUNT(*) n FROM mesajlar WHERE kaynak = 'form' AND ip = ? AND tarih > ?").bind(ip, simdi(Date.now() - 3600 * 1000)).first();
+      if (int(c.n) >= 5) return json({ hata: 'Çok fazla mesaj gönderildi, lütfen bizi telefonla ara.' }, 429);
+      const r = await D.prepare("INSERT INTO mesajlar(tarih, kaynak, ad, tel, eposta, konu, mesaj, ip) VALUES(?, 'form', ?, ?, ?, 'Site iletişim formu', ?, ?)").bind(simdi(), ad, tel, eposta, mesaj, ip).run();
+      const id = int(r.meta.last_row_id);
+      const A = await ayarlar(D);
+      const bilgi = `${ad}${tel ? '\nTelefon: ' + tel : ''}${eposta ? '\nE-posta: ' + eposta : ''}`;
+      arkada((async () => {
+        const [ed, wd] = await Promise.all([
+          epostaGonder(env, A, { konu: 'Siteden yeni mesaj: ' + ad, metin: `Siteden yeni mesaj var.\n\n${bilgi}\n\nMesaj:\n${mesaj}\n\nBu e-postayı yanıtlarsan cevabın doğrudan müşteriye gider${eposta ? '' : ' (müşteri e-posta yazmadı, telefonla dönmen gerekiyor)'}.`, yanitla: eposta }),
+          whatsappGonder(A, `✉️ Siteden yeni mesaj\n${bilgi}\n\n${kes(mesaj, 600)}`),
+        ]);
+        await D.prepare('UPDATE mesajlar SET eposta_durum = ?, wa_durum = ? WHERE id = ?').bind(ed, wd, id).run();
+      })());
+      return json({ ok: 1 });
     }
     case 'randevu': {
       if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);

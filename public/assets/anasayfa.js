@@ -74,4 +74,26 @@
   document.querySelectorAll('[data-odak="sihirbaz"], a[href="#degerle"]').forEach(function (a) {
     a.addEventListener('click', function (ev) { ev.preventDefault(); if (window.OTK) window.OTK.basla(); });
   });
+
+  // iletişim formu: mesaj panele kaydedilir, e-posta ve WhatsApp bildirimi gider
+  var mf = $('#mesajForm');
+  if (mf) mf.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var d = {}; ['ad', 'tel', 'eposta', 'mesaj', 'web'].forEach(function (k) { d[k] = mf.elements[k].value.trim(); });
+    var durum = $('#mesajDurum'), btn = mf.querySelector('.mf-gonder');
+    var hata = function (m) { durum.className = 'mf-durum hata'; durum.textContent = m; };
+    if (!d.ad) return hata('Lütfen adını yaz.');
+    if (d.tel.replace(/\D/g, '').length < 10 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.eposta)) return hata('Sana dönebilmemiz için telefon ya da e-posta adresi yaz.');
+    if (d.mesaj.length < 5) return hata('Lütfen mesajını yaz.');
+    btn.disabled = true; durum.className = 'mf-durum'; durum.textContent = 'Gönderiliyor…';
+    fetch('api.php?a=mesaj', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.hata) { hata(j.hata); return; }
+        mf.reset();
+        durum.className = 'mf-durum tamam'; durum.textContent = 'Teşekkürler, mesajın bize ulaştı. En kısa sürede dönüş yapacağız.';
+      })
+      .catch(function () { hata('Mesaj gönderilemedi. Lütfen bizi telefonla ya da WhatsApp\'tan ara.'); })
+      .then(function () { btn.disabled = false; });
+  });
 })();
