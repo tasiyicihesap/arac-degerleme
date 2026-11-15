@@ -28,7 +28,15 @@
       if (k2 && f.telefon) { k2.href = 'tel:' + f.telefon.replace(/[^\d+]/g, ''); k2.querySelector('b').textContent = 'Bizi arayın'; k2.querySelector('small').textContent = 'Aracını telefonda anlat, uzmanımız teklifini hazırlasın.'; }
       else if (k2) k2.hidden = true;
     }
-    if (f.adres) goster($('#seritAdres'), null, f.adres);
+    if (f.eposta) {
+      var ep = 'mailto:' + f.eposta.trim();
+      goster($('#seritEposta'), ep, f.eposta.trim()); goster($('#yardimEposta'), ep); goster($('#altEposta'), ep, f.eposta.trim());
+    }
+    if (f.telefon) goster($('#altTelLink'), 'tel:' + f.telefon.replace(/[^\d+]/g, ''));
+    if (f.adres) {
+      var harita = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(f.adres);
+      goster($('#seritAdres'), harita, f.adres); var al = $('#altAdresLink'); if (al) al.href = harita;
+    }
   });
 
   document.addEventListener('otk:markalar', function (e) {

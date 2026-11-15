@@ -6,6 +6,7 @@ export const VARSAYILAN_AYARLAR = {
   firma_alt: '',
   telefon: '',
   whatsapp: '',
+  eposta: '',
   adres: 'İstanbul',
   alim_marji: '10',
   aralik: '3',

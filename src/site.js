@@ -11,7 +11,7 @@ export async function siteApi(req, env) {
   switch (a) {
     case 'firma': {
       const A = await ayarlar(D);
-      return json({ ad: A.firma_adi, alt: A.firma_alt, telefon: A.telefon, whatsapp: A.whatsapp, adres: A.adres, teklif_goster: A.teklif_goster === '1',
+      return json({ ad: A.firma_adi, alt: A.firma_alt, telefon: A.telefon, whatsapp: A.whatsapp, eposta: A.eposta, adres: A.adres, teklif_goster: A.teklif_goster === '1',
         donanimlar: donanimlar(A).map((d) => ({ ad: d.ad, kosul: d.kosul })) });
     }
     case 'metinler': { // panelden değiştirilen site cümleleri

@@ -647,7 +647,7 @@
 
   // ---------- AYARLAR ----------
   var AYAR_GRUPLARI = [
-    ['Firma ve site', [['firma_adi', 'Firma adı'], ['firma_alt', 'Alt başlık'], ['telefon', 'Telefon', 'Sitede ve "Hemen ara" butonunda'], ['whatsapp', 'WhatsApp numarası', '90 ile, ör. 905321234567'], ['adres', 'Adres / şehir'],
+    ['Firma ve site', [['firma_adi', 'Firma adı'], ['firma_alt', 'Alt başlık'], ['telefon', 'Telefon', 'Sitede ve "Hemen ara" butonunda'], ['whatsapp', 'WhatsApp numarası', '90 ile, ör. 905321234567'], ['eposta', 'E-posta adresi'], ['adres', 'Adres'],
       ['teklif_goster', 'Müşteriye ön teklif göster', '1 = göster, 0 = "sizi arayacağız"']]],
     ['Teklif hesabı', [['alim_marji', 'Alım marjı %', 'İlan medyanından düşülen pay'], ['aralik', 'Teklif aralığı ±%'], ['yuvarla', 'Yuvarlama (TL)'], ['yil_kaybi', 'Yıllık değer farkı %', 'Tabloda olmayan yıl tahmini için'],
       ['min_yil', 'En eski model yılı', 'Daha eskisine otomatik teklif yok'], ['max_km', 'En yüksek km', 'Üstüne otomatik teklif yok']]],
@@ -766,7 +766,7 @@
       $('#aKaydet', k).onclick = function () {
         var d = {}; $$('[data-k]', k).forEach(function (i) { d[i.dataset.k] = i.value.replace(',', '.'); });
         if (d.robot_url !== undefined) d.robot_url = $('[data-k="robot_url"]', k).value.trim();
-        ['firma_adi', 'firma_alt', 'telefon', 'adres'].forEach(function (x) { d[x] = $('[data-k="' + x + '"]', k).value; });
+        ['firma_adi', 'firma_alt', 'telefon', 'whatsapp', 'eposta', 'adres'].forEach(function (x) { d[x] = $('[data-k="' + x + '"]', k).value; });
         api('ayar_kaydet', d).then(function () { bildir('Ayarlar kaydedildi'); });
       };
       $('#sHesap', k).onclick = function () {
