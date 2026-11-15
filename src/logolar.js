@@ -1,0 +1,2 @@
+// Pakette gelen marka logoları (public/assets/logolar/*.png)
+export const LOGOLAR = new Set('alfa-romeo aston-martin audi bentley bmw byd cadillac chery chevrolet chrysler citroen cupra dacia daewoo daihatsu dodge ds-automobiles ferrari fiat ford geely genesis honda hongqi hyundai infiniti isuzu jaguar jeep kia lada lamborghini lancia land-rover leapmotor lexus lincoln maserati mazda mercedes-benz mg mini mitsubishi nissan omoda opel peugeot porsche proton renault rolls-royce rover saab seat skoda smart subaru suzuki tata tesla toyota volkswagen volvo '.trim().split(' '));

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Yönetim — OTOKABUL Araç Alım</title>
+<link rel="stylesheet" href="panel.css">
+</head>
+<body>
+
+<div id="girisEkrani" class="giris" hidden>
+  <form class="giris-kutu" id="girisForm">
+    <div class="logo"><span>OTO</span>KABUL</div>
+    <h1 id="girisBaslik">Yönetim Paneli</h1>
+    <p id="girisNot" class="soluk"></p>
+    <input type="password" id="girisSifre" placeholder="Şifre" autocomplete="current-password" required>
+    <input type="password" id="girisSifre2" placeholder="Şifre (tekrar)" autocomplete="new-password" hidden>
+    <button class="btn ana" type="submit" id="girisBtn">Giriş</button>
+    <div class="hata" id="girisHata"></div>
+  </form>
+</div>
+
+<div id="uygulama" class="uyg" hidden>
+  <aside class="yan">
+    <div class="logo"><span>OTO</span>KABUL<small>Araç Alım</small></div>
+    <nav id="menu">
+      <a data-s="ozet" class="aktif">📊 Özet</a>
+      <a data-s="talepler">📥 Teklif Talepleri <b id="yeniRozet" hidden></b></a>
+      <a data-s="fiyatlar">🧮 Fiyat Tablosu</a>
+      <a data-s="toplu">⚡ Toplu Fiyat Değişimi</a>
+      <a data-s="robot">🤖 Fiyat Robotu</a>
+      <a data-s="katalog">🚗 Araç Kataloğu</a>
+      <a data-s="ayarlar">⚙️ Ayarlar</a>
+    </nav>
+    <div class="yan-alt">
+      <a href="../" target="_blank">Siteyi aç ↗</a>
+      <a id="cikis">Çıkış</a>
+    </div>
+  </aside>
+  <main class="ana-alan">
+    <section data-sayfa="ozet"></section>
+    <section data-sayfa="talepler" hidden></section>
+    <section data-sayfa="fiyatlar" hidden></section>
+    <section data-sayfa="toplu" hidden></section>
+    <section data-sayfa="robot" hidden></section>
+    <section data-sayfa="katalog" hidden></section>
+    <section data-sayfa="ayarlar" hidden></section>
+  </main>
+</div>
+
+<div class="cekmece" id="cekmece" hidden><div class="cekmece-ic" id="cekmeceIc"></div></div>
+<div class="bildirim" id="bildirim"></div>
+
+<script src="../assets/robot-core.js"></script>
+<script src="../assets/katalog-core.js"></script>
+<script src="xlsx.full.min.js" defer></script>
+<script src="panel.js"></script>
+</body>
+</html>

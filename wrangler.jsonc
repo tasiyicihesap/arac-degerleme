@@ -1,0 +1,14 @@
+{
+  // OTOKABUL araç alım sitesi — Cloudflare Workers + D1
+  "name": "arac-degerleme",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api.php", "/yonetim/api.php", "/yuklemeler/*"]
+  },
+  // Veritabanı ilk yayında Cloudflare tarafından otomatik oluşturulur
+  "d1_databases": [{ "binding": "DB", "database_name": "otokabul-db" }],
+  "observability": { "enabled": true }
+}

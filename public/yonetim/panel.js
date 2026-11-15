@@ -1,0 +1,685 @@
+/* OTOKABUL Araç Alım — Yönetim Paneli */
+(function () {
+  'use strict';
+  var $ = function (s, k) { return (k || document).querySelector(s); };
+  var $$ = function (s, k) { return Array.prototype.slice.call((k || document).querySelectorAll(s)); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var NF = new Intl.NumberFormat('tr-TR');
+  var tl = function (n) { return n ? NF.format(Math.round(n)) : '—'; };
+  var yuzde = function (n, isaret) { n = +n || 0; var s = (n > 0 && isaret !== false ? '+' : '') + n.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) + '%'; return '<span class="' + (n > 0 ? 'art' : n < 0 ? 'azl' : '') + '">' + s + '</span>'; };
+  var csrf = null;
+
+  function api(a, govde, sessiz) {
+    return fetch('api.php?a=' + a, govde !== undefined ? { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF': csrf || '' }, body: JSON.stringify(govde) } : { headers: { 'X-CSRF': csrf || '' } })
+      .then(function (r) {
+        return r.json().catch(function () { return { hata: 'Sunucu yanıtı okunamadı (' + r.status + ')' }; }).then(function (j) {
+          if (r.status === 401 && a !== 'giris') { girisGoster(); throw new Error('Oturum kapandı'); }
+          if (!r.ok) { if (!sessiz) bildir(j.hata || 'Hata', true); throw new Error(j.hata || 'Hata'); }
+          return j;
+        });
+      });
+  }
+  function bildir(m, hata) {
+    var d = document.createElement('div'); if (hata) d.className = 'hata'; d.textContent = m;
+    $('#bildirim').appendChild(d); setTimeout(function () { d.remove(); }, hata ? 6000 : 3500);
+  }
+
+  // ---------- giriş ----------
+  var kurulum = false;
+  function girisGoster() {
+    $('#uygulama').hidden = true; $('#girisEkrani').hidden = false;
+    $('#girisBaslik').textContent = kurulum ? 'İlk kurulum' : 'Yönetim Paneli';
+    $('#girisNot').textContent = kurulum ? 'Panel için bir şifre belirleyin (en az 6 karakter). Bu şifreyle giriş yapacaksınız.' : '';
+    $('#girisSifre2').hidden = !kurulum; $('#girisBtn').textContent = kurulum ? 'Şifreyi kaydet ve gir' : 'Giriş';
+    $('#girisSifre').focus();
+  }
+  $('#girisForm').onsubmit = function (e) {
+    e.preventDefault(); $('#girisHata').textContent = '';
+    var s = $('#girisSifre').value;
+    if (kurulum && s !== $('#girisSifre2').value) { $('#girisHata').textContent = 'Şifreler aynı değil.'; return; }
+    api(kurulum ? 'kurulum' : 'giris', { sifre: s }, true).then(function (j) { csrf = j.csrf; kurulum = false; baslat(); })
+      .catch(function (e) { $('#girisHata').textContent = e.message; });
+  };
+  $('#cikis').onclick = function () { api('cikis', {}).then(function () { location.reload(); }); };
+
+  api('durum').then(function (d) {
+    kurulum = d.kurulum; csrf = d.csrf;
+    if (d.giris) baslat(); else girisGoster();
+  });
+
+  // ---------- gezinme ----------
+  var SAYFALAR = { ozet: cizOzet, talepler: cizTalepler, fiyatlar: cizFiyatlar, toplu: cizToplu, robot: cizRobot, katalog: cizKatalog, ayarlar: cizAyarlar };
+  var markaListesi = [];
+  function sayfa(ad, veri) {
+    $$('#menu a').forEach(function (a) { a.classList.toggle('aktif', a.dataset.s === ad); });
+    $$('[data-sayfa]').forEach(function (s) { s.hidden = s.dataset.sayfa !== ad; });
+    location.hash = ad;
+    SAYFALAR[ad]($('[data-sayfa="' + ad + '"]'), veri);
+  }
+  $('#menu').onclick = function (e) { var a = e.target.closest('a'); if (a) sayfa(a.dataset.s); };
+  function baslat() {
+    $('#girisEkrani').hidden = true; $('#uygulama').hidden = false;
+    api('markalar').then(function (l) { markaListesi = l; });
+    var h = location.hash.slice(1); sayfa(SAYFALAR[h] ? h : 'ozet');
+    rozetGuncelle();
+    otomatikRobot();
+  }
+  var sonRandevu = null;
+  setInterval(function () { if (!$('#uygulama').hidden) rozetGuncelle(); }, 30000);
+  function rozetGuncelle() {
+    api('ozet', undefined, true).then(function (o) {
+      var n = o.talep_yeni + o.talep_randevu, r = $('#yeniRozet');
+      r.hidden = !n; r.textContent = n; r.title = o.talep_randevu + ' randevu isteği, ' + o.talep_yeni + ' yeni talep';
+      r.classList.toggle('randevu-var', o.talep_randevu > 0);
+      document.title = (o.talep_randevu ? '(' + o.talep_randevu + ' randevu) ' : n ? '(' + n + ') ' : '') + 'Yönetim — OTOKABUL Araç Alım';
+      if (sonRandevu !== null && o.talep_randevu > sonRandevu) bildir('📅 Yeni randevu isteği geldi!');
+      sonRandevu = o.talep_randevu;
+    }).catch(function () {});
+  }
+
+  // ---------- ÖZET ----------
+  function cizOzet(k) {
+    k.innerHTML = '<h1 class="bas">Özet</h1><p class="bas-alt">Bugünün durumu</p><div id="oz">Yükleniyor…</div>';
+    api('ozet').then(function (o) {
+      var r = o.robot;
+      $('#oz', k).innerHTML =
+        '<div class="kartlar">' +
+        '<div class="kart"><div class="s">Bugün gelen talep</div><div class="d">' + o.talep_bugun + '</div></div>' +
+        '<div class="kart" style="border-color:#86efac;background:#f0fdf4"><div class="s">📅 Randevu isteyen</div><div class="d" style="color:var(--y)">' + o.talep_randevu + '</div></div>' +
+        '<div class="kart"><div class="s">Bekleyen (Yeni)</div><div class="d">' + o.talep_yeni + ' <small>/ ' + o.talep_toplam + '</small></div></div>' +
+        '<div class="kart"><div class="s">Fiyat satırı</div><div class="d">' + NF.format(o.satir) + '</div></div>' +
+        '<div class="kart"><div class="s">Marka / model</div><div class="d">' + o.marka + ' <small>/ ' + o.model + '</small></div></div>' +
+        '<div class="kart"><div class="s">Son robot taraması</div><div class="d" style="font-size:16px">' + (r ? esc(r.tarih) + '<br><small>' + NF.format(r.cozulen) + ' ilan · ' + (r.degisim ? yuzde(r.degisim) + ' piyasa' : '') + '</small>' : '—') + '</div></div>' +
+        '</div>' +
+        '<div class="iki-kolon"><div class="kutu"><h2>Son talepler</h2>' + talepTablosu(o.son_talepler, true) + '<div class="alt-not"><a data-git="talepler">Tümünü gör →</a></div></div>' +
+        '<div class="kutu"><h2>Son fiyat işlemleri</h2>' + (o.islem.length ? '<table class="xl"><tr><th>Tarih</th><th>İşlem</th><th>Satır</th></tr>' + o.islem.map(function (i) { return '<tr><td>' + esc(i.tarih) + '</td><td>' + esc(i.aciklama) + (i.geri_alindi ? ' <span class="rozet">geri alındı</span>' : '') + '</td><td class="s">' + i.etkilenen + '</td></tr>'; }).join('') + '</table>' : '<p class="soluk">Henüz işlem yok.</p>') +
+        '<div class="alt-not"><a data-git="toplu">Toplu fiyat değişimi →</a></div></div></div>';
+      $$('[data-git]', k).forEach(function (a) { a.onclick = function () { sayfa(a.dataset.git); }; });
+      $$('tr[data-id]', k).forEach(function (t) { t.onclick = function () { talepDetay(+t.dataset.id); }; });
+    });
+  }
+
+  // ---------- TALEPLER ----------
+  var DURUMLAR = ['Yeni', 'Randevu İstedi', 'Arandı', 'Ekspertiz', 'Alındı', 'Vazgeçti', 'Uygun değil'];
+  var talepCache = [];
+  function hasarOzet(h) {
+    try { h = typeof h === 'string' ? JSON.parse(h) : h; } catch (e) { h = {}; }
+    var s = { lokal: 0, boyali: 0, degisen: 0 }; Object.keys(h || {}).forEach(function (p) { s[h[p]]++; });
+    var t = []; if (s.lokal) t.push(s.lokal + ' lokal'); if (s.boyali) t.push(s.boyali + ' boya'); if (s.degisen) t.push(s.degisen + ' değ.');
+    return t.join(', ') || 'Hatasız';
+  }
+  function talepTablosu(l, kisa) {
+    if (!l.length) return '<p class="soluk">Henüz talep yok.</p>';
+    return '<div class="tablo-kap" style="max-height:none"><table class="xl"><tr><th>No</th><th>Tarih</th><th>Ad</th><th>Telefon</th>' + (kisa ? '' : '<th>İl</th>') + '<th>Araç</th><th>Km</th>' + (kisa ? '' : '<th>Hasar</th><th>Tramer</th>') + '<th>Ön teklif</th><th>Durum</th></tr>' +
+      l.map(function (t) {
+        return '<tr data-id="' + t.id + '" style="cursor:pointer"><td class="sat-no">' + t.id + '</td><td>' + esc(String(t.tarih).slice(5, 16)) + '</td><td>' + esc(t.ad) + '</td><td>' + esc(t.tel) + '</td>' + (kisa ? '' : '<td>' + esc(t.il) + '</td>') +
+          '<td>' + esc(t.yil + ' ' + t.marka + ' ' + t.model) + '</td><td class="s">' + tl(t.km) + '</td>' + (kisa ? '' : '<td>' + hasarOzet(t.hasar) + (t.agir == 1 ? ' <b class="azl">AĞIR</b>' : '') + '</td><td class="s">' + (t.tramer ? tl(t.tramer) : '—') + '</td>') +
+          '<td class="s">' + (t.teklif_min ? tl(t.teklif_min) + ' – ' + tl(t.teklif_max) : '<span class="soluk">ekspertiz</span>') + '</td><td><span class="rozet ' + esc(String(t.durum).split(' ')[0]) + '">' + esc(t.durum) + '</span></td></tr>';
+      }).join('') + '</table></div>';
+  }
+  function cizTalepler(k) {
+    k.innerHTML = '<h1 class="bas">Teklif Talepleri</h1><p class="bas-alt">Sitedeki değerleme formunu dolduran müşteriler. Satıra tıklayınca detay açılır.</p>' +
+      '<div class="satirlar"><input class="girdi" id="tAra" placeholder="Ad, telefon, marka ara…" style="width:260px"><select class="girdi" id="tDurum"><option value="">Tüm durumlar</option>' + DURUMLAR.map(function (d) { return '<option>' + d + '</option>'; }).join('') + '</select>' +
+      '<button class="btn" id="tCsv">Excel\'e aktar (CSV)</button></div><div id="tListe">Yükleniyor…</div>';
+    var yukle = function () {
+      api('talepler', { ara: $('#tAra', k).value, durum: $('#tDurum', k).value }).then(function (l) {
+        talepCache = l; $('#tListe', k).innerHTML = talepTablosu(l);
+        $$('tr[data-id]', k).forEach(function (t) { t.onclick = function () { talepDetay(+t.dataset.id); }; });
+      });
+    };
+    var zaman; $('#tAra', k).oninput = function () { clearTimeout(zaman); zaman = setTimeout(yukle, 250); };
+    $('#tDurum', k).onchange = yukle;
+    $('#tCsv', k).onclick = function () {
+      var bas = ['No', 'Tarih', 'Ad', 'Telefon', 'İl', 'Marka', 'Model', 'Yıl', 'Versiyon', 'Yakıt', 'Vites', 'Km', 'Renk', 'Hasar', 'Tramer', 'Ağır hasar', 'Teklif min', 'Teklif max', 'Durum', 'Not'];
+      var sat = talepCache.map(function (t) { return [t.id, t.tarih, t.ad, t.tel, t.il, t.marka, t.model, t.yil, t.versiyon, t.yakit, t.vites, t.km, t.renk, hasarOzet(t.hasar), t.tramer, t.agir == 1 ? 'Evet' : 'Hayır', t.teklif_min, t.teklif_max, t.durum, t.notlar]; });
+      csvIndir('teklif_talepleri.csv', [bas].concat(sat));
+    };
+    yukle();
+  }
+  function csvIndir(ad, satirlar) {
+    var csv = '﻿' + satirlar.map(function (r) { return r.map(function (h) { h = h == null ? '' : String(h); return /[;"\n]/.test(h) ? '"' + h.replace(/"/g, '""') + '"' : h; }).join(';'); }).join('\r\n');
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = ad; a.click();
+  }
+  var PARCA_AD = { on_tampon: 'Ön Tampon', kaput: 'Motor Kaputu', tavan: 'Tavan', bagaj: 'Bagaj Kapağı', arka_tampon: 'Arka Tampon', sol_on_camurluk: 'Sol Ön Çamurluk', sol_on_kapi: 'Sol Ön Kapı', sol_arka_kapi: 'Sol Arka Kapı', sol_arka_camurluk: 'Sol Arka Çamurluk', sag_on_camurluk: 'Sağ Ön Çamurluk', sag_on_kapi: 'Sağ Ön Kapı', sag_arka_kapi: 'Sağ Arka Kapı', sag_arka_camurluk: 'Sağ Arka Çamurluk' };
+  var DURUM_AD = { lokal: 'Lokal boyalı', boyali: 'Boyalı', degisen: 'Değişen' };
+  function talepDetay(id) {
+    var go = function (t) {
+      var h = {}, d = {}; try { h = JSON.parse(t.hasar || '{}'); d = JSON.parse(t.detay || '{}'); } catch (e) {}
+      var tel = String(t.tel).replace(/\D/g, ''); if (tel.indexOf('0') === 0) tel = '9' + tel; if (tel.length === 10) tel = '90' + tel;
+      var arac = t.yil + ' ' + t.marka + ' ' + t.model + (t.versiyon ? ' ' + t.versiyon : '');
+      var wa = 'https://wa.me/' + tel + '?text=' + encodeURIComponent('Merhaba ' + t.ad + ', OTOKABUL\'dan yazıyoruz. ' + arac + ' aracınız için talebinizi aldık' + (t.teklif_min ? ' (ön teklif: ' + tl(t.teklif_min) + ' – ' + tl(t.teklif_max) + ' TL)' : '') + '. Ekspertiz randevusu için uygun olduğunuz zamanı yazabilir misiniz?');
+      $('#cekmeceIc').innerHTML = '<div class="satirlar" style="justify-content:space-between"><h2>#' + t.id + ' · ' + esc(t.ad) + '</h2><button class="btn kucuk" id="kapat">Kapat ✕</button></div>' +
+        '<div class="satirlar"><a class="btn koyu" href="tel:' + esc(t.tel) + '">📞 Ara</a><a class="btn" style="background:#25d366;color:#fff;border-color:#25d366" target="_blank" href="' + wa + '">WhatsApp</a></div>' +
+        '<dl class="bilgi"><dt>Tarih</dt><dd>' + esc(t.tarih) + '</dd><dt>Telefon</dt><dd>' + esc(t.tel) + '</dd><dt>İl</dt><dd>' + esc(t.il) + '</dd>' +
+        '<dt>Araç</dt><dd>' + esc(arac) + '</dd><dt>Yakıt / vites</dt><dd>' + esc(t.yakit + ' / ' + t.vites) + (t.kasa ? ' · ' + esc(t.kasa) : '') + '</dd><dt>Kilometre</dt><dd>' + tl(t.km) + ' km</dd><dt>Renk</dt><dd>' + esc(t.renk || '—') + '</dd>' +
+        '<dt>Boya / değişen</dt><dd>' + (Object.keys(h).length ? Object.keys(h).map(function (p) { return esc(PARCA_AD[p] || p) + ': ' + DURUM_AD[h[p]]; }).join('<br>') : 'Hatasız') + '</dd>' +
+        '<dt>Tramer</dt><dd>' + (t.tramer ? tl(t.tramer) + ' TL' : 'Yok') + '</dd><dt>Ağır hasar</dt><dd>' + (t.agir == 1 ? '<span class="azl">VAR</span>' : 'Yok') + '</dd>' +
+        (t.kabul_tarih ? '<dt>Randevu isteği</dt><dd class="art">✓ Teklifi kabul etti · ' + esc(t.kabul_tarih) + '</dd>' : '') + '<dt>Ön teklif</dt><dd style="font-size:18px;color:var(--v2)">' + (t.teklif_min ? tl(t.teklif_min) + ' – ' + tl(t.teklif_max) + ' TL' : 'Otomatik teklif verilmedi') + '</dd></dl>' +
+        '<div class="kutu"><h2>Hesap dökümü</h2><div class="kalem"><span>Baz piyasa fiyatı (motor/paket dahil)</span><b>' + tl(d.baz) + ' TL</b></div>' +
+        (d.kalemler || []).map(function (x) { return '<div class="kalem"><span>' + esc(x[0]) + '</span>' + (x[1] === null ? '' : yuzde(x[1])) + '</div>'; }).join('') +
+        '<div class="kalem"><span>Alım marjı ve ±aralık</span><span class="soluk">ayarlardan</span></div>' + (d.mesaj ? '<p class="soluk">' + esc(d.mesaj) + '</p>' : '') + '</div>' +
+        '<div class="alanlar" style="grid-template-columns:1fr"><label>Durum<select class="girdi" id="dDurum">' + DURUMLAR.map(function (x) { return '<option' + (x === t.durum ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label>' +
+        '<label>Notlar<textarea class="girdi" id="dNot" rows="4">' + esc(t.notlar || '') + '</textarea></label></div>' +
+        '<div class="satirlar" style="margin-top:12px"><button class="btn ana" id="dKaydet">Kaydet</button><button class="btn kirmizi" id="dSil">Sil</button></div>';
+      $('#cekmece').hidden = false;
+      $('#kapat').onclick = kapat;
+      $('#dKaydet').onclick = function () { api('talep_kaydet', { id: t.id, durum: $('#dDurum').value, notlar: $('#dNot').value }).then(function () { bildir('Kaydedildi'); kapat(); yenile(); }); };
+      $('#dSil').onclick = function () { if (confirm('#' + t.id + ' numaralı talep silinsin mi?')) api('talep_sil', { id: t.id }).then(function () { bildir('Silindi'); kapat(); yenile(); }); };
+    };
+    var t = talepCache.find(function (x) { return +x.id === id; });
+    if (t) go(t); else api('talepler', { ara: '' }).then(function (l) { talepCache = l; var x = l.find(function (y) { return +y.id === id; }); if (x) go(x); });
+  }
+  function kapat() { $('#cekmece').hidden = true; }
+  $('#cekmece').onclick = function (e) { if (e.target.id === 'cekmece') kapat(); };
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') kapat(); });
+  function yenile() { var a = $('#menu a.aktif'); if (a) sayfa(a.dataset.s); rozetGuncelle(); }
+
+  // ---------- FİYAT TABLOSU ----------
+  var fFiltre = { markalar: [], model: '', yil1: '', yil2: '', durum: '', ara: '', sira: 'marka', limit: 500 };
+  function markaSecenek(secili) { return '<option value="">Tüm markalar</option>' + markaListesi.map(function (m) { return '<option' + (m === secili ? ' selected' : '') + '>' + esc(m) + '</option>'; }).join(''); }
+  function cizFiyatlar(k) {
+    k.innerHTML = '<h1 class="bas">Fiyat Tablosu</h1><p class="bas-alt">Her satır bir marka/model/yıl. <b>Piyasa</b> robotun bulduğu ilan medyanı; <b>Ayar %</b> ile oynayın ya da <b>Elle Fiyat</b> yazın. Hücreden çıkınca kaydedilir.</p>' +
+      '<div class="satirlar">' +
+      '<select class="girdi" id="fMarka">' + markaSecenek(fFiltre.markalar[0]) + '</select>' +
+      '<input class="girdi" id="fModel" placeholder="Model" style="width:120px" value="' + esc(fFiltre.model) + '">' +
+      '<input class="girdi" id="fYil1" placeholder="Yıl ≥" style="width:80px" value="' + esc(fFiltre.yil1) + '"><input class="girdi" id="fYil2" placeholder="Yıl ≤" style="width:80px" value="' + esc(fFiltre.yil2) + '">' +
+      '<select class="girdi" id="fDurum"><option value="">Tüm satırlar</option><option value="ayarli">Ayarlı (% ≠ 0)</option><option value="elle">Elle fiyatlı</option><option value="kilit">Kilitli</option><option value="pasif">Pasif</option><option value="az">Az ilanlı (&lt;5)</option><option value="kasko">Kaskodan (ilansız)</option><option value="ilan">İlandan</option></select>' +
+      '<select class="girdi" id="fSira"><option value="marka">Sıra: Marka/Model</option><option value="yil">Sıra: Yıl</option><option value="piyasa">Sıra: Fiyat</option><option value="adet">Sıra: İlan sayısı</option><option value="degisim">Sıra: En çok değişen</option></select>' +
+      '<button class="btn koyu" id="fToplu">⚡ Bu filtreye toplu değişim</button><button class="btn" id="fEkle">+ Satır ekle</button><button class="btn" id="fCsv">CSV</button></div>' +
+      '<div class="tablo-kap" id="fTablo">Yükleniyor…</div><div class="alt-not" id="fNot"></div>';
+    $('#fDurum', k).value = fFiltre.durum; $('#fSira', k).value = fFiltre.sira;
+    var zaman, oku = function () {
+      fFiltre.markalar = $('#fMarka', k).value ? [$('#fMarka', k).value] : [];
+      fFiltre.model = $('#fModel', k).value.trim(); fFiltre.yil1 = $('#fYil1', k).value.trim(); fFiltre.yil2 = $('#fYil2', k).value.trim();
+      fFiltre.durum = $('#fDurum', k).value; fFiltre.sira = $('#fSira', k).value;
+      clearTimeout(zaman); zaman = setTimeout(function () { fiyatYukle(k); }, 250);
+    };
+    $$('.satirlar .girdi', k).forEach(function (i) { i.oninput = oku; i.onchange = oku; });
+    $('#fToplu', k).onclick = function () { sayfa('toplu', JSON.parse(JSON.stringify(fFiltre))); };
+    $('#fEkle', k).onclick = satirEkleFormu;
+    $('#fCsv', k).onclick = function () {
+      api('fiyatlar', Object.assign({}, fFiltre, { limit: 2000 })).then(function (j) {
+        csvIndir('fiyat_tablosu.csv', [['Marka', 'Model', 'Yıl', 'İlan', 'Piyasa', 'P25', 'P75', 'Ayar %', 'Elle', 'Baz', 'Alım teklifi', 'Kilit', 'Aktif']].concat(j.satirlar.map(function (r) { return [r.marka, r.model, r.yil, r.adet, r.piyasa, r.p25, r.p75, String(r.ayar).replace('.', ','), r.elle || '', r.baz, r.teklif, r.kilit ? 'E' : '', r.aktif ? 'E' : 'H']; })));
+      });
+    };
+    if (!markaListesi.length) api('markalar').then(function (l) { markaListesi = l; $('#fMarka', k).innerHTML = markaSecenek(fFiltre.markalar[0]); });
+    fiyatYukle(k);
+  }
+  function satirHtml(r, i) {
+    var deg = r.onceki > 0 ? (r.piyasa / r.onceki - 1) * 100 : 0;
+    return '<tr data-id="' + r.id + '" class="' + (r.aktif == 1 ? '' : 'pasif') + '"><td class="sat-no">' + (i + 1) + '</td><td>' + esc(r.marka) + '</td><td>' + esc(r.model) + '</td><td>' + r.yil + '</td>' +
+      '<td class="s">' + (r.kaynak === 'kasko' ? '<span class="rozet" title="İlan yok: kasko × katsayı">kasko</span>' : (r.adet || '—')) + '</td><td class="s">' + tl(r.piyasa) + '</td><td class="s">' + (r.onceki > 0 && Math.abs(deg) >= 0.05 ? yuzde(Math.round(deg * 10) / 10) : '') + '</td>' +
+      '<td class="s soluk">' + (r.p25 ? tl(r.p25) + ' – ' + tl(r.p75) : '') + '</td>' +
+      '<td><input class="hucre' + (+r.ayar ? ' dolu' : '') + '" data-alan="ayar" value="' + (+r.ayar ? String(+r.ayar).replace('.', ',') : '') + '" placeholder="0" style="width:64px"></td>' +
+      '<td><input class="hucre' + (r.elle ? ' dolu' : '') + '" data-alan="elle" value="' + (r.elle ? NF.format(r.elle) : '') + '" placeholder="—"></td>' +
+      '<td class="s baz">' + tl(r.baz) + '</td><td class="s teklif">' + tl(r.teklif) + '</td>' +
+      '<td style="text-align:center"><input type="checkbox" data-alan="kilit"' + (r.kilit == 1 ? ' checked' : '') + ' title="Kilitli satırın piyasa fiyatını robot değiştirmez"></td>' +
+      '<td style="text-align:center"><input type="checkbox" data-alan="aktif"' + (r.aktif == 1 ? ' checked' : '') + ' title="Pasif satır sitede görünmez"></td></tr>';
+  }
+  function fiyatYukle(k) {
+    api('fiyatlar', fFiltre).then(function (j) {
+      $('#fTablo', k).innerHTML = '<table class="xl"><thead><tr><th></th><th>Marka</th><th>Model</th><th>Yıl</th><th>İlan</th><th>Piyasa</th><th>Son değişim</th><th>Piyasa aralığı</th><th>Ayar %</th><th>Elle fiyat</th><th>Baz fiyat</th><th>Alım teklifi (−' + j.marj + '%)</th><th>Kilit</th><th>Aktif</th></tr></thead><tbody>' +
+        j.satirlar.map(satirHtml).join('') + '</tbody></table>';
+      $('#fNot', k).innerHTML = NF.format(j.toplam) + ' satır' + (j.toplam > j.satirlar.length ? ' · ilk ' + j.satirlar.length + ' gösteriliyor, filtreyi daraltın' : '') + ' · Baz = Elle fiyat varsa o, yoksa Piyasa × (1 + Ayar%). Alım teklifi km/hasar düzeltmesinden önceki ortalamadır.';
+      var tb = $('tbody', k);
+      tb.addEventListener('change', function (e) {
+        var el = e.target, tr = el.closest('tr'); if (!el.dataset.alan) return;
+        var deger = el.type === 'checkbox' ? el.checked : el.value.replace(/\./g, '').replace(',', '.').trim();
+        if (el.dataset.alan === 'elle') deger = el.value.replace(/\D/g, '');
+        api('satir_kaydet', { id: +tr.dataset.id, alan: el.dataset.alan, deger: deger }).then(function (s) {
+          var idx = +$('.sat-no', tr).textContent - 1;
+          var t = document.createElement('tbody'); t.innerHTML = satirHtml(s.satir, idx);
+          var yeni = t.firstChild; tr.replaceWith(yeni); yeni.classList.add('kaydedildi');
+        });
+      });
+      tb.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+        var el = e.target; if (!el.classList.contains('hucre')) return;
+        e.preventDefault();
+        var tr = el.closest('tr'), hedef = (e.key === 'ArrowUp' ? tr.previousElementSibling : tr.nextElementSibling);
+        el.blur();
+        if (hedef) { var x = hedef.querySelector('[data-alan="' + el.dataset.alan + '"]'); if (x) { x.focus(); x.select(); } }
+      });
+    });
+  }
+  function satirEkleFormu() {
+    $('#cekmeceIc').innerHTML = '<div class="satirlar" style="justify-content:space-between"><h2>Satır ekle / elle fiyat</h2><button class="btn kucuk" id="kapat">Kapat ✕</button></div>' +
+      '<p class="soluk">Robotta olmayan bir araç için fiyat girin. Aynı marka/model/yıl varsa elle fiyatı güncellenir. Satır kilitli eklenir.</p>' +
+      '<div class="alanlar" style="grid-template-columns:1fr"><label>Marka<input class="girdi" id="eMarka" list="eMarkalar"></label><datalist id="eMarkalar">' + markaListesi.map(function (m) { return '<option value="' + esc(m) + '">'; }).join('') + '</datalist>' +
+      '<label>Model<input class="girdi" id="eModel"></label><label>Yıl<input class="girdi" id="eYil" inputmode="numeric"></label><label>Piyasa fiyatı (TL)<input class="girdi" id="eFiyat" inputmode="numeric"></label></div>' +
+      '<div class="satirlar" style="margin-top:12px"><button class="btn ana" id="eKaydet">Kaydet</button></div>';
+    $('#cekmece').hidden = false; $('#kapat').onclick = kapat;
+    $('#eKaydet').onclick = function () {
+      api('satir_ekle', { marka: $('#eMarka').value, model: $('#eModel').value, yil: $('#eYil').value, fiyat: $('#eFiyat').value.replace(/\D/g, '') })
+        .then(function () { bildir('Kaydedildi'); kapat(); api('markalar').then(function (l) { markaListesi = l; }); yenile(); });
+    };
+  }
+
+  // ---------- TOPLU DEĞİŞİM ----------
+  var tFiltre = { markalar: [], model: '', yil1: '', yil2: '', fiyat1: '', fiyat2: '', durum: '' };
+  function cizToplu(k, gelenFiltre) {
+    if (gelenFiltre) tFiltre = Object.assign({ fiyat1: '', fiyat2: '' }, gelenFiltre);
+    k.innerHTML = '<h1 class="bas">Toplu Fiyat Değişimi</h1><p class="bas-alt">Talimatınızı verin, filtreye uyan tüm araçların fiyatı aynı anda değişsin. Her işlem kaydedilir ve tek tıkla geri alınabilir.</p>' +
+      '<div class="iki-kolon"><div class="kutu"><h2>1. Hangi araçlar?</h2>' +
+      '<label style="font-size:12.5px;font-weight:600">Markalar <small class="soluk">(hiçbiri seçili değilse tümü)</small></label>' +
+      '<div class="satirlar" style="margin:6px 0"><input class="girdi" id="mAra" placeholder="Marka ara…" style="width:160px"><button class="btn kucuk" id="mTum">Tümünü seç</button><button class="btn kucuk" id="mHic">Temizle</button></div>' +
+      '<div class="markalar-sec" id="mListe"></div>' +
+      '<div class="alanlar" style="margin-top:12px"><label>Model içerir<input class="girdi" id="tModel" value="' + esc(tFiltre.model) + '"></label>' +
+      '<label>Yıl (en az – en çok)<span class="satirlar" style="margin:0"><input class="girdi" id="tYil1" style="width:48%" value="' + esc(tFiltre.yil1) + '"><input class="girdi" id="tYil2" style="width:48%" value="' + esc(tFiltre.yil2) + '"></span></label>' +
+      '<label>Baz fiyat (en az – en çok TL)<span class="satirlar" style="margin:0"><input class="girdi" id="tF1" style="width:48%" value="' + esc(tFiltre.fiyat1) + '"><input class="girdi" id="tF2" style="width:48%" value="' + esc(tFiltre.fiyat2) + '"></span></label>' +
+      '<label>Satır durumu<select class="girdi" id="tDurum"><option value="">Hepsi</option><option value="ayarli">Ayarlı olanlar</option><option value="elle">Elle fiyatlılar</option><option value="kilit">Kilitliler</option><option value="az">Az ilanlılar</option><option value="kasko">Kaskodan (ilansız)</option><option value="ilan">İlandan</option></select></label></div></div>' +
+      '<div class="kutu"><h2>2. Ne yapılsın?</h2>' +
+      '<div class="alanlar" style="grid-template-columns:1fr 1fr"><label>İşlem<select class="girdi" id="tTip"><option value="yuzde">Yüzde değiştir (%)</option><option value="sabit">Tutar ekle / çıkar (TL)</option><option value="sifirla">Ayarları sıfırla (piyasaya dön)</option></select></label>' +
+      '<label>Değer <small>(azaltmak için eksi yazın)</small><input class="girdi" id="tOran" placeholder="ör. 3 veya -2,5"></label></div>' +
+      '<div id="hizli" style="margin:10px 0">' + [[-15, -1], [1, 15]].map(function (a) { var b = []; for (var i = a[0]; i <= a[1]; i++) b.push('<button class="btn kucuk ' + (i < 0 ? 'eksi' : 'arti') + '" data-v="' + i + '">' + (i > 0 ? '+' : '') + i + '%</button>'); return '<div class="hizli">' + b.join('') + '</div>'; }).join('') + '</div>' +
+      '<div class="alanlar" style="grid-template-columns:1fr 1fr"><label>Uygulanacak satırlar<select class="girdi" id="tHedef"><option value="hepsi">Hepsi</option><option value="robot">Sadece robot fiyatlı</option><option value="elle">Sadece elle fiyatlı</option></select></label>' +
+      '<label>Açıklama <small>(isteğe bağlı)</small><input class="girdi" id="tAcik" placeholder="ör. Kasım zammı"></label></div>' +
+      '<div class="satirlar" style="margin-top:14px"><button class="btn" id="tOnizle">Önizle</button><button class="btn ana" id="tUygula">Uygula</button></div>' +
+      '<div id="tSonuc"></div></div></div>' +
+      '<div class="kutu"><h2>İşlem geçmişi</h2><div id="tGecmis">Yükleniyor…</div></div>';
+    var secili = {}; tFiltre.markalar.forEach(function (m) { secili[m] = 1; });
+    var mCiz = function () {
+      var q = $('#mAra', k).value.toLocaleLowerCase('tr');
+      $('#mListe', k).innerHTML = markaListesi.filter(function (m) { return !q || m.toLocaleLowerCase('tr').indexOf(q) >= 0; })
+        .map(function (m) { return '<label><input type="checkbox" value="' + esc(m) + '"' + (secili[m] ? ' checked' : '') + ' hidden>' + esc(m) + '</label>'; }).join('');
+    };
+    var onZaman, gecersiz = function () { $('#tSonuc', k).innerHTML = ''; clearTimeout(onZaman); onZaman = setTimeout(function () { if ($('#tOran', k).value.trim() || $('#tTip', k).value === 'sifirla') onizle(); }, 450); };
+    if (!markaListesi.length) api('markalar').then(function (l) { markaListesi = l; mCiz(); }); else mCiz();
+    $('#mAra', k).oninput = mCiz;
+    $('#mListe', k).onchange = function (e) { if (e.target.checked) secili[e.target.value] = 1; else delete secili[e.target.value]; gecersiz(); };
+    $('#mTum', k).onclick = function () { $$('#mListe input', k).forEach(function (i) { secili[i.value] = 1; }); mCiz(); gecersiz(); };
+    $('#mHic', k).onclick = function () { secili = {}; mCiz(); gecersiz(); };
+    $('#tDurum', k).value = tFiltre.durum || '';
+    $$('.girdi', k).forEach(function (i) { if (i.id !== 'mAra') i.addEventListener('input', gecersiz); });
+    $('#tTip', k).onchange = function () { $('#tOran', k).disabled = this.value === 'sifirla'; $('#hizli', k).style.display = this.value === 'yuzde' ? '' : 'none'; gecersiz(); };
+    $('#hizli', k).onclick = function (e) { var b = e.target.closest('button'); if (b) { $('#tOran', k).value = b.dataset.v; $$('#hizli button', k).forEach(function (x) { x.classList.toggle('secili', x === b); }); clearTimeout(onZaman); onizle(); } };
+    var istek = function () {
+      return {
+        filtre: { markalar: Object.keys(secili), model: $('#tModel', k).value.trim(), yil1: $('#tYil1', k).value.trim(), yil2: $('#tYil2', k).value.trim(), fiyat1: $('#tF1', k).value.replace(/\D/g, ''), fiyat2: $('#tF2', k).value.replace(/\D/g, ''), durum: $('#tDurum', k).value },
+        tip: $('#tTip', k).value, oran: $('#tOran', k).value.replace(/\./g, '').replace(',', '.').trim(), hedef: $('#tHedef', k).value, aciklama: $('#tAcik', k).value.trim()
+      };
+    };
+    var onizle = function () {
+      var g = istek();
+      return api('toplu_onizle', g).then(function (o) {
+        $('#tSonuc', k).innerHTML = '<p style="margin:12px 0 6px"><b>' + NF.format(o.adet) + '</b> satır etkilenecek · ortalama değişim ' + yuzde(o.ort_degisim) + '</p>' +
+          (o.ornek.length ? '<div class="tablo-kap" style="max-height:260px"><table class="xl"><tr><th>Araç</th><th>Şimdiki baz</th><th>Yeni baz</th></tr>' + o.ornek.map(function (x) { return '<tr><td>' + esc(x.yil + ' ' + x.marka + ' ' + x.model) + '</td><td class="s">' + tl(x.eski) + '</td><td class="s baz">' + tl(x.yeni) + '</td></tr>'; }).join('') + '</table></div>' + (o.adet > o.ornek.length ? '<div class="alt-not">İlk ' + o.ornek.length + ' örnek gösteriliyor.</div>' : '') : '');
+        return o;
+      }).catch(function () { $('#tSonuc', k).innerHTML = ''; });
+    };
+    $('#tOnizle', k).onclick = onizle;
+    $('#tUygula', k).onclick = function () {
+      var g = istek(), b = this;
+      clearTimeout(onZaman); b.disabled = true;
+      onizle().then(function (o) {
+        b.disabled = false;
+        if (!o) return;
+        if (!o.adet) return bildir('Filtreye uyan satır yok.', true);
+        var ne = g.tip === 'sifirla' ? 'ayarları sıfırlanacak' : 'fiyatı ' + (g.tip === 'yuzde' ? (+g.oran > 0 ? '+' : '') + g.oran + '%' : NF.format(+g.oran) + ' TL') + ' değişecek';
+        if (!confirm(NF.format(o.adet) + ' satırın ' + ne + '. Onaylıyor musunuz?\n(İşlem geçmişinden geri alınabilir)')) return;
+        return api('toplu_uygula', g).then(function (r) { bildir(NF.format(r.adet) + ' satır güncellendi'); $('#tSonuc', k).innerHTML = '<p class="art" style="margin-top:12px">✓ ' + NF.format(r.adet) + ' satır güncellendi.</p>'; gecmisCiz(); });
+      }, function () { b.disabled = false; });
+    };
+    var gecmisCiz = function () {
+      api('islemler').then(function (l) {
+        $('#tGecmis', k).innerHTML = l.length ? '<div class="tablo-kap" style="max-height:340px"><table class="xl"><tr><th>Tarih</th><th>İşlem</th><th>Satır</th><th></th></tr>' + l.map(function (i) {
+          return '<tr><td>' + esc(i.tarih) + '</td><td>' + esc(i.aciklama) + '</td><td class="s">' + NF.format(i.etkilenen) + '</td><td>' + (i.geri_alindi == 1 ? '<span class="rozet">geri alındı</span>' : '<button class="btn kucuk" data-geri="' + i.id + '">↶ Geri al</button>') + '</td></tr>';
+        }).join('') + '</table></div><div class="alt-not">Geri alma, o işlemden önceki değerlere döndürür. Sonraki işlemleri etkileyebileceği için en yeniden eskiye doğru geri almanız önerilir.</div>' : '<p class="soluk">Henüz işlem yok.</p>';
+        $$('[data-geri]', k).forEach(function (b) { b.onclick = function () { if (confirm('Bu işlem geri alınsın mı?')) api('geri_al', { id: +b.dataset.geri }).then(function () { bildir('Geri alındı'); gecmisCiz(); }); }; });
+      });
+    };
+    gecmisCiz();
+  }
+
+  // ---------- FİYAT ROBOTU ----------
+  var robotSonuc = null, robotCalisiyor = false;
+  function cizRobot(k) {
+    k.innerHTML = '<h1 class="bas">Fiyat Robotu</h1><p class="bas-alt">AraçRadar\'ın topladığı arabam.com ve sahibinden ilanlarını okur, her marka/model/yıl için uç değerleri atıp piyasa medyanını çıkarır. Kaydettiğinizde tüm teklifler yeni piyasaya göre güncellenir (Ayar % ve elle fiyatlar korunur).</p>' +
+      '<div class="iki-kolon"><div class="kutu"><h2>Piyasayı tara</h2>' +
+      '<div class="alanlar" style="grid-template-columns:1fr"><label>Veri kaynağı (AraçRadar meta.json)<input class="girdi" id="rUrl"></label>' +
+      '<label>En az ilan sayısı <small>(bundan az ilanı olan yıl satırı oluşturulmaz)</small><input class="girdi" id="rMin" style="width:90px"></label></div>' +
+      '<div class="satirlar" style="margin-top:12px"><button class="btn ana" id="rTara">🤖 Piyasayı Tara</button><label class="btn" style="font-weight:500">📁 Dosyadan (JSON)<input type="file" id="rDosya" accept=".json" multiple hidden></label></div>' +
+      '<div class="ilerleme"><i id="rCubuk"></i></div><div class="log" id="rLog">Hazır.</div></div>' +
+      '<div class="kutu" id="rSonuc"><h2>Sonuç</h2><p class="soluk">Tarama yapıldığında burada piyasa değişim analizi görünecek.</p></div></div>' +
+      '<div class="iki-kolon"><div class="kutu"><h2>Excel\'den fiyat listesi yapıştır</h2><p class="soluk" style="margin-top:0">Sütunlar: <b>Marka · Model · Yıl · Fiyat</b> (Excel\'den kopyalayıp yapıştırın). Kasko değer listesi veya kendi listeniz için.</p>' +
+      '<textarea class="girdi" id="lMetin" rows="6" style="width:100%" placeholder="Renault\tClio\t2020\t1035000"></textarea>' +
+      '<div class="satirlar" style="margin-top:8px"><select class="girdi" id="lMod"><option value="elle">Elle fiyat olarak yaz (robot ezmez)</option><option value="piyasa">Piyasa fiyatı olarak yaz</option></select><button class="btn koyu" id="lAktar">İçe aktar</button></div></div>' +
+      '<div class="kutu"><h2>Tarama geçmişi</h2><div id="rGecmis">Yükleniyor…</div></div></div>';
+    api('ayarlar').then(function (A) { $('#rUrl', k).value = A.robot_url; $('#rMin', k).value = A.robot_min_adet; });
+    $('#rTara', k).onclick = function () { robotTara($('#rUrl', k).value.trim(), +$('#rMin', k).value || 3, false); };
+    $('#rDosya', k).onchange = function () {
+      var dosyalar = Array.prototype.slice.call(this.files); if (!dosyalar.length) return;
+      Promise.all(dosyalar.map(function (f) { return f.text().then(JSON.parse); })).then(function (l) {
+        var kayit = []; l.forEach(function (x) { kayit = kayit.concat(Array.isArray(x) ? x : (x.ilanlar || [])); });
+        robotIsle(kayit, +$('#rMin', k).value || 3, dosyalar.map(function (f) { return f.name; }).join(', '), false);
+      }).catch(function (e) { bildir('Dosya okunamadı: ' + e.message, true); });
+    };
+    $('#lAktar', k).onclick = function () {
+      var sat = $('#lMetin', k).value.split(/\r?\n/).map(function (s) { return s.split(/\t|;/).map(function (h) { return h.trim(); }); }).filter(function (s) { return s.length >= 4 && +s[2]; });
+      if (!sat.length) return bildir('Okunabilir satır yok. Sütunlar: Marka, Model, Yıl, Fiyat', true);
+      api('liste_ice_aktar', { satirlar: sat, mod: $('#lMod', k).value }).then(function (r) { bildir(r.adet + ' satır içe aktarıldı'); $('#lMetin', k).value = ''; });
+    };
+    if (robotSonuc) sonucCiz(robotSonuc);
+    gecmisCizRobot();
+  }
+  function gecmisCizRobot() {
+    var g = $('#rGecmis'); if (!g) return;
+    api('robot_log').then(function (l) {
+      g.innerHTML = l.length ? '<div class="tablo-kap" style="max-height:300px"><table class="xl"><tr><th>Tarih</th><th>Kaynak</th><th>İlan</th><th>Satır</th><th>Yeni</th><th>Piyasa</th></tr>' + l.map(function (r) { return '<tr><td>' + esc(r.tarih) + '</td><td>' + esc(String(r.kaynak).slice(0, 40)) + '</td><td class="s">' + NF.format(r.cozulen) + '</td><td class="s">' + NF.format(r.satir) + '</td><td class="s">' + NF.format(r.yeni) + '</td><td class="s">' + (r.degisim ? yuzde(r.degisim) : '—') + '</td></tr>'; }).join('') + '</table></div>' : '<p class="soluk">Henüz tarama yok.</p>';
+    });
+  }
+  function rlog(m) { var l = $('#rLog'); if (l) { l.textContent += '\n' + m; l.scrollTop = 1e9; } }
+  function robotTara(url, minAdet, otomatik) {
+    if (robotCalisiyor) return; robotCalisiyor = true;
+    var l = $('#rLog'); if (l) l.textContent = 'Kaynak okunuyor: ' + url;
+    var b = $('#rTara'); if (b) b.disabled = true;
+    var bitti = function () { robotCalisiyor = false; var b = $('#rTara'); if (b) b.disabled = false; };
+    fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now()).then(function (r) { if (!r.ok) throw new Error('meta.json okunamadı (' + r.status + ')'); return r.json(); }).then(function (meta) {
+      var taban = url.replace(/[^/]*$/, '').replace(/data\/$/, '');
+      var parcalar = (meta.parcalar || []).map(function (p) { return /^https?:/.test(p) ? p : taban + p; });
+      if (!parcalar.length) throw new Error('meta.json içinde parça listesi yok');
+      rlog(parcalar.length + ' parça, toplam ' + NF.format(meta.toplam || 0) + ' ilan. İndiriliyor…');
+      var kayit = [], i = 0;
+      var sirayla = function () {
+        if (i >= parcalar.length) return Promise.resolve();
+        var u = parcalar[i];
+        return fetch(u + '?t=' + Date.now()).then(function (r) { if (!r.ok) throw new Error(u + ' → ' + r.status); return r.json(); }).then(function (j) {
+          kayit = kayit.concat(Array.isArray(j) ? j : (j.ilanlar || []));
+          i++; var c = $('#rCubuk'); if (c) c.style.width = (i / parcalar.length * 80) + '%';
+          if (i % 5 === 0 || i === parcalar.length) rlog(i + '/' + parcalar.length + ' parça · ' + NF.format(kayit.length) + ' ilan');
+          return sirayla();
+        });
+      };
+      return sirayla().then(function () { return robotIsle(kayit, minAdet, 'AraçRadar (' + url.replace(/^https?:\/\//, '').slice(0, 60) + ')', otomatik); });
+    }).catch(function (e) { rlog('HATA: ' + e.message); bildir('Robot: ' + e.message, true); }).then(bitti, bitti);
+  }
+  function robotIsle(kayit, minAdet, kaynak, otomatik) {
+    rlog('Ayrıştırılıyor ve piyasa medyanları hesaplanıyor…');
+    var a = RobotCore.aggregate(kayit, { minAdet: minAdet });
+    a.kaynak = kaynak;
+    rlog(NF.format(a.cozulen) + ' / ' + NF.format(a.toplamKayit) + ' ilan çözüldü → ' + NF.format(a.satirlar.length) + ' fiyat satırı.');
+    var c = $('#rCubuk'); if (c) c.style.width = '90%';
+    return api('piyasa_tumu').then(function (mevcut) {
+      var oranlar = [], marka = {}, yeni = 0, hareket = [];
+      a.satirlar.forEach(function (s) {
+        var m = mevcut[s.marka + '|' + s.model + '|' + s.yil];
+        if (!m) { yeni++; return; }
+        if (m[1] || !m[0]) return;
+        var o = s.medyan / m[0] - 1; if (Math.abs(o) >= 1) return;
+        oranlar.push(o); (marka[s.marka] = marka[s.marka] || []).push(o);
+        hareket.push({ s: s, eski: m[0], o: o });
+      });
+      var med = function (x) { if (!x.length) return 0; x = x.slice().sort(function (p, q) { return p - q; }); var n = x.length; return n % 2 ? x[(n - 1) / 2] : (x[n / 2 - 1] + x[n / 2]) / 2; };
+      a.analiz = {
+        genel: Math.round(med(oranlar) * 10000) / 100, karsilastirilan: oranlar.length, yeni: yeni,
+        marka: Object.keys(marka).filter(function (m) { return marka[m].length >= 3; }).map(function (m) { return { m: m, o: Math.round(med(marka[m]) * 10000) / 100, n: marka[m].length }; }).sort(function (p, q) { return q.n - p.n; }),
+        hareket: hareket.filter(function (h) { return h.s.adet >= 5 && Math.abs(h.o) >= 0.005; }).sort(function (p, q) { return Math.abs(q.o) - Math.abs(p.o); }).slice(0, 25)
+      };
+      robotSonuc = a;
+      if (c) c.style.width = '100%';
+      rlog('Analiz hazır: genel piyasa değişimi ' + a.analiz.genel + '%');
+      if (otomatik) {
+        if (Math.abs(a.analiz.genel) > 15) { bildir('Otomatik robot: piyasa değişimi ' + a.analiz.genel + '% — çok yüksek, kaydetmedim. Fiyat Robotu sayfasından kontrol edin.', true); return; }
+        return robotKaydet(true);
+      }
+      sonucCiz(a);
+    });
+  }
+  function sonucCiz(a) {
+    var k = $('#rSonuc'); if (!k) return;
+    var an = a.analiz;
+    k.innerHTML = '<h2>Sonuç</h2><div class="kartlar"><div class="kart"><div class="s">Genel piyasa değişimi</div><div class="buyuk-rakam">' + yuzde(an.genel) + '</div><div class="s">' + NF.format(an.karsilastirilan) + ' satır karşılaştırıldı (medyan)</div></div>' +
+      '<div class="kart"><div class="s">Fiyat satırı</div><div class="d">' + NF.format(a.satirlar.length) + '</div><div class="s">' + NF.format(an.yeni) + ' yeni satır</div></div></div>' +
+      '<div class="satirlar"><button class="btn ana" id="rKaydet">✓ Veritabanına kaydet</button><span class="soluk">Kaydedince tüm teklifler bu piyasaya göre hesaplanır.</span></div>' +
+      (an.marka.length ? '<div class="tablo-kap" style="max-height:240px;margin-top:10px"><table class="xl"><tr><th>Marka</th><th>Satır</th><th>Değişim (medyan)</th></tr>' + an.marka.map(function (m) { return '<tr><td>' + esc(m.m) + '</td><td class="s">' + m.n + '</td><td class="s">' + yuzde(m.o) + '</td></tr>'; }).join('') + '</table></div>' : '') +
+      (an.hareket.length ? '<h2 style="margin-top:14px">En çok değişenler (5+ ilan)</h2><div class="tablo-kap" style="max-height:240px"><table class="xl"><tr><th>Araç</th><th>Eski</th><th>Yeni</th><th>%</th></tr>' + an.hareket.map(function (h) { return '<tr><td>' + esc(h.s.yil + ' ' + h.s.marka + ' ' + h.s.model) + ' <span class="soluk">(' + h.s.adet + ')</span></td><td class="s">' + tl(h.eski) + '</td><td class="s">' + tl(h.s.medyan) + '</td><td class="s">' + yuzde(Math.round(h.o * 1000) / 10) + '</td></tr>'; }).join('') + '</table></div>' : '');
+    $('#rKaydet').onclick = function () { robotKaydet(false); };
+  }
+  function robotKaydet(otomatik) {
+    var a = robotSonuc; if (!a) return;
+    var b = $('#rKaydet'); if (b) b.disabled = true;
+    return api('robot_kaydet', { satirlar: a.satirlar, versiyonlar: a.versiyonlar, toplamKayit: a.toplamKayit, cozulen: a.cozulen, kaynak: (otomatik ? 'Otomatik · ' : '') + a.kaynak }).then(function (r) {
+      bildir((otomatik ? 'Otomatik robot: ' : '') + NF.format(r.guncellenen) + ' satır güncellendi, ' + NF.format(r.yeni) + ' yeni satır · piyasa ' + (r.genel_degisim > 0 ? '+' : '') + r.genel_degisim + '%');
+      robotSonuc = null;
+      var k = $('#rSonuc');
+      if (k) {
+        k.innerHTML = '<h2>Kaydedildi ✓</h2><p>' + NF.format(r.guncellenen) + ' satır güncellendi, ' + NF.format(r.yeni) + ' yeni satır eklendi' + (r.kilitli ? ', ' + r.kilitli + ' kilitli satır atlandı' : '') + '.</p>' +
+          '<p>Genel piyasa değişimi: <b>' + yuzde(r.genel_degisim) + '</b>. Robot fiyatlı satırlar bu değişimi otomatik aldı. <b>Elle fiyat</b> girdiğiniz satırlar değişmedi.</p>' +
+          (r.genel_degisim ? '<button class="btn koyu" id="rElle">Elle fiyatlı satırlara da ' + yuzde(r.genel_degisim) + ' uygula</button>' : '');
+        var e = $('#rElle'); if (e) e.onclick = function () {
+          api('toplu_uygula', { filtre: {}, tip: 'yuzde', oran: r.genel_degisim, hedef: 'elle', aciklama: 'Robot piyasa değişimi elle fiyatlara (' + r.genel_degisim + '%)' })
+            .then(function (x) { bildir(x.adet + ' elle fiyat güncellendi'); e.remove(); }).catch(function () {});
+        };
+      }
+      api('markalar').then(function (l) { markaListesi = l; });
+      gecmisCizRobot();
+    }).catch(function () { if (b) b.disabled = false; });
+  }
+  function otomatikRobot() {
+    api('ayarlar').then(function (A) {
+      if (A.robot_oto !== '1') return;
+      api('robot_log').then(function (l) {
+        var son = l.filter(function (r) { return String(r.kaynak).indexOf('Başlangıç') < 0; })[0];
+        var yas = son ? (Date.now() - new Date(String(son.tarih).replace(' ', 'T')).getTime()) / 36e5 : 999;
+        if (yas < 24) return;
+        bildir('Fiyat robotu arka planda piyasayı tarıyor…');
+        robotTara(A.robot_url, +A.robot_min_adet || 3, true);
+      });
+    });
+  }
+
+  // ---------- ARAÇ KATALOĞU (TSB) ----------
+  var katalogHazir = null;
+  function cizKatalog(k) {
+    k.innerHTML = '<h1 class="bas">Araç Kataloğu</h1><p class="bas-alt">TSB kasko değer listesi: Türkiye\'deki tüm marka, model, motor ve paketler. İlanı az olan araçlara da fiyat verilmesini, versiyon farkının hesaplanmasını ve sitedeki kasa / yakıt / vites / motor seçimlerini sağlar.</p>' +
+      '<div id="kDurum" class="kartlar">Yükleniyor…</div>' +
+      '<div class="iki-kolon"><div class="kutu"><h2>TSB listesini güncelle</h2><p class="soluk" style="margin-top:0">TSB listeyi ayda birkaç kez yayımlar. Otomatik indirme sunucunuzun TSB\'ye bağlanabilmesine bağlıdır; olmazsa tsb.org.tr\'den indirdiğiniz Excel\'i seçin.</p>' +
+      '<div class="satirlar"><button class="btn ana" id="kTsb">⬇ TSB\'den otomatik indir</button><label class="btn" style="font-weight:500">📁 Excel dosyası seç<input type="file" id="kDosya" accept=".xlsx,.xls" hidden></label></div>' +
+      '<div class="ilerleme"><i id="kCubuk"></i></div><div class="log" id="kLog">Hazır.</div><div id="kOnizle"></div></div>' +
+      '<div class="kutu"><h2>Kasko → piyasa katsayısı</h2><p class="soluk" style="margin-top:0">İlanı olmayan araçların fiyatı: <b>model-yıl kasko ortalaması × katsayı</b>. Katsayı, hem ilanı hem kaskosu olan araçlardan marka marka otomatik hesaplanır.</p>' +
+      '<div class="satirlar"><label style="font-size:12.5px;font-weight:600">Elle katsayı <small class="soluk">(boş = otomatik)</small> <input class="girdi" id="kKatsayi" style="width:90px"></label><button class="btn koyu" id="kKalibre">Kaydet ve yeniden hesapla</button></div>' +
+      '<div id="kKal"></div></div></div>' +
+      '<div class="iki-kolon"><div class="kutu"><h2>Model eşleştirme</h2><p class="soluk" style="margin-top:0">TSB\'deki ad ile ilan sitelerindeki model adı farklıysa buradan bağlayın. Örn: BMW · TSB başlangıcı <b>320</b> → model <b>3 Serisi</b>.</p>' +
+      '<div class="satirlar"><select class="girdi" id="eMarka2"></select><input class="girdi" id="eTsb" placeholder="TSB tip başlangıcı" style="width:150px"><input class="girdi" id="eModel2" placeholder="Sitedeki model" style="width:140px"><button class="btn koyu" id="eEkle">Ekle</button></div>' +
+      '<div id="eListe"></div><div class="iki-kolon" style="margin-top:10px"><div><b style="font-size:13px">İlanı var, katalogda yok</b><div class="tablo-kap" style="max-height:220px" id="eIlan"></div></div><div><b style="font-size:13px">Sadece katalogda (ilanı yok)</b><div class="tablo-kap" style="max-height:220px" id="eKasko"></div></div></div></div>' +
+      '<div class="kutu"><h2>Görseller</h2><p class="soluk" style="margin-top:0">Marka logosu ve model fotoğrafı yükleyin (PNG/JPG/WEBP, en fazla 3 MB). Fotoğrafı olmayan modellerde kasa tipine göre çizim gösterilir.</p>' +
+      '<div class="satirlar"><select class="girdi" id="gMarka"></select></div><div id="gLogo" class="satirlar"></div><div id="gModeller" class="tablo-kap" style="max-height:330px"></div></div></div>' +
+      '<div class="kutu"><h2>Katalog</h2><div class="satirlar"><select class="girdi" id="tkMarka"></select><input class="girdi" id="tkAra" placeholder="Model / versiyon ara" style="width:220px"></div><div class="tablo-kap" id="tkTablo" style="max-height:520px"><p class="soluk" style="padding:10px">Marka seçin.</p></div></div>';
+    var log = function (m, sifirla) { var l = $('#kLog', k); l.textContent = (sifirla ? '' : l.textContent + '\n') + m; l.scrollTop = 1e9; };
+    var cubuk = function (y) { $('#kCubuk', k).style.width = y + '%'; };
+    var durum = function () {
+      api('katalog_durum').then(function (d) {
+        $('#kDurum', k).innerHTML = '<div class="kart"><div class="s">Versiyon (motor/paket)</div><div class="d">' + NF.format(d.versiyon) + '</div></div>' +
+          '<div class="kart"><div class="s">Model / marka</div><div class="d">' + NF.format(d.model) + ' <small>/ ' + d.marka + '</small></div></div>' +
+          '<div class="kart"><div class="s">Kasko değeri</div><div class="d">' + NF.format(d.deger) + '</div><div class="s">' + (d.yillar && d.yillar.a ? d.yillar.a + '–' + d.yillar.b : '') + '</div></div>' +
+          '<div class="kart"><div class="s">Fiyat satırı</div><div class="d">' + NF.format(d.ilan_satir) + ' <small>ilan</small></div><div class="s">+ ' + NF.format(d.kasko_satir) + ' kaskodan</div></div>' +
+          '<div class="kart"><div class="s">Liste kaynağı</div><div class="d" style="font-size:14px">' + esc(d.kaynak || 'Henüz yüklenmedi') + '</div></div>';
+        var kal = d.kalibrasyon;
+        $('#kKal', k).innerHTML = kal.length ? '<div class="tablo-kap" style="max-height:260px;margin-top:10px"><table class="xl"><tr><th>Marka</th><th>Katsayı</th><th>Örnek</th></tr>' + kal.map(function (r) { return '<tr><td>' + (r.marka === '*' ? '<b>Genel (diğer markalar)</b>' : esc(r.marka)) + '</td><td class="s">' + (+r.oran).toFixed(3).replace('.', ',') + '</td><td class="s">' + r.ornek + '</td></tr>'; }).join('') + '</table></div>' : '<p class="soluk">Katalog yüklenince hesaplanır.</p>';
+        $('#eListe', k).innerHTML = d.eslestirme.length ? '<div class="tablo-kap" style="max-height:160px"><table class="xl"><tr><th>Marka</th><th>TSB</th><th>Model</th><th></th></tr>' + d.eslestirme.map(function (e) { return '<tr><td>' + esc(e.marka) + '</td><td>' + esc(e.tsb) + '</td><td>' + esc(e.model) + '</td><td><button class="btn kucuk kirmizi" data-esil="' + e.id + '">Sil</button></td></tr>'; }).join('') + '</table></div>' : '';
+        $$('[data-esil]', k).forEach(function (b) { b.onclick = function () { api('eslestirme_sil', { id: +b.dataset.esil }).then(durum); }; });
+        var tablo = function (l) { return '<table class="xl"><tr><th>Marka</th><th>Model</th><th>Adet</th></tr>' + l.map(function (r) { return '<tr><td>' + esc(r.marka) + '</td><td>' + esc(r.model) + '</td><td class="s">' + r.n + '</td></tr>'; }).join('') + '</table>'; };
+        $('#eIlan', k).innerHTML = d.sadece_ilan.length ? tablo(d.sadece_ilan) : '<p class="soluk" style="padding:8px">—</p>';
+        $('#eKasko', k).innerHTML = d.sadece_kasko.length ? tablo(d.sadece_kasko) : '<p class="soluk" style="padding:8px">—</p>';
+      });
+    };
+    api('ayarlar').then(function (A) { $('#kKatsayi', k).value = A.kasko_katsayi || ''; });
+    var markaDoldur = function () {
+      var o = markaSecenek('').replace('Tüm markalar', 'Marka seçin');
+      $('#eMarka2', k).innerHTML = o; $('#gMarka', k).innerHTML = o; $('#tkMarka', k).innerHTML = o;
+    };
+    if (markaListesi.length) markaDoldur(); else api('markalar').then(function (l) { markaListesi = l; markaDoldur(); });
+    durum();
+
+    // --- içe aktarma ---
+    var isle = function (buf, kaynak) {
+      if (!window.XLSX) { log('Excel okuyucu yüklenemedi (xlsx.full.min.js).'); return; }
+      log('Excel okunuyor…'); cubuk(30);
+      setTimeout(function () {
+        try {
+          var wb = XLSX.read(buf, { type: 'array' });
+          var ham = [];
+          wb.SheetNames.forEach(function (sn) {
+            var rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, raw: true, defval: '' });
+            try { ham = ham.concat(KatalogCore.satirlariOku(rows, new Date().getFullYear())); } catch (e) { log('Sayfa "' + sn + '" atlandı: ' + e.message); }
+          });
+          if (!ham.length) throw new Error('Listede okunabilir satır bulunamadı.');
+          log(NF.format(ham.length) + ' tip satırı okundu. Model adları ilan verisiyle eşleştiriliyor…'); cubuk(55);
+          api('site_modelleri').then(function (sm) {
+            var kat = KatalogCore.katalogOlustur(ham, sm.modeller, sm.eslestirme);
+            var ilanModel = {}; sm.modeller.forEach(function (x) { ilanModel[x.marka + '|' + x.model] = 1; });
+            var modeller = {}, eslesen = {}, markalar = {};
+            kat.forEach(function (x) { modeller[x.marka + '|' + x.model] = 1; markalar[x.marka] = 1; if (ilanModel[x.marka + '|' + x.model]) eslesen[x.marka + '|' + x.model] = 1; });
+            katalogHazir = { liste: kat, kaynak: kaynak };
+            cubuk(70);
+            log(NF.format(kat.length) + ' versiyon · ' + NF.format(Object.keys(modeller).length) + ' model · ' + Object.keys(markalar).length + ' marka. İlan modeliyle eşleşen: ' + NF.format(Object.keys(eslesen).length) + '.');
+            var ornek = kat.filter(function (x, i) { return i % Math.max(1, Math.floor(kat.length / 25)) === 0; }).slice(0, 25);
+            $('#kOnizle', k).innerHTML = '<div class="tablo-kap" style="max-height:300px;margin-top:10px"><table class="xl"><tr><th>Marka</th><th>Model</th><th>Versiyon</th><th>Kasa</th><th>Yakıt</th><th>Vites</th><th>Motor</th><th>HP</th><th>Son yıl değeri</th></tr>' +
+              ornek.map(function (x) { var ys = Object.keys(x.degerler).sort(); var y = ys[ys.length - 1]; return '<tr><td>' + esc(x.marka) + '</td><td>' + esc(x.model) + '</td><td>' + esc(x.versiyon) + '</td><td>' + esc(x.kasa || '—') + '</td><td>' + esc(x.yakit) + '</td><td>' + esc(x.vites) + '</td><td>' + esc(x.motor) + '</td><td class="s">' + (x.beygir || '') + '</td><td class="s">' + y + ': ' + tl(x.degerler[y]) + '</td></tr>'; }).join('') +
+              '</table></div><div class="satirlar" style="margin-top:10px"><button class="btn ana" id="kKaydet">✓ Kataloğu kaydet</button><span class="soluk">Mevcut katalog değiştirilir; fiyat tablonuzdaki ayarlar korunur.</span></div>';
+            $('#kKaydet', k).onclick = kaydet;
+          });
+        } catch (e) { log('HATA: ' + e.message); bildir(e.message, true); }
+      }, 30);
+    };
+    var kaydet = function () {
+      var h = katalogHazir; if (!h) return;
+      $('#kKaydet', k).disabled = true;
+      var parca = 1200, i = 0;
+      log('Kaydediliyor…');
+      var gonder = function () {
+        if (i >= h.liste.length) {
+          return api('katalog_bitir', { kaynak: h.kaynak }).then(function (r) {
+            cubuk(100); log('Bitti. ' + NF.format(r.satir || 0) + ' model-yıl fiyatı kaskodan hesaplandı. Genel katsayı: ' + (r.genel_oran ? (+r.genel_oran).toFixed(3) : '—'));
+            bildir('Katalog kaydedildi'); katalogHazir = null; $('#kOnizle', k).innerHTML = '';
+            api('markalar').then(function (l) { markaListesi = l; markaDoldur(); }); durum();
+          });
+        }
+        return api('katalog_parca', { liste: h.liste.slice(i, i + parca) }).then(function () {
+          i += parca; cubuk(70 + Math.min(29, i / h.liste.length * 29)); return gonder();
+        });
+      };
+      api('katalog_basla', {}).then(gonder).catch(function () { $('#kKaydet', k).disabled = false; });
+    };
+    $('#kDosya', k).onchange = function () {
+      var f = this.files[0]; if (!f) return;
+      log('Dosya: ' + f.name, true); cubuk(10);
+      f.arrayBuffer().then(function (b) { isle(new Uint8Array(b), 'Excel: ' + f.name); });
+      this.value = '';
+    };
+    $('#kTsb', k).onclick = function () {
+      var b = this; b.disabled = true; log('TSB\'ye bağlanılıyor…', true); cubuk(10);
+      fetch('api.php?a=tsb_indir', { headers: { 'X-CSRF': csrf } }).then(function (r) {
+        var tip = r.headers.get('Content-Type') || '';
+        if (!r.ok || tip.indexOf('json') >= 0) return r.text().then(function (t) {
+          var j = null; try { j = JSON.parse(t); } catch (e) {}
+          throw new Error(j && j.hata ? j.hata : 'Sunucu cevabı: ' + t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300));
+        });
+        var ad = decodeURIComponent(r.headers.get('X-Dosya') || 'tsb.xlsx'), donem = r.headers.get('X-Donem') || '';
+        return r.arrayBuffer().then(function (buf) { log('İndirildi: ' + ad + ' (' + donem + ', ' + NF.format(Math.round(buf.byteLength / 1024)) + ' KB)'); isle(new Uint8Array(buf), 'TSB ' + donem + ' (' + ad + ')'); });
+      }).catch(function (e) { log('HATA: ' + e.message + '\nTSB sitesinden Excel\'i indirip "Excel dosyası seç" ile yükleyebilirsiniz.'); bildir(e.message, true); })
+        .then(function () { b.disabled = false; });
+    };
+    $('#kKalibre', k).onclick = function () {
+      api('ayar_kaydet', { kasko_katsayi: $('#kKatsayi', k).value.trim().replace(',', '.') }).then(function () { return api('kalibre_et', {}); })
+        .then(function (r) { bildir(NF.format(r.satir || 0) + ' satır yeniden hesaplandı'); durum(); });
+    };
+    $('#eEkle', k).onclick = function () {
+      api('eslestirme_ekle', { marka: $('#eMarka2', k).value, tsb: $('#eTsb', k).value, model: $('#eModel2', k).value })
+        .then(function (r) { bildir('Eşleştirme eklendi (' + r.guncellenen + ' versiyon güncellendi)'); $('#eTsb', k).value = $('#eModel2', k).value = ''; durum(); });
+    };
+
+    // --- görseller ---
+    var yukle = function (veri, dosya) {
+      var fd = new FormData(); Object.keys(veri).forEach(function (x) { fd.append(x, veri[x]); }); fd.append('dosya', dosya);
+      return fetch('api.php?a=gorsel_yukle', { method: 'POST', headers: { 'X-CSRF': csrf }, body: fd }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.hata); return j; }); })
+        .catch(function (e) { bildir(e.message, true); throw e; });
+    };
+    var gorselCiz = function () {
+      var m = $('#gMarka', k).value; if (!m) { $('#gLogo', k).innerHTML = ''; $('#gModeller', k).innerHTML = '<p class="soluk" style="padding:10px">Marka seçin.</p>'; return; }
+      api('gorseller').then(function (g) {
+        var l = g.logo.find(function (x) { return x.marka === m; }) || {};
+        $('#gLogo', k).innerHTML = '<span style="display:inline-grid;place-items:center;width:120px;height:56px;border:1px solid var(--c);border-radius:10px;background:#fff">' + (l.url ? '<img src="../' + esc(l.url) + '" style="max-width:100px;max-height:44px">' : '<span class="soluk">logo yok</span>') + '</span>' +
+          '<label class="btn">Logo yükle<input type="file" accept="image/*" hidden id="gLogoDosya"></label>';
+        $('#gLogoDosya', k).onchange = function () { yukle({ tur: 'logo', marka: m }, this.files[0]).then(function () { bildir('Logo yüklendi'); gorselCiz(); }); };
+      });
+      api('model_gorselleri', { marka: m }).then(function (l) {
+        $('#gModeller', k).innerHTML = '<table class="xl"><tr><th>Model</th><th>Fotoğraf</th><th></th></tr>' + l.map(function (x, i) {
+          return '<tr><td>' + esc(x.model) + '</td><td>' + (x.url ? '<img src="../' + esc(x.url) + '" style="height:38px;border-radius:6px">' : '<span class="soluk">—</span>') + '</td><td><label class="btn kucuk">Yükle<input type="file" accept="image/*" hidden data-gm="' + i + '"></label>' + (x.url ? ' <button class="btn kucuk kirmizi" data-gs="' + i + '">Sil</button>' : '') + '</td></tr>';
+        }).join('') + '</table>';
+        $$('[data-gm]', k).forEach(function (inp) { inp.onchange = function () { yukle({ tur: 'model', marka: m, model: l[+inp.dataset.gm].model }, inp.files[0]).then(function () { bildir('Fotoğraf yüklendi'); gorselCiz(); }); }; });
+        $$('[data-gs]', k).forEach(function (b) { b.onclick = function () { api('gorsel_sil', { tur: 'model', marka: m, model: l[+b.dataset.gs].model }).then(gorselCiz); }; });
+      });
+    };
+    $('#gMarka', k).onchange = gorselCiz;
+
+    // --- katalog tablosu ---
+    var KASALAR = ['', 'Sedan', 'Hatchback', 'SUV', 'Station Wagon', 'Coupe', 'Cabrio', 'MPV / Ticari', 'Pick-up'];
+    var YAKITLAR = ['Benzin', 'Dizel', 'LPG', 'Hibrit', 'Elektrik'], VITESLER = ['Manuel', 'Otomatik', 'Yarı Otomatik'];
+    var sec = function (alan, l, v) { return '<select class="girdi" data-ka="' + alan + '" style="padding:2px 4px;font-size:12.5px">' + l.map(function (x) { return '<option' + (x === v ? ' selected' : '') + ' value="' + esc(x) + '">' + (x || '—') + '</option>'; }).join('') + '</select>'; };
+    var tkZaman, tkCiz = function () {
+      var m = $('#tkMarka', k).value; if (!m) return;
+      api('katalog_liste', { marka: m, ara: $('#tkAra', k).value.trim() }).then(function (l) {
+        $('#tkTablo', k).innerHTML = l.length ? '<table class="xl"><tr><th>Model</th><th>Versiyon</th><th>Kasa</th><th>Yakıt</th><th>Vites</th><th>Motor</th><th>HP</th><th>Kasko (yıl: değer)</th><th>Aktif</th></tr>' + l.map(function (x) {
+          var d = String(x.degerler || '').split(',').map(function (p) { var a = p.split(':'); return a[0] + ': ' + tl(+a[1]); }).sort().reverse().slice(0, 3).join(' · ');
+          return '<tr data-kid="' + x.id + '"><td><input class="hucre" data-ka="model" value="' + esc(x.model) + '" style="width:120px;text-align:left"></td><td>' + esc(x.versiyon) + '</td><td>' + sec('kasa', KASALAR, x.kasa) + '</td><td>' + sec('yakit', YAKITLAR, x.yakit) + '</td><td>' + sec('vites', VITESLER, x.vites) + '</td>' +
+            '<td><input class="hucre" data-ka="motor" value="' + esc(x.motor) + '" style="width:44px"></td><td><input class="hucre" data-ka="beygir" value="' + (x.beygir || '') + '" style="width:50px"></td><td class="soluk">' + d + '</td><td style="text-align:center"><input type="checkbox" data-ka="aktif"' + (x.aktif == 1 ? ' checked' : '') + '></td></tr>';
+        }).join('') + '</table>' + (l.length >= 600 ? '<div class="alt-not">İlk 600 satır; aramayla daraltın.</div>' : '') : '<p class="soluk" style="padding:10px">Kayıt yok.</p>';
+      });
+    };
+    $('#tkMarka', k).onchange = tkCiz;
+    $('#tkAra', k).oninput = function () { clearTimeout(tkZaman); tkZaman = setTimeout(tkCiz, 300); };
+    $('#tkTablo', k).addEventListener('change', function (e) {
+      var el = e.target; if (!el.dataset.ka) return;
+      var tr = el.closest('tr');
+      api('katalog_satir', { id: +tr.dataset.kid, alan: el.dataset.ka, deger: el.type === 'checkbox' ? (el.checked ? 1 : 0) : el.value }).then(function () { tr.classList.add('kaydedildi'); setTimeout(function () { tr.classList.remove('kaydedildi'); }, 1000); });
+    });
+  }
+
+  // ---------- AYARLAR ----------
+  var AYAR_GRUPLARI = [
+    ['Firma ve site', [['firma_adi', 'Firma adı'], ['firma_alt', 'Alt başlık'], ['telefon', 'Telefon', 'Sitede ve "Hemen ara" butonunda'], ['whatsapp', 'WhatsApp numarası', '90 ile, ör. 905321234567'], ['adres', 'Adres / şehir'],
+      ['teklif_goster', 'Müşteriye ön teklif göster', '1 = göster, 0 = "sizi arayacağız"']]],
+    ['Teklif hesabı', [['alim_marji', 'Alım marjı %', 'İlan medyanından düşülen pay'], ['aralik', 'Teklif aralığı ±%'], ['yuvarla', 'Yuvarlama (TL)'], ['yil_kaybi', 'Yıllık değer farkı %', 'Tabloda olmayan yıl tahmini için'],
+      ['min_yil', 'En eski model yılı', 'Daha eskisine otomatik teklif yok'], ['max_km', 'En yüksek km', 'Üstüne otomatik teklif yok']]],
+    ['Kilometre', [['yillik_km', 'Beklenen yıllık km', 'Piyasa km ortalaması yoksa'], ['km_ceza', 'Fazla her 10.000 km için −%'], ['km_bonus', 'Eksik her 10.000 km için +%'], ['km_sinir', 'Km etkisi en fazla ±%']]],
+    ['Hasar', [['lokal_boya', 'Lokal boyalı parça başına −%'], ['boyali', 'Boyalı parça başına −%'], ['degisen', 'Değişen parça başına −%'], ['tavan_kat', 'Tavan / kaput çarpanı', 'Kritik parçalarda kesinti × bu sayı'],
+      ['tramer_kat', 'Tramer katsayısı', 'Tramer/piyasa × 100 × katsayı = −%'], ['tramer_sinir', 'Tramer kesintisi en fazla %']]],
+    ['Yakıt ve vites farkı (%)', [['yakit_Benzin', 'Benzin'], ['yakit_Dizel', 'Dizel'], ['yakit_LPG', 'LPG'], ['yakit_Hibrit', 'Hibrit'], ['yakit_Elektrik', 'Elektrik'], ['vites_Manuel', 'Manuel'], ['vites_Otomatik', 'Otomatik'], ['vites_Yarı Otomatik', 'Yarı Otomatik']]],
+    ['Robot', [['robot_url', 'AraçRadar veri adresi'], ['robot_min_adet', 'En az ilan sayısı'], ['robot_oto', 'Panel açılınca otomatik tara', '1 = son tarama 24 saatten eskiyse tara ve kaydet']]]
+  ];
+  function cizAyarlar(k) {
+    k.innerHTML = '<h1 class="bas">Ayarlar</h1><p class="bas-alt">Teklif formülü, firma bilgileri ve robot ayarları.</p><div id="aForm">Yükleniyor…</div>';
+    api('ayarlar').then(function (A) {
+      $('#aForm', k).innerHTML = '<div class="iki-kolon"><div>' + AYAR_GRUPLARI.map(function (g) {
+        return '<div class="kutu"><h2>' + g[0] + '</h2><div class="alanlar">' + g[1].map(function (f) { return '<label>' + f[1] + (f[2] ? ' <small>' + f[2] + '</small>' : '') + '<input class="girdi" data-k="' + esc(f[0]) + '" value="' + esc(A[f[0]]) + '"></label>'; }).join('') + '</div></div>';
+      }).join('') + '<div class="satirlar"><button class="btn ana" id="aKaydet">Ayarları kaydet</button></div></div>' +
+        '<div><div class="kutu"><h2>Teklif simülatörü</h2><p class="soluk" style="margin-top:0">Ayarları kaydettikten sonra bir aracın teklifini test edin.</p><div class="alanlar">' +
+        '<label>Marka<input class="girdi" id="sMarka" list="sMarkalar" value="Fiat"></label><datalist id="sMarkalar">' + markaListesi.map(function (m) { return '<option value="' + esc(m) + '">'; }).join('') + '</datalist>' +
+        '<label>Model<input class="girdi" id="sModel" value="Egea"></label><label>Yıl<input class="girdi" id="sYil" value="2021"></label><label>Km<input class="girdi" id="sKm" value="90000"></label>' +
+        '<label>Yakıt<select class="girdi" id="sYakit"><option>Benzin</option><option selected>Dizel</option><option>LPG</option><option>Hibrit</option><option>Elektrik</option></select></label>' +
+        '<label>Vites<select class="girdi" id="sVites"><option>Manuel</option><option>Otomatik</option><option>Yarı Otomatik</option></select></label>' +
+        '<label>Boyalı parça<input class="girdi" id="sBoya" value="0"></label><label>Değişen parça<input class="girdi" id="sDeg" value="0"></label><label>Tramer TL<input class="girdi" id="sTramer" value="0"></label></div>' +
+        '<div class="satirlar" style="margin-top:10px"><button class="btn koyu" id="sHesap">Hesapla</button></div><div id="sSonuc"></div></div>' +
+        '<div class="kutu"><h2>Şifre değiştir</h2><div class="alanlar"><label>Mevcut şifre<input type="password" class="girdi" id="pEski"></label><label>Yeni şifre<input type="password" class="girdi" id="pYeni"></label></div><div class="satirlar" style="margin-top:10px"><button class="btn" id="pKaydet">Şifreyi değiştir</button></div></div>' +
+        '<div class="kutu"><h2>Yedek</h2><p class="soluk" style="margin-top:0">Tüm fiyatlar, talepler ve ayarlar tek dosyada. Ayda bir indirip saklayın.</p><a class="btn" href="api.php?a=yedek_indir">⬇ Veritabanı yedeğini indir</a></div></div></div>';
+      $('#aKaydet', k).onclick = function () {
+        var d = {}; $$('[data-k]', k).forEach(function (i) { d[i.dataset.k] = i.value.replace(',', '.'); });
+        if (d.robot_url !== undefined) d.robot_url = $('[data-k="robot_url"]', k).value.trim();
+        ['firma_adi', 'firma_alt', 'telefon', 'adres'].forEach(function (x) { d[x] = $('[data-k="' + x + '"]', k).value; });
+        api('ayar_kaydet', d).then(function () { bildir('Ayarlar kaydedildi'); });
+      };
+      $('#sHesap', k).onclick = function () {
+        var h = {}, P = ['kaput', 'sol_on_kapi', 'sag_on_kapi', 'sol_arka_kapi', 'sag_arka_kapi', 'sol_on_camurluk', 'sag_on_camurluk', 'bagaj', 'on_tampon', 'arka_tampon'], i = 0;
+        for (var b = +$('#sBoya', k).value || 0; b > 0 && i < P.length; b--) h[P[i++]] = 'boyali';
+        for (var d2 = +$('#sDeg', k).value || 0; d2 > 0 && i < P.length; d2--) h[P[i++]] = 'degisen';
+        api('simule', { marka: $('#sMarka', k).value, model: $('#sModel', k).value, yil: +$('#sYil', k).value, km: +$('#sKm', k).value.replace(/\D/g, ''), yakit: $('#sYakit', k).value, vites: $('#sVites', k).value, hasar: h, tramer: +$('#sTramer', k).value.replace(/\D/g, '') })
+          .then(function (s) {
+            $('#sSonuc', k).innerHTML = '<div style="margin-top:12px"><div class="kalem"><span>Piyasa (baz)</span><b>' + tl(s.baz) + '</b></div>' + s.kalemler.map(function (x) { return '<div class="kalem"><span>' + esc(x[0]) + '</span>' + (x[1] === null ? '' : yuzde(x[1])) + '</div>'; }).join('') +
+              '<div class="kalem"><span>Teklif</span><b style="color:var(--v2);font-size:16px">' + (s.min ? tl(s.min) + ' – ' + tl(s.max) + ' TL' : '—') + '</b></div>' + (s.mesaj ? '<p class="soluk">' + esc(s.mesaj) + ' (durum: ' + s.durum + ')</p>' : '') + '</div>';
+          });
+      };
+      $('#pKaydet', k).onclick = function () { api('sifre_degistir', { eski: $('#pEski', k).value, yeni: $('#pYeni', k).value }).then(function () { bildir('Şifre değiştirildi'); $('#pEski', k).value = $('#pYeni', k).value = ''; }); };
+    });
+  }
+})();
