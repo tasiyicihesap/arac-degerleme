@@ -38,7 +38,7 @@
     var nf = new Intl.NumberFormat('tr-TR');
     iz.innerHTML = l.map(function (m) {
       return '<button type="button" data-m="' + esc(m.ad) + '">' + (m.logo ? '<img src="' + esc(m.logo) + '" alt="" loading="lazy">' : '<span class="harf">' + esc(m.ad.charAt(0)) + '</span>') +
-        '<span>' + esc(m.ad) + '</span>' + (m.n > 0 ? '<small>' + nf.format(m.n) + ' ilan</small>' : '') + '</button>';
+        '<span>' + esc(m.ad) + '</span></button>';
     }).join('');
     iz.onclick = function (ev) { var b = ev.target.closest('button[data-m]'); if (b && window.OTK) window.OTK.marka(b.dataset.m); };
   });

@@ -489,7 +489,7 @@
   api('markalar').then(function (l) {
     cache.markalar = l;
     var n = l.reduce(function (a, b) { return a + b.n; }, 0);
-    if (n > 1000) $('#ilanSayi').textContent = new Intl.NumberFormat('tr-TR').format(Math.floor(n / 1000) * 1000) + '+';
+    if (n > 1000 && $('#ilanSayi')) $('#ilanSayi').textContent = new Intl.NumberFormat('tr-TR').format(Math.floor(n / 1000) * 1000) + '+';
     document.dispatchEvent(new CustomEvent('otk:markalar', { detail: l }));
   }).catch(function () {});
   // ana sayfadaki marka kartlarından sihirbazı başlatmak için
