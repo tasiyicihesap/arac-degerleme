@@ -361,15 +361,25 @@
   api('firma').then(function (f) {
     firma = f;
     document.querySelectorAll('#altFirma').forEach(function (e) { e.textContent = f.ad; });
-    $('#firmaAlt').textContent = f.alt || '';
+    if ($('#firmaAlt')) $('#firmaAlt').textContent = f.alt || '';
     $('#altAdres').textContent = f.adres || '';
     if (f.telefon) { var t = $('#ustTel'); t.hidden = false; t.href = 'tel:' + f.telefon.replace(/[^\d+]/g, ''); $('span', t).textContent = f.telefon; $('#altTel').textContent = '☎ ' + f.telefon; }
     if (f.whatsapp) { var w = $('#waSabit'); w.hidden = false; w.href = 'https://wa.me/' + f.whatsapp.replace(/\D/g, ''); }
+    document.dispatchEvent(new CustomEvent('otk:firma', { detail: f }));
   }).catch(function () {});
   api('markalar').then(function (l) {
     cache.markalar = l;
     var n = l.reduce(function (a, b) { return a + b.n; }, 0);
     if (n > 1000) $('#ilanSayi').textContent = new Intl.NumberFormat('tr-TR').format(Math.floor(n / 1000) * 1000) + '+';
+    document.dispatchEvent(new CustomEvent('otk:markalar', { detail: l }));
   }).catch(function () {});
+  // ana sayfadaki marka kartlarından sihirbazı başlatmak için
+  window.OTK = {
+    marka: function (m) {
+      if (adim !== 0) { S = { hasar: {}, tramerVar: null, agir: null, ad: S.ad, tel: S.tel, il: S.il, kvkk: S.kvkk }; sonuc = null; git(0); }
+      sec('marka', m, true);
+      $('#sihirbaz').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
   git(0);
 })();

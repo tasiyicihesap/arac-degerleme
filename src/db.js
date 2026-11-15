@@ -3,7 +3,7 @@ import baslangic from './baslangic.json';
 
 export const VARSAYILAN_AYARLAR = {
   firma_adi: 'OTOKABUL',
-  firma_alt: 'OTOCLASS güvencesiyle',
+  firma_alt: '',
   telefon: '',
   whatsapp: '',
   adres: 'İstanbul',
