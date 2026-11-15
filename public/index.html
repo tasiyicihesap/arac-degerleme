@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aracını Hemen Sat — Ücretsiz Ön Teklif | OTOKABUL.COM.TR</title>
-<meta name="description" content="Aracının güncel piyasa değerini dakikalar içinde öğren, OTOKABUL.COM.TR'den anında ön teklif al. Ücretsiz ekspertiz, noter işlemleri bizden, aynı gün ödeme.">
-<meta property="og:title" content="Aracını dakikalar içinde değerle, aynı gün sat | OTOKABUL.COM.TR">
-<meta property="og:description" content="Güncel piyasa ilanlarına dayalı ön teklif, ücretsiz ekspertiz, aynı gün ödeme.">
+<meta name="description" content="Aracının güncel piyasa değerini birkaç dakikada öğren, OTOKABUL.COM.TR'den ücretsiz ön teklif al. Ekspertiz ücretsiz, noter işlemleri bizden, ödeme aynı gün.">
+<meta property="og:title" content="Aracını birkaç dakikada değerle, aynı gün sat | OTOKABUL.COM.TR">
+<meta property="og:description" content="Güncel ilan verisine dayanan ön teklif, ücretsiz ekspertiz, aynı gün ödeme.">
 <meta name="theme-color" content="#0f1b2d">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1b2d'/%3E%3Ctext x='32' y='43' font-family='Arial' font-weight='900' font-size='30' text-anchor='middle' fill='%23ff5a1f'%3EOK%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,10 +16,14 @@
 <link rel="stylesheet" href="assets/anasayfa.css">
 </head>
 <body class="ana">
+<!--
+  Panelden değiştirilebilen cümleler data-metin ile işaretli (Yönetim Paneli > Site İçeriği).
+  data-bolum: paneldeki grup adı, data-etiket: alanın açıklaması.
+-->
 
 <div class="serit">
   <div class="kap serit-ic">
-    <span class="serit-not">Galeriye gitmeden, ilan vermeden aracını sat</span>
+    <span class="serit-not" data-metin="serit_not" data-bolum="Üst şerit" data-etiket="Sol üstteki kısa yazı">İlan vermeden, pazarlık yapmadan aracını sat</span>
     <div class="serit-baglar">
       <a id="seritTel" href="#" hidden><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg><span></span></a>
       <a id="seritWa" href="#" target="_blank" rel="noopener" hidden><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Z"/></svg>WhatsApp</a>
@@ -32,12 +36,12 @@
   <div class="kap ust-ic">
     <a class="logo" href="./" aria-label="OTOKABUL.COM.TR ana sayfa"><span class="logo-a">OTO</span><span class="logo-b">KABUL</span><span class="logo-c">.COM.TR</span><small id="firmaAlt" hidden></small></a>
     <nav>
-      <a href="#nasil">Nasıl çalışır?</a>
-      <a href="#fiyat">Fiyatı nasıl buluyoruz?</a>
-      <a href="#neden">Neden biz?</a>
-      <a href="#sss">Sık sorulanlar</a>
+      <a href="#nasil" data-metin="menu_nasil" data-bolum="Menü" data-etiket="1. bağlantı">Nasıl işliyor?</a>
+      <a href="#fiyat" data-metin="menu_fiyat" data-bolum="Menü" data-etiket="2. bağlantı">Fiyatı kim belirliyor?</a>
+      <a href="#neden" data-metin="menu_neden" data-bolum="Menü" data-etiket="3. bağlantı">Neden biz?</a>
+      <a href="#sss" data-metin="menu_sss" data-bolum="Menü" data-etiket="4. bağlantı">Sorular</a>
       <a class="ust-tel" id="ustTel" href="#" hidden>☎ <span></span></a>
-      <a class="ust-cta" href="#degerle">Aracımı değerle</a>
+      <a class="ust-cta" href="#degerle" data-metin="menu_buton" data-bolum="Menü" data-etiket="Sağ üstteki düğme">Aracımı değerle</a>
     </nav>
   </div>
 </header>
@@ -47,32 +51,32 @@
   <svg class="kahraman-desen" viewBox="0 0 600 600" aria-hidden="true"><path d="M110 0h170L120 300l160 300H110L-50 300Z"/><path d="M330 0h170L340 300l160 300H330L170 300Z"/></svg>
   <div class="kap kahraman-ic">
     <div class="kahraman-yazi">
-      <p class="etiket"><i></i>Bugün değerle, bugün sat</p>
-      <h1>Aracını satmanın<br><em>en hızlı</em> ve en<br>güvenilir yolu.</h1>
-      <p class="alt">Fiyat robotumuz güncel piyasadaki binlerce ilanı inceler, aracına özel ön teklifi dakikalar içinde hazırlar. Beğenirsen ücretsiz ekspertiz, noter ve ödeme aynı gün.</p>
+      <p class="etiket"><i></i><span data-metin="giris_etiket" data-bolum="Giriş alanı" data-etiket="Başlık üstündeki küçük rozet">Ücretsiz ön teklif · 2 dakika</span></p>
+      <h1 data-metin="giris_baslik" data-bolum="Giriş alanı" data-etiket="Büyük başlık (*yıldız arası* turuncu yazılır)">Aracını <em>birkaç dakikada</em> değerle,<br><em>aynı gün</em> nakit sat.</h1>
+      <p class="alt" data-metin="giris_alt" data-bolum="Giriş alanı" data-etiket="Başlık altındaki açıklama">Fiyat robotumuz piyasadaki güncel ilanları tek tek tarar, aracına özel ön teklifi saniyeler içinde hazırlar. Teklif içine sinerse ekspertiz ücretsiz, noter işlemleri bizden, ödeme aynı gün.</p>
       <div class="secim-kartlari">
         <a class="secim-karti" href="#degerle" data-odak="sihirbaz">
           <span class="secim-ikon"><svg viewBox="0 0 48 48"><rect x="6" y="20" width="36" height="14" rx="4"/><path d="M11 20l4-8a4 4 0 0 1 3.6-2.2h10.8A4 4 0 0 1 33 12l4 8"/><circle cx="14" cy="34" r="4"/><circle cx="34" cy="34" r="4"/><path d="M30 6l3 3 6-6" class="tik"/></svg></span>
-          <span><b>Aracımı değerle</b><small>Marka, model, kilometre ve hasar bilgini gir, ön teklifini hemen gör.</small></span>
+          <span><b data-metin="kart1_baslik" data-bolum="Giriş alanı" data-etiket="1. kart başlığı">Fiyatını hemen öğren</b><small data-metin="kart1_yazi" data-bolum="Giriş alanı" data-etiket="1. kart yazısı">Markayı, modeli ve kilometreyi seç; ön teklifin aynı ekranda çıksın.</small></span>
           <span class="ok">›</span>
         </a>
         <a class="secim-karti" id="kartWa" href="#iletisim">
           <span class="secim-ikon yesil"><svg viewBox="0 0 48 48"><path d="M24 6a18 18 0 0 0-15.5 27.2L6 42l9-2.4A18 18 0 1 0 24 6Z"/><path d="M17 18c0 7 6 13 13 13l2.5-3-4-2-2 1.5c-2-1-4-3-5-5l1.5-2-2-4Z" class="dolu"/></svg></span>
-          <span><b>WhatsApp'tan yaz</b><small>Ruhsat ve fotoğrafları gönder, uzmanımız teklifiyle dönsün.</small></span>
+          <span><b data-metin="kart2_baslik" data-bolum="Giriş alanı" data-etiket="2. kart başlığı (WhatsApp)">Fotoğrafını gönder</b><small data-metin="kart2_yazi" data-bolum="Giriş alanı" data-etiket="2. kart yazısı">Ruhsatı ve birkaç fotoğrafı WhatsApp'tan ilet, teklifini uzmanımız hazırlasın.</small></span>
           <span class="ok">›</span>
         </a>
       </div>
       <ul class="guven">
-        <li><b id="ilanSayi">Binlerce</b><span>güncel ilan analizi</span></li>
-        <li><b>Ücretsiz</b><span>ekspertiz</span></li>
-        <li><b>Aynı gün</b><span>ödeme</span></li>
+        <li><b id="ilanSayi">Binlerce</b><span data-metin="sayi1" data-bolum="Giriş alanı" data-etiket="İlan sayısının altındaki yazı">ilan her gün taranıyor</span></li>
+        <li><b data-metin="sayi2_b" data-bolum="Giriş alanı" data-etiket="2. rakam">Ücretsiz</b><span data-metin="sayi2" data-bolum="Giriş alanı" data-etiket="2. rakamın altı">ekspertiz</span></li>
+        <li><b data-metin="sayi3_b" data-bolum="Giriş alanı" data-etiket="3. rakam">Aynı gün</b><span data-metin="sayi3" data-bolum="Giriş alanı" data-etiket="3. rakamın altı">ödeme</span></li>
       </ul>
     </div>
 
     <div class="sihirbaz" id="sihirbaz">
-      <div class="sb-baslik"><span class="nokta"></span>Ücretsiz ön teklif · 2 dakika</div>
+      <div class="sb-baslik"><span class="nokta"></span><span data-metin="sihirbaz_ust" data-bolum="Giriş alanı" data-etiket="Değerleme kutusunun üst yazısı">Ücretsiz ön teklif · Kayıt gerekmez</span></div>
       <div class="sb-ust">
-        <div class="sb-adim" id="sbAdimYazi">1 / 10</div>
+        <div class="sb-adim" id="sbAdimYazi">1 / 12</div>
         <div class="sb-cubuk"><i id="sbCubuk"></i></div>
       </div>
       <div class="sb-secimler" id="sbSecimler"></div>
@@ -87,64 +91,74 @@
 
 <section class="guven-serit">
   <div class="kap guven-serit-ic">
-    <div class="gs-kalem"><span class="gs-ikon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span><div><b>Piyasa verisiyle fiyat</b><small>Tahmin değil; güncel ilanlar ve kasko değerleri</small></div></div>
-    <div class="gs-kalem"><span class="gs-ikon"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V7z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></span><div><b>Şeffaf teklif</b><small>Fiyatı etkileyen her kalemi tek tek görürsün</small></div></div>
-    <div class="gs-kalem"><span class="gs-ikon"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg></span><div><b>Aynı gün ödeme</b><small>Noter satışıyla birlikte hesabına geçer</small></div></div>
-    <div class="gs-kalem"><span class="gs-ikon"><svg viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/></svg></span><div><b>Evrak bizden</b><small>Noter randevusu ve işlemleri biz ayarlarız</small></div></div>
+    <div class="gs-kalem"><span class="gs-ikon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span><div><b data-metin="gs1_b" data-bolum="Güven şeridi" data-etiket="1. başlık">Veriye dayalı fiyat</b><small data-metin="gs1" data-bolum="Güven şeridi" data-etiket="1. yazı">Göz kararı değil; güncel ilanlar ve kasko değerleri</small></div></div>
+    <div class="gs-kalem"><span class="gs-ikon"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V7z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></span><div><b data-metin="gs2_b" data-bolum="Güven şeridi" data-etiket="2. başlık">Açık hesap</b><small data-metin="gs2" data-bolum="Güven şeridi" data-etiket="2. yazı">Fiyata etki eden her kalemi tek tek görürsün</small></div></div>
+    <div class="gs-kalem"><span class="gs-ikon"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg></span><div><b data-metin="gs3_b" data-bolum="Güven şeridi" data-etiket="3. başlık">Aynı gün ödeme</b><small data-metin="gs3" data-bolum="Güven şeridi" data-etiket="3. yazı">Noterde imza atıldığı gün para hesabında</small></div></div>
+    <div class="gs-kalem"><span class="gs-ikon"><svg viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/></svg></span><div><b data-metin="gs4_b" data-bolum="Güven şeridi" data-etiket="4. başlık">Evrak işi bizde</b><small data-metin="gs4" data-bolum="Güven şeridi" data-etiket="4. yazı">Noter randevusunu ve devir işlemlerini biz ayarlarız</small></div></div>
   </div>
 </section>
 
 <section class="nasil" id="nasil">
   <div class="kap">
     <div class="bolum-bas">
-      <p class="ust-etiket">Nasıl çalışır?</p>
-      <h2>Aracını 4 adımda sat</h2>
-      <p>Galeri galeri gezmek, ilan verip pazarlık beklemek yok. Süreç senin elinde, her adımda yanındayız.</p>
+      <p class="ust-etiket" data-metin="nasil_etiket" data-bolum="Nasıl işliyor" data-etiket="Küçük üst başlık">Nasıl işliyor?</p>
+      <h2 data-metin="nasil_baslik" data-bolum="Nasıl işliyor" data-etiket="Bölüm başlığı">Dört kısa adımda satış tamam</h2>
+      <p data-metin="nasil_alt" data-bolum="Nasıl işliyor" data-etiket="Bölüm açıklaması">Galeri galeri dolaşmana, ilan verip telefon başında beklemene gerek yok. Süreci sen başlatırsın, gerisini birlikte hallederiz.</p>
     </div>
     <div class="adim-kartlari">
       <article>
-        <div class="adim-gorsel g1"><svg viewBox="0 0 200 120"><rect x="70" y="8" width="60" height="104" rx="10" class="cerceve"/><rect x="78" y="22" width="44" height="8" rx="3" class="acik"/><rect x="78" y="36" width="44" height="8" rx="3" class="acik"/><rect x="78" y="50" width="30" height="8" rx="3" class="vurgu"/><rect x="78" y="88" width="44" height="12" rx="4" class="vurgu"/><circle cx="150" cy="40" r="14" class="halka"/><path d="M143 40l5 5 9-9" class="tik"/></svg></div>
-        <span class="adim-no">1</span><h3>Bilgilerini gir</h3><p>Marka, model, yıl, kilometre ve boya-değişen durumunu seç. Sadece 2 dakika.</p>
+        <div class="adim-gorsel g1" data-gorsel="adim1"><svg viewBox="0 0 200 120"><rect x="70" y="8" width="60" height="104" rx="10" class="cerceve"/><rect x="78" y="22" width="44" height="8" rx="3" class="acik"/><rect x="78" y="36" width="44" height="8" rx="3" class="acik"/><rect x="78" y="50" width="30" height="8" rx="3" class="vurgu"/><rect x="78" y="88" width="44" height="12" rx="4" class="vurgu"/><circle cx="150" cy="40" r="14" class="halka"/><path d="M143 40l5 5 9-9" class="tik"/></svg></div>
+        <span class="adim-no">1</span><h3 data-metin="adim1_b" data-bolum="Nasıl işliyor" data-etiket="1. adım başlığı">Aracını anlat</h3><p data-metin="adim1" data-bolum="Nasıl işliyor" data-etiket="1. adım yazısı">Marka, model, kilometre ve boya-değişen bilgisini seç. Dilersen fotoğraf da ekle.</p>
       </article>
       <article>
-        <div class="adim-gorsel g2"><svg viewBox="0 0 200 120"><path d="M60 30h60l26 30-26 30H60a8 8 0 0 1-8-8V38a8 8 0 0 1 8-8Z" class="etiket-sekil"/><circle cx="128" cy="60" r="6" class="delik"/><text x="96" y="66" text-anchor="middle" class="fiyat-yazi">₺</text><path d="M30 92l18-14 14 8 22-20" class="cizgi-grafik"/></svg></div>
-        <span class="adim-no">2</span><h3>Ön teklifini gör</h3><p>Robotumuz piyasayı tarar, aracına özel fiyat aralığını anında gösterir.</p>
+        <div class="adim-gorsel g2" data-gorsel="adim2"><svg viewBox="0 0 200 120"><path d="M60 30h60l26 30-26 30H60a8 8 0 0 1-8-8V38a8 8 0 0 1 8-8Z" class="etiket-sekil"/><circle cx="128" cy="60" r="6" class="delik"/><text x="96" y="66" text-anchor="middle" class="fiyat-yazi">₺</text><path d="M30 92l18-14 14 8 22-20" class="cizgi-grafik"/></svg></div>
+        <span class="adim-no">2</span><h3 data-metin="adim2_b" data-bolum="Nasıl işliyor" data-etiket="2. adım başlığı">Fiyatını anında öğren</h3><p data-metin="adim2" data-bolum="Nasıl işliyor" data-etiket="2. adım yazısı">Robotumuz piyasayı tarar ve aracına özel fiyat aralığını aynı ekranda gösterir.</p>
       </article>
       <article>
-        <div class="adim-gorsel g3"><svg viewBox="0 0 200 120"><rect x="40" y="58" width="120" height="30" rx="10" class="kasa"/><path d="M58 58l12-20h60l12 20" class="kasa-ust"/><circle cx="72" cy="90" r="11" class="teker"/><circle cx="128" cy="90" r="11" class="teker"/><circle cx="150" cy="30" r="16" class="halka"/><path d="M144 30h12M150 24v12" class="arti"/></svg></div>
-        <span class="adim-no">3</span><h3>Ücretsiz ekspertiz</h3><p>Uzmanımız seni arar, uygun saatte aracını ücretsiz kontrol eder ve kesin teklifi verir.</p>
+        <div class="adim-gorsel g3" data-gorsel="adim3"><svg viewBox="0 0 200 120"><rect x="40" y="58" width="120" height="30" rx="10" class="kasa"/><path d="M58 58l12-20h60l12 20" class="kasa-ust"/><circle cx="72" cy="90" r="11" class="teker"/><circle cx="128" cy="90" r="11" class="teker"/><circle cx="150" cy="30" r="16" class="halka"/><path d="M144 30h12M150 24v12" class="arti"/></svg></div>
+        <span class="adim-no">3</span><h3 data-metin="adim3_b" data-bolum="Nasıl işliyor" data-etiket="3. adım başlığı">Uzmanımız incelesin</h3><p data-metin="adim3" data-bolum="Nasıl işliyor" data-etiket="3. adım yazısı">Sana uygun saatte aracını ücretsiz kontrol ederiz ve kesin teklifimizi veririz.</p>
       </article>
       <article>
-        <div class="adim-gorsel g4"><svg viewBox="0 0 200 120"><rect x="44" y="34" width="112" height="62" rx="10" class="kart-sekil"/><rect x="44" y="48" width="112" height="10" class="serit-sekil"/><rect x="58" y="72" width="36" height="8" rx="3" class="acik"/><circle cx="150" cy="30" r="18" class="halka-yesil"/><path d="M142 30l6 6 10-11" class="tik"/></svg></div>
-        <span class="adim-no">4</span><h3>Paran aynı gün hesabında</h3><p>Teklifi kabul et, noter satışını yapalım; ödemen aynı gün hesabına geçsin.</p>
+        <div class="adim-gorsel g4" data-gorsel="adim4"><svg viewBox="0 0 200 120"><rect x="44" y="34" width="112" height="62" rx="10" class="kart-sekil"/><rect x="44" y="48" width="112" height="10" class="serit-sekil"/><rect x="58" y="72" width="36" height="8" rx="3" class="acik"/><circle cx="150" cy="30" r="18" class="halka-yesil"/><path d="M142 30l6 6 10-11" class="tik"/></svg></div>
+        <span class="adim-no">4</span><h3 data-metin="adim4_b" data-bolum="Nasıl işliyor" data-etiket="4. adım başlığı">Noterde imzala, parayı al</h3><p data-metin="adim4" data-bolum="Nasıl işliyor" data-etiket="4. adım yazısı">Teklifi onaylarsan noter satışını birlikte yaparız; ödeme aynı gün hesabına geçer.</p>
       </article>
     </div>
-    <div class="orta"><a class="btn-ana btn-buyuk" href="#degerle">Hemen ön teklif al →</a></div>
+    <div class="orta"><a class="btn-ana btn-buyuk" href="#degerle" data-metin="nasil_buton" data-bolum="Nasıl işliyor" data-etiket="Bölüm altındaki düğme">Ön teklifimi hesapla →</a></div>
+  </div>
+</section>
+
+<section class="galeri" id="galeri" hidden>
+  <div class="kap">
+    <div class="bolum-bas">
+      <p class="ust-etiket" data-metin="galeri_etiket" data-bolum="Galeri" data-etiket="Küçük üst başlık">Galerimizden</p>
+      <h2 data-metin="galeri_baslik" data-bolum="Galeri" data-etiket="Bölüm başlığı">Teslim aldığımız araçlardan kareler</h2>
+    </div>
+    <div class="galeri-izgara" id="galeriIzgara"></div>
   </div>
 </section>
 
 <section class="markalar" id="markalar">
   <div class="kap">
     <div class="bolum-bas">
-      <p class="ust-etiket">Her marka, her model</p>
-      <h2>Hangi aracı satıyorsun?</h2>
-      <p>Markana tıkla, değerlemeye kaldığın yerden devam et.</p>
+      <p class="ust-etiket" data-metin="marka_etiket" data-bolum="Markalar" data-etiket="Küçük üst başlık">Her marka, her model</p>
+      <h2 data-metin="marka_baslik" data-bolum="Markalar" data-etiket="Bölüm başlığı">Aracının markası hangisi?</h2>
+      <p data-metin="marka_alt" data-bolum="Markalar" data-etiket="Bölüm açıklaması">Markana tıkla, değerleme o markayla başlasın.</p>
     </div>
     <div class="marka-izgara" id="markaIzgara"></div>
-    <div class="orta"><a class="metin-link" href="#degerle">Tüm markalar →</a></div>
+    <div class="orta"><a class="metin-link" href="#degerle" data-metin="marka_link" data-bolum="Markalar" data-etiket="Alttaki bağlantı">Diğer markalar →</a></div>
   </div>
 </section>
 
 <section class="fiyat-bolum" id="fiyat">
   <div class="kap fiyat-ic">
     <div class="fiyat-yazi-blok">
-      <p class="ust-etiket acik">Fiyatı nasıl buluyoruz?</p>
-      <h2>Ön teklifin arkasında gerçek piyasa verisi var</h2>
-      <p class="aciklama">Teklifimiz bir galericinin tahmini değil. Her gün güncellenen veriyle aracının bugünkü piyasa değerini hesaplıyoruz.</p>
+      <p class="ust-etiket acik" data-metin="fiyat_etiket" data-bolum="Fiyat bölümü" data-etiket="Küçük üst başlık">Fiyatı kim belirliyor?</p>
+      <h2 data-metin="fiyat_baslik" data-bolum="Fiyat bölümü" data-etiket="Bölüm başlığı">Teklifimizin arkasında piyasanın kendisi var</h2>
+      <p class="aciklama" data-metin="fiyat_alt" data-bolum="Fiyat bölümü" data-etiket="Bölüm açıklaması">Bir galericinin tahminiyle değil, her gün yenilenen verilerle çalışıyoruz. Aracının bugün piyasada ne ettiğini üç adımda hesaplıyoruz.</p>
       <ol class="fiyat-adim">
-        <li><b>Güncel ilanlar</b><span>Türkiye'nin büyük ilan sitelerindeki aynı marka, model ve yıldaki araçları tarar, uç fiyatları ayıklar.</span></li>
-        <li><b>Motor ve paket farkı</b><span>Aynı modelin farklı motor ve donanımları arasındaki farkı kasko değer listesiyle hesaplar.</span></li>
-        <li><b>Aracının durumu</b><span>Kilometre, boya-değişen ve tramer bilgisini piyasa ortalamasına göre değerlendirir.</span></li>
+        <li><b data-metin="fa1_b" data-bolum="Fiyat bölümü" data-etiket="1. madde başlığı">Güncel ilanlar</b><span data-metin="fa1" data-bolum="Fiyat bölümü" data-etiket="1. madde yazısı">Büyük ilan sitelerinde aynı marka, model ve yıldaki araçları tarar; aşırı ucuz ve aşırı pahalı ilanları ayıklar.</span></li>
+        <li><b data-metin="fa2_b" data-bolum="Fiyat bölümü" data-etiket="2. madde başlığı">Motor ve paket farkı</b><span data-metin="fa2" data-bolum="Fiyat bölümü" data-etiket="2. madde yazısı">Aynı modelin farklı motor ve donanım seçenekleri arasındaki farkı kasko değer listesinden hesaplar.</span></li>
+        <li><b data-metin="fa3_b" data-bolum="Fiyat bölümü" data-etiket="3. madde başlığı">Aracının durumu</b><span data-metin="fa3" data-bolum="Fiyat bölümü" data-etiket="3. madde yazısı">Kilometre, boya-değişen ve tramer bilgisini piyasa ortalamasıyla karşılaştırır.</span></li>
       </ol>
     </div>
     <div class="fiyat-gorsel" aria-hidden="true">
@@ -163,14 +177,14 @@
 <section class="neden" id="neden">
   <div class="kap">
     <div class="bolum-bas">
-      <p class="ust-etiket">Neden OTOKABUL.COM.TR?</p>
-      <h2>Aracını satarken içinin rahat olsun</h2>
+      <p class="ust-etiket" data-metin="neden_etiket" data-bolum="Neden biz" data-etiket="Küçük üst başlık">Neden OTOKABUL.COM.TR?</p>
+      <h2 data-metin="neden_baslik" data-bolum="Neden biz" data-etiket="Bölüm başlığı">Satarken aklında soru işareti kalmasın</h2>
     </div>
     <div class="neden-izgara">
-      <div class="neden-kart"><span class="nk-ikon"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><h3>Adil piyasa fiyatı</h3><p>Fiyatı güncel ilan verisi belirler; pazarlık yorgunluğu yaşamazsın.</p></div>
-      <div class="neden-kart"><span class="nk-ikon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/><path d="M8.5 11l2 2 3.5-4"/></svg></span><h3>Ücretsiz ekspertiz</h3><p>Aracını uzmanımız ücretsiz kontrol eder, sürpriz kesinti olmaz.</p></div>
-      <div class="neden-kart"><span class="nk-ikon"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span><h3>Evrak ve noter bizden</h3><p>Noter randevusu, satış ve devir işlemlerini biz organize ederiz.</p></div>
-      <div class="neden-kart"><span class="nk-ikon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><h3>Zamanın sana kalsın</h3><p>İlan, telefon trafiği, yabancılarla randevu yok; her şey tek seferde biter.</p></div>
+      <div class="neden-kart"><span class="nk-ikon"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><h3 data-metin="n1_b" data-bolum="Neden biz" data-etiket="1. kart başlığı">Hakkını veren fiyat</h3><p data-metin="n1" data-bolum="Neden biz" data-etiket="1. kart yazısı">Fiyatı güncel ilan verisi belirler; uzun pazarlıklarla vakit kaybetmezsin.</p></div>
+      <div class="neden-kart"><span class="nk-ikon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/><path d="M8.5 11l2 2 3.5-4"/></svg></span><h3 data-metin="n2_b" data-bolum="Neden biz" data-etiket="2. kart başlığı">Ücretsiz ekspertiz</h3><p data-metin="n2" data-bolum="Neden biz" data-etiket="2. kart yazısı">Aracını uzmanımız ücretsiz inceler; sonradan sürpriz kesinti çıkmaz.</p></div>
+      <div class="neden-kart"><span class="nk-ikon"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span><h3 data-metin="n3_b" data-bolum="Neden biz" data-etiket="3. kart başlığı">Noter ve evrak bizde</h3><p data-metin="n3" data-bolum="Neden biz" data-etiket="3. kart yazısı">Noter randevusundan devir işlemlerine kadar bütün süreci biz yürütürüz.</p></div>
+      <div class="neden-kart"><span class="nk-ikon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><h3 data-metin="n4_b" data-bolum="Neden biz" data-etiket="4. kart başlığı">Zaman senin</h3><p data-metin="n4" data-bolum="Neden biz" data-etiket="4. kart yazısı">İlan, telefon trafiği ve yabancılarla randevu yok; her şey tek seferde biter.</p></div>
     </div>
   </div>
 </section>
@@ -178,7 +192,7 @@
 <section class="yardim" id="iletisim">
   <div class="kap">
     <div class="yardim-kutu">
-      <div><h2>Bir sorun mu var? Hemen yanındayız.</h2><p>Aracın hakkında soru sormak ya da teklifini konuşmak için bize yaz veya ara.</p></div>
+      <div><h2 data-metin="yardim_baslik" data-bolum="İletişim kutusu" data-etiket="Başlık">Aklına takılan bir şey mi var?</h2><p data-metin="yardim_alt" data-bolum="İletişim kutusu" data-etiket="Açıklama">Aracını sormak ya da teklifini konuşmak için bize yaz veya ara; hemen dönüş yapalım.</p></div>
       <div class="yardim-butonlar">
         <a class="btn-wa" id="yardimWa" href="#" target="_blank" rel="noopener" hidden>WhatsApp'tan yaz</a>
         <a class="btn-ara" id="yardimTel" href="#" hidden>Hemen ara</a>
@@ -191,18 +205,18 @@
 <section class="sss" id="sss">
   <div class="kap sss-ic">
     <div class="bolum-bas sol">
-      <p class="ust-etiket">Sık sorulanlar</p>
-      <h2>Aklına takılanlar</h2>
-      <p>Cevabını bulamadığın bir soru varsa bize yazman yeterli.</p>
+      <p class="ust-etiket" data-metin="sss_etiket" data-bolum="Sık sorulanlar" data-etiket="Küçük üst başlık">Sık sorulanlar</p>
+      <h2 data-metin="sss_baslik" data-bolum="Sık sorulanlar" data-etiket="Bölüm başlığı">Merak ettiklerin</h2>
+      <p data-metin="sss_alt" data-bolum="Sık sorulanlar" data-etiket="Bölüm açıklaması">Aradığın cevabı bulamazsan bize yazman yeterli.</p>
     </div>
     <div>
-      <details open><summary>Ön teklif nasıl hesaplanıyor?</summary><p>Fiyat robotumuz Türkiye'nin büyük ilan sitelerindeki güncel ilanları düzenli olarak tarar, aynı marka, model ve yıldaki araçların piyasa fiyatını çıkarır. Motor ve paket farkı kasko değer listesiyle, kilometre, boya-değişen ve tramer bilgisi de bu fiyata göre değerlendirilir.</p></details>
-      <details><summary>Ön teklif ile kesin teklif neden farklı olabilir?</summary><p>Ön teklif senin verdiğin bilgilere dayanır. Ekspertizde bildirilmemiş bir hasar, mekanik arıza veya kayıt çıkarsa teklif güncellenir. Bilgiler doğruysa kesin teklif ön teklif aralığında olur.</p></details>
-      <details><summary>Ekspertiz ücretli mi?</summary><p>Hayır. Ekspertiz tamamen ücretsizdir ve teklifi kabul etmek zorunda değilsin.</p></details>
-      <details><summary>Ödemeyi ne zaman alırım?</summary><p>Teklifi kabul edip noter satışını yaptığımız gün, ödeme hesabına yapılır.</p></details>
-      <details><summary>Hangi araçları alıyorsunuz?</summary><p>Her marka ve modeli değerlendiriyoruz. Çok eski, ağır hasar kayıtlı veya çok yüksek kilometreli araçlarda fiyatı uzmanımız ekspertiz sonrası belirler.</p></details>
-      <details><summary>Aracımda kredi veya rehin varsa satabilir miyim?</summary><p>Evet. Kredi kapatma ve rehin kaldırma sürecini birlikte planlıyoruz; detayları uzmanımız telefonda anlatır.</p></details>
-      <details><summary>Bilgilerim ne için kullanılıyor?</summary><p>Ad ve telefon bilgin yalnızca sana teklifimizi iletmek ve randevu oluşturmak için kullanılır, üçüncü kişilerle paylaşılmaz.</p></details>
+      <details open><summary data-metin="s1_s" data-bolum="Sık sorulanlar" data-etiket="1. soru">Ön teklif nasıl hesaplanıyor?</summary><p data-metin="s1_c" data-bolum="Sık sorulanlar" data-etiket="1. cevap">Fiyat robotumuz büyük ilan sitelerindeki güncel ilanları düzenli olarak tarar ve aynı marka, model ve yıldaki araçların piyasa fiyatını çıkarır. Motor ve paket farkı kasko değer listesinden; kilometre, boya-değişen ve tramer bilgisi de bu fiyata göre hesaplanır.</p></details>
+      <details><summary data-metin="s2_s" data-bolum="Sık sorulanlar" data-etiket="2. soru">Ön teklif ile kesin teklif neden farklı olabilir?</summary><p data-metin="s2_c" data-bolum="Sık sorulanlar" data-etiket="2. cevap">Ön teklif senin verdiğin bilgilere dayanır. Ekspertizde bildirilmemiş bir hasar, mekanik arıza ya da kayıt çıkarsa teklif güncellenir. Bilgiler doğruysa kesin teklif, ön teklif aralığında kalır.</p></details>
+      <details><summary data-metin="s3_s" data-bolum="Sık sorulanlar" data-etiket="3. soru">Ekspertiz için ücret ödüyor muyum?</summary><p data-metin="s3_c" data-bolum="Sık sorulanlar" data-etiket="3. cevap">Hayır, ekspertiz tamamen ücretsiz. Teklifimizi kabul etmek zorunda da değilsin.</p></details>
+      <details><summary data-metin="s4_s" data-bolum="Sık sorulanlar" data-etiket="4. soru">Paramı ne zaman alırım?</summary><p data-metin="s4_c" data-bolum="Sık sorulanlar" data-etiket="4. cevap">Teklifi onaylayıp noter satışını yaptığımız gün ödeme hesabına geçer.</p></details>
+      <details><summary data-metin="s5_s" data-bolum="Sık sorulanlar" data-etiket="5. soru">Hangi araçları satın alıyorsunuz?</summary><p data-metin="s5_c" data-bolum="Sık sorulanlar" data-etiket="5. cevap">Her marka ve modeli değerlendiriyoruz. Çok eski, ağır hasar kayıtlı ya da çok yüksek kilometreli araçlarda fiyatı uzmanımız ekspertizden sonra belirler.</p></details>
+      <details><summary data-metin="s6_s" data-bolum="Sık sorulanlar" data-etiket="6. soru">Aracımda kredi veya rehin varsa satabilir miyim?</summary><p data-metin="s6_c" data-bolum="Sık sorulanlar" data-etiket="6. cevap">Evet. Kredi kapatma ve rehin kaldırma işlemlerini birlikte planlıyoruz; ayrıntıları uzmanımız telefonda anlatır.</p></details>
+      <details><summary data-metin="s7_s" data-bolum="Sık sorulanlar" data-etiket="7. soru">Bilgilerim ne için kullanılıyor?</summary><p data-metin="s7_c" data-bolum="Sık sorulanlar" data-etiket="7. cevap">Ad ve telefon bilgin yalnızca teklifimizi sana iletmek ve randevu oluşturmak için kullanılır; üçüncü kişilerle paylaşılmaz.</p></details>
     </div>
   </div>
 </section>
@@ -212,10 +226,10 @@
   <div class="kap alt-kolonlar">
     <div class="ak-marka">
       <a class="logo" href="./"><span class="logo-a">OTO</span><span class="logo-b">KABUL</span><span class="logo-c">.COM.TR</span></a>
-      <p>Aracını galeriye gitmeden, ilan vermeden; güncel piyasa fiyatıyla ve aynı gün ödemeyle sat.</p>
+      <p data-metin="alt_yazi" data-bolum="Alt bilgi" data-etiket="Logonun altındaki yazı">Aracını galeriye götürmeden, ilan vermeden; güncel piyasa fiyatıyla ve aynı gün ödemeyle sat.</p>
     </div>
     <div><h4>Hizmetlerimiz</h4><a href="#degerle">Aracını sat</a><a href="#degerle">Ücretsiz ön teklif</a><a href="#nasil">Ücretsiz ekspertiz</a></div>
-    <div><h4>Nasıl çalışır?</h4><a href="#nasil">Satış adımları</a><a href="#fiyat">Fiyatı nasıl buluyoruz?</a><a href="#sss">Sık sorulanlar</a></div>
+    <div><h4>Nasıl işliyor?</h4><a href="#nasil">Satış adımları</a><a href="#fiyat">Fiyatı kim belirliyor?</a><a href="#sss">Sık sorulanlar</a></div>
     <div><h4>İletişim</h4><span id="altTel"></span><a id="altWa" href="#" target="_blank" rel="noopener" hidden>WhatsApp</a><span id="altAdres">İstanbul</span></div>
   </div>
   <div class="kap alt-son"><span>© <span id="yil">2026</span> <b id="altFirma">OTOKABUL</b>.COM.TR · Tüm hakları saklıdır.</span><span>otokabul.com.tr</span></div>

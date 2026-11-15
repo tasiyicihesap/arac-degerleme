@@ -126,3 +126,22 @@ a.btn{text-decoration:none;display:inline-block}
 .rozet.Randevu{background:#16a34a;color:#fff}
 .yan nav b.randevu-var{background:#16a34a;color:#fff;animation:nabiz 1.6s infinite}
 @keyframes nabiz{50%{box-shadow:0 0 0 5px rgba(22,163,74,.25)}}
+
+/* site içeriği */
+.metin-grup{border:1px solid var(--c);border-radius:10px;margin-bottom:8px;background:#fff}
+.metin-grup summary{padding:10px 12px;font-weight:700;cursor:pointer}
+.metin-grup summary small{font-weight:400;color:var(--g);margin-left:6px}
+.metin-grup[open] summary{border-bottom:1px solid var(--c)}
+.metin-alan{display:flex;flex-direction:column;gap:4px;padding:8px 12px;font-size:12.5px;font-weight:600;color:var(--m2)}
+.metin-alan textarea{font:inherit;font-weight:400;font-size:14px;resize:vertical;min-height:38px}
+.metin-alan i{font-style:normal;font-size:11px;background:#fff1ea;color:#c2410c;border-radius:6px;padding:1px 6px;margin-left:4px}
+.metin-alan.degisti textarea{border-color:#fdba74}
+.yapiskan{position:sticky;bottom:0;background:#fff;padding:10px 0 2px;margin-top:6px}
+.site-gorsel{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.sg-kart{border:1px solid var(--c);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.sg-onizle{aspect-ratio:4/3;border-radius:8px;background:#f1eee7;display:grid;place-items:center;overflow:hidden;color:var(--g);font-size:12px}
+.sg-onizle img{width:100%;height:100%;object-fit:cover}
+.kucuk-girdi{width:80px}
+table.parca-oran td{padding:3px 6px}
+.talep-foto{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.talep-foto img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block}

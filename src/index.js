@@ -6,7 +6,7 @@ import { db } from './db.js';
 import { json } from './yardim.js';
 
 async function gorselSun(req, env, yol) {
-  const m = yol.match(/^\/yuklemeler\/(logo|model)\/([a-z0-9-]+)\.(png|jpg|webp)$/);
+  const m = yol.match(/^\/yuklemeler\/(logo|model|site)\/([a-z0-9-]+)\.(png|jpg|webp)$/);
   if (!m) return new Response('Bulunamadı', { status: 404 });
   const D = await db(env);
   const g = await D.prepare('SELECT mime, parca FROM gorseller WHERE tur = ? AND ad = ?').bind(m[1], m[2]).first();

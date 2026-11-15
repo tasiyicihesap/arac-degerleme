@@ -43,8 +43,27 @@
     iz.onclick = function (ev) { var b = ev.target.closest('button[data-m]'); if (b && window.OTK) window.OTK.marka(b.dataset.m); };
   });
 
+  // panelden değiştirilen cümleler: *kelime* turuncu vurgu, satır sonu alt satır
+  var bicimle = function (m) { return esc(m).replace(/\*([^*\n]+)\*/g, '<em>$1</em>').replace(/\n/g, '<br>'); };
+  fetch('api.php?a=metinler').then(function (r) { return r.ok ? r.json() : {}; }).then(function (o) {
+    Object.keys(o || {}).forEach(function (k) { document.querySelectorAll('[data-metin="' + k + '"]').forEach(function (el) { el.innerHTML = bicimle(o[k]); }); });
+  }).catch(function () {});
+
+  // panelden yüklenen gerçek fotoğraflar: adım kartları ve galeri
+  fetch('api.php?a=site_gorselleri').then(function (r) { return r.ok ? r.json() : {}; }).then(function (g) {
+    g = g || {};
+    document.querySelectorAll('[data-gorsel]').forEach(function (el) {
+      var u = g[el.dataset.gorsel]; if (u) { el.innerHTML = '<img src="' + esc(u) + '" alt="" loading="lazy">'; el.classList.add('foto-var'); }
+    });
+    var gal = [], i; for (i = 1; i <= 8; i++) if (g['galeri' + i]) gal.push(g['galeri' + i]);
+    if (gal.length) {
+      $('#galeriIzgara').innerHTML = gal.map(function (u) { return '<figure><img src="' + esc(u) + '" alt="" loading="lazy"></figure>'; }).join('');
+      $('#galeri').hidden = false;
+    }
+  }).catch(function () {});
+
   // "Aracımı değerle" kartı: sihirbaza kaydır
   document.querySelectorAll('[data-odak="sihirbaz"], a[href="#degerle"]').forEach(function (a) {
-    a.addEventListener('click', function (ev) { ev.preventDefault(); var s = $('#sihirbaz'); if (s) s.scrollIntoView({ behavior: 'smooth', block: window.innerWidth < 980 ? 'start' : 'center' }); });
+    a.addEventListener('click', function (ev) { ev.preventDefault(); if (window.OTK) window.OTK.basla(); });
   });
 })();

@@ -32,6 +32,15 @@ export const VARSAYILAN_AYARLAR = {
   kasko_katsayi: '',
   versiyon_sinir: '35',
   kasko_kaynak: '',
+  // sihirbazdaki donanım seçenekleri: etki = teklife % etkisi, kosul = '' (hepsi) | 'otomatik' | 'BMW, MINI' (marka listesi)
+  donanim_liste: JSON.stringify([
+    { ad: 'Sunroof (açılır tavan)', etki: 0, kosul: '' },
+    { ad: 'Cam tavan (panoramik)', etki: 0, kosul: '' },
+    { ad: 'Joystick vites', etki: 0, kosul: 'otomatik' },
+    { ad: 'NBT multimedya / navigasyon', etki: 0, kosul: 'BMW, MINI' },
+  ]),
+  // parça bazlı boya-değişen kesintileri {"kaput":{"lokal":1,"boyali":3,"degisen":6}}; boş alan: genel formül
+  parca_oranlari: '',
   sifre: '',
 };
 
@@ -46,6 +55,9 @@ CREATE TABLE IF NOT EXISTS model_eslestirme (id INTEGER PRIMARY KEY AUTOINCREMEN
 CREATE TABLE IF NOT EXISTS kalibrasyon (marka TEXT PRIMARY KEY, oran REAL, ornek INTEGER);
 CREATE TABLE IF NOT EXISTS robot_log (id INTEGER PRIMARY KEY AUTOINCREMENT, tarih TEXT, kaynak TEXT, kayit INTEGER, cozulen INTEGER, satir INTEGER, yeni INTEGER, degisim REAL, ozet TEXT);
 CREATE TABLE IF NOT EXISTS gorseller (tur TEXT, ad TEXT, uz TEXT, mime TEXT, boyut INTEGER, parca INTEGER, zaman INTEGER, PRIMARY KEY(tur, ad));
+CREATE TABLE IF NOT EXISTS talep_foto (id INTEGER PRIMARY KEY AUTOINCREMENT, talep_id INTEGER NOT NULL, mime TEXT, boyut INTEGER, veri BLOB);
+CREATE INDEX IF NOT EXISTS ix_talep_foto ON talep_foto(talep_id);
+CREATE TABLE IF NOT EXISTS metinler (k TEXT PRIMARY KEY, v TEXT);
 CREATE TABLE IF NOT EXISTS gorsel_parca (tur TEXT, ad TEXT, sira INTEGER, veri BLOB, PRIMARY KEY(tur, ad, sira));
 `;
 
@@ -97,6 +109,13 @@ async function kur(D) {
   const kt = await D.prepare("SELECT type FROM sqlite_master WHERE name = 'katalog'").first();
   if (kt && kt.type === 'table') await D.batch([D.prepare('DROP INDEX IF EXISTS ix_katalog_mm'), D.prepare('DROP TABLE katalog')]);
   if (!kt || kt.type === 'table') await D.prepare(KATALOG_GORUNUM).run();
+  // eski veritabanlarına yeni talep sütunları
+  const { results: tk } = await D.prepare('PRAGMA table_info(talepler)').all();
+  const varS = new Set(tk.map((c) => c.name)); const ek = [];
+  if (!varS.has('donanim')) ek.push(D.prepare("ALTER TABLE talepler ADD COLUMN donanim TEXT DEFAULT ''"));
+  if (!varS.has('aciklama')) ek.push(D.prepare("ALTER TABLE talepler ADD COLUMN aciklama TEXT DEFAULT ''"));
+  if (!varS.has('foto_sayi')) ek.push(D.prepare('ALTER TABLE talepler ADD COLUMN foto_sayi INTEGER DEFAULT 0'));
+  if (ek.length) await D.batch(ek);
   const r = await D.prepare("SELECT v FROM ayarlar WHERE k = '_kurulum'").first();
   if (r) return;
   // ilk açılış: AraçRadar'dan hazırlanmış başlangıç piyasa verisi
@@ -243,6 +262,11 @@ export async function versiyonOrani(D, katalogId, yil) {
 
 // ---- görseller ----
 import { LOGOLAR } from './logolar.js';
+// donanım listesi (ayardaki JSON); bozuksa varsayılan
+export function donanimlar(A) {
+  try { const l = JSON.parse(A.donanim_liste || '[]'); if (Array.isArray(l)) return l.filter((d) => d && str(d.ad).trim()).map((d) => ({ ad: str(d.ad).trim(), etki: flt(d.etki), kosul: str(d.kosul).trim() })); } catch (e) {}
+  return JSON.parse(VARSAYILAN_AYARLAR.donanim_liste);
+}
 export function gorselSlug(s) {
   const tr = { 'ç': 'c', 'ğ': 'g', 'ı': 'i', 'İ': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u', 'Ç': 'c', 'Ğ': 'g', 'Ö': 'o', 'Ş': 's', 'Ü': 'u', 'é': 'e', 'ë': 'e' };
   s = str(s).replace(/[çğıİöşüÇĞÖŞÜéë]/g, (c) => tr[c]).toLowerCase();

@@ -32,9 +32,11 @@
     { ad: 'kasa', baslik: 'Kasa tipi', ciz: function (k) { cizSecim(k, 'kasa'); }, gecerli: function () { return !!S.kasa; } },
     { ad: 'yakit', baslik: 'Yakıt tipi', ciz: function (k) { cizSecim(k, 'yakit'); }, gecerli: function () { return !!S.yakit; } },
     { ad: 'vites', baslik: 'Vites tipi', ciz: function (k) { cizSecim(k, 'vites'); }, gecerli: function () { return !!S.vites; } },
-    { ad: 'versiyon', baslik: 'Motor / paket', ciz: cizVersiyon, gecerli: function () { return S.versiyon !== undefined; } },
+    { ad: 'motor', baslik: 'Motor seçeneği', ciz: cizMotor, gecerli: function () { return S.motor !== undefined; } },
+    { ad: 'versiyon', baslik: 'Donanım paketi', ciz: cizVersiyon, gecerli: function () { return S.versiyon !== undefined; } },
     { ad: 'km', baslik: 'Kilometre ve renk', ciz: cizKm, gecerli: function () { return S.km > 0; } },
     { ad: 'hasar', baslik: 'Hasar durumu', ciz: cizHasar, gecerli: function () { return S.tramerVar !== null && S.agir !== null && (!S.tramerVar || S.tramer > 0); } },
+    { ad: 'ek', baslik: 'Donanım, açıklama ve fotoğraflar', ciz: cizEk },
     { ad: 'iletisim', baslik: 'Teklifini nereye iletelim?', ciz: cizIletisim, gecerli: function () { return S.ad && S.ad.trim().length > 1 && (S.tel || '').replace(/\D/g, '').length >= 10 && S.kvkk; } },
     { ad: 'sonuc', baslik: '', ciz: cizSonuc }
   ];
@@ -66,19 +68,19 @@
 
   function secimleriCiz() {
     var ets = [];
-    [['marka', 0], ['yil', 1], ['model', 2], ['kasa', 3], ['yakit', 4], ['vites', 5], ['versiyon', 6]].forEach(function (x) {
+    [['marka', 0], ['yil', 1], ['model', 2], ['kasa', 3], ['yakit', 4], ['vites', 5], ['motorAd', 6], ['versiyon', 7]].forEach(function (x) {
       if (S[x[0]] && S[x[0]] !== 'Diğer' && adim > x[1]) ets.push([x[1], S[x[0]]]);
     });
-    if (S.km && adim > 7) ets.push([7, new Intl.NumberFormat('tr-TR').format(S.km) + ' km']);
+    if (S.km && adim > 8) ets.push([8, new Intl.NumberFormat('tr-TR').format(S.km) + ' km']);
     if (adim >= ADIMLAR.length - 1) ets = [];
     $('#sbSecimler').innerHTML = ets.map(function (e) { return '<button data-a="' + e[0] + '">' + esc(e[1]) + ' ✎</button>'; }).join('');
     $('#sbSecimler').onclick = function (e) { var b = e.target.closest('button'); if (b) git(+b.dataset.a); };
   }
 
-  var SIRA = ['marka', 'yil', 'model', 'kasa', 'yakit', 'vites', 'versiyon'];
+  var SIRA = ['marka', 'yil', 'model', 'kasa', 'yakit', 'vites', 'motor', 'versiyon'];
   function temizleSonra(alan) {
     var i = SIRA.indexOf(alan);
-    if (i >= 0) { SIRA.slice(i + 1).forEach(function (k) { delete S[k]; }); if (i < 6) S.katalog_id = 0; }
+    if (i >= 0) { SIRA.slice(i + 1).forEach(function (k) { delete S[k]; if (k === 'motor') delete S.motorAd; }); if (i < 7) S.katalog_id = 0; }
   }
   function sec(alan, deger, otoIlerle) {
     S[alan] = deger;
@@ -172,12 +174,37 @@
       $('#ogeler', k).onclick = function (e) { var b = e.target.closest('.secenek'); if (b) sec(alan, b.dataset.v, true); };
     }).catch(hataGoster(k));
   }
+  // motor anahtarı: hacim + beygir (aynı motorun paketleri birlikte listelenir)
+  function motorAnahtar(v) { return (v.motor || '') + '|' + (v.beygir || 0); }
+  function motorEtiket(v) { var p = []; if (v.motor) p.push(v.motor); if (v.beygir) p.push(v.beygir + ' hp'); return p.join(' · ') || 'Diğer'; }
+  function kasaYakitVites(tsb) {
+    var l = tsb.filter(function (v) { return (!S.kasa || v.kasa === S.kasa) && (!S.yakit || v.yakit === S.yakit) && (!S.vites || v.vites === S.vites); });
+    return l.length ? l : tsb;
+  }
+  function cizMotor(k) {
+    secenekler().then(function (tsb) {
+      if (!tsb.length) { S.motor = ''; S.motorAd = ''; git(adim + yon); return; }
+      var gr = {}, sira = [];
+      kasaYakitVites(tsb).forEach(function (v) { var a = motorAnahtar(v); if (!gr[a]) { gr[a] = { a: a, ad: motorEtiket(v), n: 0, hacim: parseFloat(v.motor) || 0, hp: v.beygir || 0 }; sira.push(gr[a]); } gr[a].n++; });
+      sira.sort(function (x, y) { return x.hacim - y.hacim || x.hp - y.hp; });
+      if (sira.length === 1) { if (S.motor !== sira[0].a) { S.motor = sira[0].a; S.motorAd = sira[0].ad === 'Diğer' ? '' : sira[0].ad; delete S.versiyon; S.katalog_id = 0; } git(adim + yon); return; }
+      k.innerHTML = '<p class="ipucu">Ruhsatta yazan motor hacmi ve gücü. Bir sonraki adımda bu motorun paketleri gelecek.</p><div class="izgara iki" id="ogeler">' + sira.map(function (m) {
+        return '<button class="secenek' + (S.motor === m.a ? ' secili' : '') + '" data-v="' + esc(m.a) + '" data-ad="' + esc(m.ad) + '">' + esc(m.ad) + '<small>' + m.n + ' paket</small></button>';
+      }).join('') + '<button class="secenek" data-v="" data-ad="">Bilmiyorum<small>tüm paketleri göster</small></button></div>';
+      $('#ogeler', k).onclick = function (e) {
+        var b = e.target.closest('.secenek'); if (!b) return;
+        if (S.motor !== b.dataset.v) { delete S.versiyon; S.katalog_id = 0; }
+        S.motor = b.dataset.v; S.motorAd = b.dataset.ad === 'Diğer' ? '' : b.dataset.ad;
+        setTimeout(function () { git(adim + 1); }, 120);
+      };
+    }).catch(hataGoster(k));
+  }
   function cizVersiyon(k) {
     secenekler().then(function (tsb) {
       if (tsb.length) {
-        var l = tsb.filter(function (v) { return (!S.kasa || v.kasa === S.kasa) && (!S.yakit || v.yakit === S.yakit) && (!S.vites || v.vites === S.vites); });
-        if (!l.length) l = tsb;
-        k.innerHTML = '<p class="ipucu">Ruhsatta veya ilanında yazan motor ve donanım paketi.</p>' + (l.length > 10 ? '<input class="ara" placeholder="Motor / paket ara" autocomplete="off">' : '') + '<div class="liste" id="ogeler"></div>';
+        var l = kasaYakitVites(tsb);
+        if (S.motor) { var m = l.filter(function (v) { return motorAnahtar(v) === S.motor; }); if (m.length) l = m; }
+        k.innerHTML = '<p class="ipucu">' + (S.motorAd ? esc(S.motorAd) + ' motorlu paketler. ' : '') + 'Ruhsatta veya satış belgesinde yazan donanım paketini seç.</p>' + (l.length > 10 ? '<input class="ara" placeholder="Paket ara" autocomplete="off">' : '') + '<div class="liste" id="ogeler"></div>';
         var kut = $('#ogeler', k), ara = $('.ara', k);
         var ciz = function (q) {
           q = (q || '').toLocaleLowerCase('tr');
@@ -200,7 +227,7 @@
       api('versiyonlar', { marka: S.marka, model: S.model }).then(function (l) {
         if (!l.length) { S.versiyon = ''; S.katalog_id = 0; git(adim + yon); return; }
         var o = l.map(function (v) { return { ad: v }; }); o.push({ ad: 'Listede yok / Bilmiyorum' });
-        aramaListesi(k, o, 'versiyon', { liste: true, yer: 'Motor / paket ara', ipucu: 'Ruhsatta veya ilanında yazan motor ve donanım paketi.' });
+        aramaListesi(k, o, 'versiyon', { liste: true, yer: 'Paket ara', ipucu: 'Ruhsatta veya satış belgesinde yazan motor ve donanım paketi.' });
         $('#ogeler', k).onclick = function (e) { var b = e.target.closest('.secenek'); if (!b) return; S.katalog_id = 0; sec('versiyon', b.dataset.v === 'Listede yok / Bilmiyorum' ? '' : b.dataset.v, true); };
       });
     }).catch(hataGoster(k));
@@ -273,17 +300,33 @@
       '</svg>';
   }
   function cizHasar(k) {
-    k.innerHTML = '<p class="ipucu">Boyalı veya değişen parçaya dokun — her dokunuşta durum değişir.</p>' +
+    k.innerHTML = '<p class="ipucu">Boyalı veya değişen parçaya dokun. Her dokunuşta durum sırayla değişir ve parçanın üstünde yazar.</p>' +
       '<div class="hasar-kap"><div>' + aracSvg() + '</div><div>' +
-      '<div class="lejant"><span><i style="background:#eef0f3"></i>Orijinal</span><span><i style="background:#fde68a"></i>Lokal boya</span><span><i style="background:#fdba74"></i>Boyalı</span><span><i style="background:#fca5a5"></i>Değişen</span></div>' +
+      '<div class="lejant"><span><i class="l-orijinal"></i>Orijinal</span><span><i class="l-lokal"></i>Lokal boyalı</span><span><i class="l-boyali"></i>Boyalı</span><span><i class="l-degisen"></i>Değişen</span></div>' +
       '<div class="parca-liste" id="parcaListe"></div>' +
       '<div class="grup"><label>Tramer (hasar) kaydı</label><div class="cift" data-ev="tramerVar"><button class="secenek" data-v="0">Yok</button><button class="secenek" data-v="1">Var</button></div>' +
       '<input class="alan" id="tramer" inputmode="numeric" placeholder="Toplam tramer tutarı (TL)" style="margin-top:8px;display:none"></div>' +
       '<div class="grup"><label>Ağır hasar kaydı</label><div class="cift" data-ev="agir"><button class="secenek" data-v="0">Yok</button><button class="secenek" data-v="1">Var</button></div></div>' +
       '</div></div>';
     var svg = $('.arac-svg', k), liste = $('#parcaListe', k), tr = $('#tramer', k);
+    // her parçanın ortasına durum yazısı (dar yan parçalarda dikey)
+    var KISA = { orijinal: 'ORİJİNAL', lokal: 'LOKAL', boyali: 'BOYALI', degisen: 'DEĞİŞEN' };
+    var yazilar = {};
+    svg.querySelectorAll('.parca').forEach(function (el) {
+      var b; try { b = el.getBBox(); } catch (e) { return; }
+      if (!b || !b.width) return;
+      var t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      var cx = b.x + b.width / 2, cy = b.y + b.height / 2, dik = b.height > b.width * 1.4;
+      t.setAttribute('x', cx); t.setAttribute('y', cy); t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'central');
+      if (dik) t.setAttribute('transform', 'rotate(-90 ' + cx + ' ' + cy + ')');
+      t.setAttribute('class', 'parca-yazi');
+      svg.appendChild(t); yazilar[el.dataset.p] = t;
+    });
     function boya() {
-      svg.querySelectorAll('.parca').forEach(function (el) { var d = S.hasar[el.dataset.p] || 'orijinal'; el.setAttribute('class', 'parca ' + d); });
+      svg.querySelectorAll('.parca').forEach(function (el) {
+        var d = S.hasar[el.dataset.p] || 'orijinal'; el.setAttribute('class', 'parca ' + d);
+        var t = yazilar[el.dataset.p]; if (t) { t.textContent = KISA[d]; t.setAttribute('class', 'parca-yazi y-' + d); }
+      });
       var ks = Object.keys(S.hasar);
       liste.innerHTML = ks.length ? ks.map(function (p) { return '<div><span>' + PAD[p] + '</span><b>' + DURUM_AD[S.hasar[p]] + '</b></div>'; }).join('') : '<div><span>Tüm parçalar orijinal</span><b>✓</b></div>';
     }
@@ -310,6 +353,76 @@
     tr.oninput = function () { var n = parseInt(tr.value.replace(/\D/g, ''), 10) || 0; S.tramer = n; tr.value = n ? new Intl.NumberFormat('tr-TR').format(n) : ''; guncelleBtn(); };
     boya();
   }
+  // donanım (sunroof vb.), açıklama ve en fazla 10 fotoğraf — hepsi isteğe bağlı
+  var FOTO_MAX = 10;
+  function donanimListesi() {
+    var l = (firma.donanimlar || []);
+    return l.filter(function (d) {
+      var ko = String(d.kosul || '').trim().toLocaleLowerCase('tr');
+      if (!ko) return true;
+      if (ko === 'otomatik') return S.vites === 'Otomatik' || S.vites === 'Yarı Otomatik';
+      return ko.split(',').map(function (x) { return x.trim(); }).indexOf(String(S.marka || '').toLocaleLowerCase('tr')) >= 0;
+    });
+  }
+  function fotoKucult(dosya) {
+    return new Promise(function (ok, red) {
+      var img = new Image(), url = URL.createObjectURL(dosya);
+      img.onload = function () {
+        var en = 1600, o = Math.min(1, en / Math.max(img.width, img.height));
+        var c = document.createElement('canvas'); c.width = Math.round(img.width * o); c.height = Math.round(img.height * o);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+        c.toBlob(function (b) { b ? ok(b) : red(new Error('Fotoğraf işlenemedi')); }, 'image/jpeg', 0.78);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); red(new Error(dosya.name + ' açılamadı')); };
+      img.src = url;
+    });
+  }
+  function cizEk(k) {
+    S.donanim = S.donanim || []; S.fotolar = S.fotolar || [];
+    var dl = donanimListesi();
+    S.donanim = S.donanim.filter(function (x) { return dl.some(function (d) { return d.ad === x; }); });
+    k.innerHTML = '<p class="ipucu">Bu adımdaki her şey isteğe bağlı. Doldurursan teklifimiz daha isabetli olur.</p>' +
+      (dl.length ? '<div class="grup"><label>Aracında hangileri var?</label><div class="izgara iki" id="donanim">' + dl.map(function (d) {
+        return '<button class="secenek kutucuk' + (S.donanim.indexOf(d.ad) >= 0 ? ' secili' : '') + '" data-v="' + esc(d.ad) + '"><i></i>' + esc(d.ad) + '</button>';
+      }).join('') + '</div></div>' : '') +
+      '<div class="grup"><label>Açıklama <small class="istege">isteğe bağlı</small></label><textarea class="alan" id="aciklama" rows="3" maxlength="1500" placeholder="Bakımları, ekstra donanımı, bilinen bir arızası vb. aklına gelen her şeyi yazabilirsin.">' + esc(S.aciklama || '') + '</textarea></div>' +
+      '<div class="grup"><label>Fotoğraflar <small class="istege">isteğe bağlı · en fazla ' + FOTO_MAX + '</small></label>' +
+      '<div class="foto-izgara" id="fotoIzgara"></div><input type="file" id="fotoDosya" accept="image/*" multiple hidden><div class="hata" id="fotoHata"></div></div>';
+    var don = $('#donanim', k);
+    if (don) don.onclick = function (e) {
+      var b = e.target.closest('.secenek'); if (!b) return;
+      var i = S.donanim.indexOf(b.dataset.v); if (i >= 0) S.donanim.splice(i, 1); else S.donanim.push(b.dataset.v);
+      b.classList.toggle('secili', i < 0);
+    };
+    $('#aciklama', k).oninput = function (e) { S.aciklama = e.target.value; };
+    var iz = $('#fotoIzgara', k), dosya = $('#fotoDosya', k), hata = $('#fotoHata', k);
+    function ciz() {
+      iz.innerHTML = S.fotolar.map(function (f, i) { return '<div class="foto"><img src="' + f.url + '" alt=""><button type="button" data-i="' + i + '" aria-label="Kaldır">✕</button></div>'; }).join('') +
+        (S.fotolar.length < FOTO_MAX ? '<button type="button" class="foto-ekle" id="fotoEkle"><b>+</b><span>' + (S.fotolar.length ? 'Fotoğraf ekle' : 'Fotoğraf yükle') + '</span><small>' + S.fotolar.length + ' / ' + FOTO_MAX + '</small></button>' : '');
+      var e = $('#fotoEkle', k); if (e) e.onclick = function () { dosya.click(); };
+    }
+    iz.onclick = function (e) { var b = e.target.closest('button[data-i]'); if (!b) return; var f = S.fotolar.splice(+b.dataset.i, 1)[0]; if (f) URL.revokeObjectURL(f.url); ciz(); };
+    dosya.onchange = function () {
+      var l = Array.prototype.slice.call(dosya.files || []).filter(function (f) { return /^image\//.test(f.type); });
+      dosya.value = ''; hata.textContent = '';
+      var yer = FOTO_MAX - S.fotolar.length;
+      if (l.length > yer) { hata.textContent = 'En fazla ' + FOTO_MAX + ' fotoğraf ekleyebilirsin; ilk ' + yer + ' tanesi alındı.'; l = l.slice(0, yer); }
+      var sir = Promise.resolve();
+      l.forEach(function (f) { sir = sir.then(function () { return fotoKucult(f).then(function (b) { S.fotolar.push({ blob: b, url: URL.createObjectURL(b) }); ciz(); }).catch(function (er) { hata.textContent = er.message; }); }); });
+    };
+    ciz();
+  }
+  function fotolariGonder(no, anahtar, durum) {
+    var l = (S.fotolar || []).slice(), i = 0, basarili = 0;
+    if (!l.length) return Promise.resolve(0);
+    var adim1 = function () {
+      if (i >= l.length) return Promise.resolve(basarili);
+      var fd = new FormData(); fd.append('no', no); fd.append('anahtar', anahtar); fd.append('dosya', l[i].blob, 'foto' + (i + 1) + '.jpg');
+      if (durum) durum(i + 1, l.length);
+      return fetch('api.php?a=foto', { method: 'POST', body: fd }).then(function (r) { if (r.ok) basarili++; }).catch(function () {}).then(function () { i++; return adim1(); });
+    };
+    return adim1();
+  }
   function cizIletisim(k) {
     k.innerHTML = '<p class="ipucu">Ön teklifin hemen ekranda; uzmanımız ekspertiz randevusu için seni arayacak.</p>' +
       '<div class="grup"><label>Ad Soyad</label><input class="alan" id="ad" autocomplete="name" value="' + esc(S.ad || '') + '"></div>' +
@@ -327,7 +440,7 @@
   var sonuc = null;
   function gonder() {
     btnI.disabled = true; btnI.textContent = 'Hesaplanıyor…';
-    var g = { ad: S.ad, tel: S.tel, il: S.il, marka: S.marka, model: S.model, yil: S.yil, versiyon: S.versiyon || '', katalog_id: S.katalog_id || 0, yakit: S.yakit, vites: S.vites, kasa: S.kasa || '', km: S.km, renk: S.renk || '', hasar: S.hasar, tramer: S.tramerVar ? S.tramer : 0, agir: !!S.agir };
+    var g = { ad: S.ad, tel: S.tel, il: S.il, marka: S.marka, model: S.model, yil: S.yil, versiyon: S.versiyon || '', katalog_id: S.katalog_id || 0, yakit: S.yakit, vites: S.vites, kasa: S.kasa || '', km: S.km, renk: S.renk || '', hasar: S.hasar, tramer: S.tramerVar ? S.tramer : 0, agir: !!S.agir, donanim: S.donanim || [], aciklama: S.aciklama || '' };
     api('teklif', null, g).then(function (s) { sonuc = s; git(ADIMLAR.length - 1); })
       .catch(function (e) { var h = $('#hata'); if (h) h.textContent = e.message; btnI.textContent = 'Teklifimi göster →'; guncelleBtn(); });
   }
@@ -343,7 +456,13 @@
     var ara = firma.telefon ? '<a class="btn-ara" href="tel:' + firma.telefon.replace(/[^\d+]/g, '') + '">Hemen ara</a>' : '';
     k.innerHTML = '<div class="sonuc">' + ust +
       '<div class="butonlar">' + wa + ara + '<button class="btn-yeni" id="yeni">Başka araç değerle</button></div>' +
-      '<div id="randevuKutu"><button class="btn-randevu" id="randevu">📅 RANDEVU AL</button>' + (fiyatli ? '<div class="randevu-alt">Teklifi uygun bulduysan tıkla, seni arayalım.</div>' : '') + '</div></div>';
+      '<div id="randevuKutu"><button class="btn-randevu" id="randevu">📅 RANDEVU AL</button>' + (fiyatli ? '<div class="randevu-alt">Teklifi uygun bulduysan tıkla, seni arayalım.</div>' : '') + '</div>' +
+      ((S.fotolar || []).length ? '<div class="foto-durum" id="fotoDurum">Fotoğraflar gönderiliyor…</div>' : '') + '</div>';
+    if ((S.fotolar || []).length && !s.fotoGitti) {
+      s.fotoGitti = true;
+      fotolariGonder(s.no, s.anahtar, function (i, n) { var d = $('#fotoDurum'); if (d) d.textContent = 'Fotoğraflar gönderiliyor… ' + i + ' / ' + n; })
+        .then(function (n) { var d = $('#fotoDurum'); if (d) { d.textContent = n ? '✓ ' + n + ' fotoğraf talebine eklendi.' : 'Fotoğraflar gönderilemedi; WhatsApp\'tan iletebilirsin.'; d.classList.add(n ? 'tamam' : 'olmadi'); } });
+    }
     $('#randevu', k).onclick = function () {
       var b = this; b.disabled = true; b.textContent = 'Gönderiliyor…';
       api('randevu', null, { no: s.no, anahtar: s.anahtar }).then(function () {
@@ -375,6 +494,12 @@
   }).catch(function () {});
   // ana sayfadaki marka kartlarından sihirbazı başlatmak için
   window.OTK = {
+    basla: function () {
+      var sb = $('#sihirbaz');
+      sb.scrollIntoView({ behavior: 'smooth', block: window.innerWidth < 980 ? 'start' : 'center' });
+      sb.classList.remove('vurgula'); void sb.offsetWidth; sb.classList.add('vurgula');
+      if (adim === 0) { var a = $('.ara', sb); if (a) setTimeout(function () { a.focus({ preventScroll: true }); }, 450); }
+    },
     marka: function (m) {
       if (adim !== 0) { S = { hasar: {}, tramerVar: null, agir: null, ad: S.ad, tel: S.tel, il: S.il, kvkk: S.kvkk }; sonuc = null; git(0); }
       sec('marka', m, true);

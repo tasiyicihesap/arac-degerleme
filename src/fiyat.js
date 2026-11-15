@@ -1,5 +1,5 @@
 // OTOKABUL — teklif hesaplama motoru
-import { ayarlar, versiyonOrani, yuvar, int, flt, str, nf, buYil, dolu } from './db.js';
+import { ayarlar, versiyonOrani, yuvar, int, flt, str, nf, buYil, dolu, donanimlar } from './db.js';
 
 export const PARCALAR = {
   on_tampon: 'Ön Tampon', kaput: 'Motor Kaputu', tavan: 'Tavan', bagaj: 'Bagaj Kapağı', arka_tampon: 'Arka Tampon',
@@ -68,11 +68,23 @@ export async function teklifHesapla(D, g, A) {
     if (Math.abs(o) >= 0.1) { carpan *= 1 + o / 100; kalem.push(['Kilometre (' + nf(km) + ' km, piyasa ort. ' + nf(beklenen) + ')', yuvar(o, 1)]); }
   }
 
+  // donanım (sunroof, cam tavan vb.) — ayarda % etkisi girilmişse
+  if (Array.isArray(g.donanim) && g.donanim.length) {
+    const dl = donanimlar(A);
+    for (const ad of g.donanim) {
+      const d = dl.find((x) => x.ad === ad);
+      if (d && d.etki) { carpan *= 1 + d.etki / 100; kalem.push(['Donanım: ' + d.ad, d.etki]); }
+    }
+  }
+
   const hasar = g.hasar && typeof g.hasar === 'object' && !Array.isArray(g.hasar) ? g.hasar : {};
   const say = { lokal: 0, boyali: 0, degisen: 0 }; let hasarO = 0;
+  let po = {}; try { po = JSON.parse(A.parca_oranlari || '{}') || {}; } catch (e) { po = {}; }
   for (const [p, d] of Object.entries(hasar)) {
     if (!PARCALAR[p] || !(d in say)) continue;
     say[d]++;
+    const ozel = po[p] && po[p][d] !== undefined && po[p][d] !== null && String(po[p][d]).trim() !== '' ? flt(String(po[p][d]).replace(',', '.')) : null;
+    if (ozel !== null) { hasarO += ozel; continue; }
     const k = KRITIK_PARCA.includes(p) ? flt(A.tavan_kat) : 1.0;
     hasarO += flt(A[d === 'lokal' ? 'lokal_boya' : d]) * k;
   }

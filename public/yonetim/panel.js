@@ -48,7 +48,7 @@
   });
 
   // ---------- gezinme ----------
-  var SAYFALAR = { ozet: cizOzet, talepler: cizTalepler, fiyatlar: cizFiyatlar, toplu: cizToplu, robot: cizRobot, katalog: cizKatalog, ayarlar: cizAyarlar };
+  var SAYFALAR = { ozet: cizOzet, talepler: cizTalepler, fiyatlar: cizFiyatlar, toplu: cizToplu, robot: cizRobot, katalog: cizKatalog, icerik: cizIcerik, ayarlar: cizAyarlar };
   var markaListesi = [];
   function sayfa(ad, veri) {
     $$('#menu a').forEach(function (a) { a.classList.toggle('aktif', a.dataset.s === ad); });
@@ -154,6 +154,8 @@
         '<dt>Araç</dt><dd>' + esc(arac) + '</dd><dt>Yakıt / vites</dt><dd>' + esc(t.yakit + ' / ' + t.vites) + (t.kasa ? ' · ' + esc(t.kasa) : '') + '</dd><dt>Kilometre</dt><dd>' + tl(t.km) + ' km</dd><dt>Renk</dt><dd>' + esc(t.renk || '—') + '</dd>' +
         '<dt>Boya / değişen</dt><dd>' + (Object.keys(h).length ? Object.keys(h).map(function (p) { return esc(PARCA_AD[p] || p) + ': ' + DURUM_AD[h[p]]; }).join('<br>') : 'Hatasız') + '</dd>' +
         '<dt>Tramer</dt><dd>' + (t.tramer ? tl(t.tramer) + ' TL' : 'Yok') + '</dd><dt>Ağır hasar</dt><dd>' + (t.agir == 1 ? '<span class="azl">VAR</span>' : 'Yok') + '</dd>' +
+        (function () { var dn = []; try { dn = t.donanim ? JSON.parse(t.donanim) : []; } catch (e) {} return dn.length ? '<dt>Donanım</dt><dd>' + dn.map(esc).join('<br>') + '</dd>' : ''; })() +
+        (t.aciklama ? '<dt>Müşteri açıklaması</dt><dd style="white-space:pre-wrap">' + esc(t.aciklama) + '</dd>' : '') +
         (t.kabul_tarih ? '<dt>Randevu isteği</dt><dd class="art">✓ Teklifi kabul etti · ' + esc(t.kabul_tarih) + '</dd>' : '') + '<dt>Ön teklif</dt><dd style="font-size:18px;color:var(--v2)">' + (t.teklif_min ? tl(t.teklif_min) + ' – ' + tl(t.teklif_max) + ' TL' : 'Otomatik teklif verilmedi') + '</dd></dl>' +
         '<div class="kutu"><h2>Hesap dökümü</h2><div class="kalem"><span>Baz piyasa fiyatı (motor/paket dahil)</span><b>' + tl(d.baz) + ' TL</b></div>' +
         (d.kalemler || []).map(function (x) { return '<div class="kalem"><span>' + esc(x[0]) + '</span>' + (x[1] === null ? '' : yuzde(x[1])) + '</div>'; }).join('') +
@@ -163,6 +165,13 @@
         '<div class="satirlar" style="margin-top:12px"><button class="btn ana" id="dKaydet">Kaydet</button><button class="btn kirmizi" id="dSil">Sil</button></div>';
       $('#cekmece').hidden = false;
       $('#kapat').onclick = kapat;
+      if (+t.foto_sayi > 0) {
+        var fk = document.createElement('div'); fk.className = 'kutu'; fk.innerHTML = '<h2>Fotoğraflar (' + t.foto_sayi + ')</h2><div class="talep-foto">Yükleniyor…</div>';
+        var dl = $('#cekmeceIc dl.bilgi'); dl.parentNode.insertBefore(fk, dl.nextSibling);
+        api('talep_fotolar', { id: t.id }).then(function (l) {
+          $('.talep-foto', fk).innerHTML = l.map(function (f) { return '<a href="api.php?a=foto&id=' + f.id + '" target="_blank"><img src="api.php?a=foto&id=' + f.id + '" alt="" loading="lazy"></a>'; }).join('') || '<span class="soluk">Fotoğraf yok</span>';
+        });
+      }
       $('#dKaydet').onclick = function () { api('talep_kaydet', { id: t.id, durum: $('#dDurum').value, notlar: $('#dNot').value }).then(function () { bildir('Kaydedildi'); kapat(); yenile(); }); };
       $('#dSil').onclick = function () { if (confirm('#' + t.id + ' numaralı talep silinsin mi?')) api('talep_sil', { id: t.id }).then(function () { bildir('Silindi'); kapat(); yenile(); }); };
     };
@@ -648,6 +657,86 @@
     ['Yakıt ve vites farkı (%)', [['yakit_Benzin', 'Benzin'], ['yakit_Dizel', 'Dizel'], ['yakit_LPG', 'LPG'], ['yakit_Hibrit', 'Hibrit'], ['yakit_Elektrik', 'Elektrik'], ['vites_Manuel', 'Manuel'], ['vites_Otomatik', 'Otomatik'], ['vites_Yarı Otomatik', 'Yarı Otomatik']]],
     ['Robot', [['robot_url', 'AraçRadar veri adresi'], ['robot_min_adet', 'En az ilan sayısı'], ['robot_oto', 'Panel açılınca otomatik tara', '1 = son tarama 24 saatten eskiyse tara ve kaydet']]]
   ];
+  // ---------- site içeriği: metinler, donanım listesi, görseller ----------
+  // site cümlelerini ana sayfadaki data-metin etiketlerinden okur (varsayılan = sayfadaki yazı)
+  function htmlMetne(h) { return h.replace(/<em>([\s\S]*?)<\/em>/gi, '*$1*').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s*\n\s*/g, '\n').replace(/[ \t]+/g, ' ').trim(); }
+  var SITE_GORSEL = [['adim1', '1. adım kartı'], ['adim2', '2. adım kartı'], ['adim3', '3. adım kartı'], ['adim4', '4. adım kartı'], ['galeri1', 'Galeri 1 (büyük)'], ['galeri2', 'Galeri 2'], ['galeri3', 'Galeri 3'], ['galeri4', 'Galeri 4'], ['galeri5', 'Galeri 5'], ['galeri6', 'Galeri 6'], ['galeri7', 'Galeri 7'], ['galeri8', 'Galeri 8']];
+  function cizIcerik(k) {
+    k.innerHTML = '<h1 class="bas">Site İçeriği</h1><p class="bas-alt">Ana sayfadaki cümleleri, sihirbazdaki donanım seçeneklerini ve sitedeki fotoğrafları buradan değiştir. Değişiklikler kaydettiğin anda sitede görünür.</p>' +
+      '<div class="iki-kolon"><div><div class="kutu"><h2>Sitedeki cümleler</h2><p class="soluk" style="margin-top:0"><b>*yıldız arası*</b> turuncu vurgulu yazılır; Enter ile alt satıra geçilir. Kutuyu boşaltıp kaydedersen ilk hâline döner.</p><div id="mListe">Yükleniyor…</div>' +
+      '<div class="satirlar yapiskan"><button class="btn ana" id="mKaydet">Cümleleri kaydet</button><a class="btn" href="../" target="_blank">Siteyi aç ↗</a></div></div></div>' +
+      '<div><div class="kutu"><h2>Donanım seçenekleri</h2><p class="soluk" style="margin-top:0">Müşteri değerleme sırasında bunları işaretleyebilir. <b>Etki %</b>: teklife eklenecek oran (0 = fiyatı değiştirmez). <b>Koşul</b>: boş = her araçta, <b>otomatik</b> = sadece otomatik vitesli araçlarda, ya da marka listesi (ör. BMW, MINI).</p>' +
+      '<div class="tablo-kap" style="max-height:none"><table class="xl" id="dTablo"></table></div><div class="satirlar" style="margin-top:10px"><button class="btn" id="dEkle">+ Satır ekle</button><button class="btn ana" id="dKaydetD">Donanımları kaydet</button></div></div>' +
+      '<div class="kutu"><h2>Sitedeki fotoğraflar</h2><p class="soluk" style="margin-top:0">Kendi galerinden gerçek araç fotoğrafları yükle. Adım kartlarındaki çizimlerin yerine geçer; galeri fotoğrafı yüklersen ana sayfada "Galerimizden" bölümü açılır. PNG/JPG/WEBP, en fazla 3 MB.</p><div class="site-gorsel" id="sgListe">Yükleniyor…</div></div>' +
+      '<div class="kutu"><h2>Talep fotoğrafları</h2><p class="soluk" style="margin-top:0">Müşterilerin yüklediği fotoğraflar veritabanında yer kaplar (ücretsiz planda toplam 500 MB). Eski taleplerin fotoğraflarını buradan silebilirsin.</p><div id="fDurum" class="soluk">…</div>' +
+      '<div class="satirlar" style="margin-top:8px"><select class="girdi" id="fGun" style="width:auto"><option value="30">30 günden eski</option><option value="60">60 günden eski</option><option value="90" selected>90 günden eski</option><option value="180">180 günden eski</option></select><button class="btn kirmizi" id="fSil">Fotoğrafları sil</button></div></div></div></div>';
+
+    // cümleler
+    Promise.all([fetch('../index.html', { cache: 'no-store' }).then(function (r) { return r.text(); }), api('metinler')]).then(function (x) {
+      var doc = new DOMParser().parseFromString(x[0], 'text/html'), kayitli = x[1] || {}, gruplar = {}, sira = [];
+      $$('[data-metin]', doc).forEach(function (el) {
+        var b = el.dataset.bolum || 'Diğer'; if (!gruplar[b]) { gruplar[b] = []; sira.push(b); }
+        gruplar[b].push({ k: el.dataset.metin, etiket: el.dataset.etiket || el.dataset.metin, varsayilan: htmlMetne(el.innerHTML) });
+      });
+      $('#mListe', k).innerHTML = sira.map(function (b) {
+        return '<details class="metin-grup"' + (b === sira[0] ? ' open' : '') + '><summary>' + esc(b) + ' <small>' + gruplar[b].length + ' alan</small></summary>' + gruplar[b].map(function (m) {
+          var deg = kayitli[m.k] !== undefined, v = deg ? kayitli[m.k] : m.varsayilan, uzun = m.varsayilan.length > 60;
+          return '<label class="metin-alan' + (deg ? ' degisti' : '') + '"><span>' + esc(m.etiket) + (deg ? ' <i>değiştirildi</i>' : '') + '</span>' +
+            '<textarea class="girdi" rows="' + (uzun ? 3 : 1) + '" data-mk="' + esc(m.k) + '" data-v="' + esc(m.varsayilan) + '">' + esc(v) + '</textarea></label>';
+        }).join('') + '</details>';
+      }).join('');
+    }).catch(function (e) { $('#mListe', k).textContent = 'Cümleler okunamadı: ' + e.message; });
+    $('#mKaydet', k).onclick = function () {
+      var d = {};
+      $$('[data-mk]', k).forEach(function (t) { var v = t.value.replace(/\r/g, ''); d[t.dataset.mk] = v.trim() === '' || v.trim() === t.dataset.v ? '' : v; });
+      api('metin_kaydet', { degerler: d }).then(function () { bildir('Cümleler kaydedildi'); cizIcerik(k); });
+    };
+
+    // donanım listesi
+    var donanim = [];
+    var dCiz = function () {
+      $('#dTablo', k).innerHTML = '<tr><th>Donanım adı</th><th>Etki %</th><th>Koşul</th><th></th></tr>' + donanim.map(function (d, i) {
+        return '<tr><td><input class="girdi" data-di="' + i + '" data-a="ad" value="' + esc(d.ad) + '"></td><td><input class="girdi kucuk-girdi" data-di="' + i + '" data-a="etki" value="' + esc(String(d.etki || 0).replace('.', ',')) + '"></td>' +
+          '<td><input class="girdi" data-di="' + i + '" data-a="kosul" value="' + esc(d.kosul || '') + '" placeholder="boş = hepsi"></td><td><button class="btn kucuk kirmizi" data-dsil="' + i + '">Sil</button></td></tr>';
+      }).join('');
+    };
+    api('ayarlar').then(function (A) { try { donanim = JSON.parse(A.donanim_liste || '[]'); } catch (e) { donanim = []; } dCiz(); });
+    $('#dTablo', k).oninput = function (e) { var i = e.target.dataset.di; if (i === undefined) return; donanim[+i][e.target.dataset.a] = e.target.dataset.a === 'etki' ? (parseFloat(e.target.value.replace(',', '.')) || 0) : e.target.value; };
+    $('#dTablo', k).onclick = function (e) { var b = e.target.closest('[data-dsil]'); if (b) { donanim.splice(+b.dataset.dsil, 1); dCiz(); } };
+    $('#dEkle', k).onclick = function () { donanim.push({ ad: '', etki: 0, kosul: '' }); dCiz(); };
+    $('#dKaydetD', k).onclick = function () {
+      var l = donanim.map(function (d) { return { ad: String(d.ad || '').trim(), etki: +d.etki || 0, kosul: String(d.kosul || '').trim() }; }).filter(function (d) { return d.ad; });
+      api('ayar_kaydet', { donanim_liste: JSON.stringify(l) }).then(function () { bildir('Donanım seçenekleri kaydedildi'); });
+    };
+
+    // site görselleri
+    var sgCiz = function () {
+      api('site_gorselleri').then(function (g) {
+        $('#sgListe', k).innerHTML = SITE_GORSEL.map(function (s) {
+          var u = g[s[0]];
+          return '<div class="sg-kart"><div class="sg-onizle">' + (u ? '<img src="../' + esc(u) + '" alt="">' : '<span>Görsel yok</span>') + '</div><b>' + esc(s[1]) + '</b>' +
+            '<div class="satirlar"><label class="btn kucuk">Yükle<input type="file" accept="image/*" hidden data-sg="' + s[0] + '"></label>' + (u ? '<button class="btn kucuk kirmizi" data-sgsil="' + s[0] + '">Sil</button>' : '') + '</div></div>';
+        }).join('');
+      });
+    };
+    $('#sgListe', k).onchange = function (e) {
+      var i = e.target; if (!i.dataset.sg || !i.files[0]) return;
+      var fd = new FormData(); fd.append('tur', 'site'); fd.append('marka', i.dataset.sg); fd.append('dosya', i.files[0]);
+      fetch('api.php?a=gorsel_yukle', { method: 'POST', headers: { 'X-CSRF': csrf }, body: fd }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.hata); }); })
+        .then(function () { bildir('Fotoğraf yüklendi'); sgCiz(); }).catch(function (er) { bildir(er.message, true); });
+    };
+    $('#sgListe', k).onclick = function (e) { var b = e.target.closest('[data-sgsil]'); if (b) api('gorsel_sil', { tur: 'site', marka: b.dataset.sgsil }).then(function () { bildir('Silindi'); sgCiz(); }); };
+    sgCiz();
+
+    // talep fotoğrafları
+    var fDurum = function () { api('foto_durum').then(function (d) { $('#fDurum', k).textContent = NF.format(d.adet) + ' fotoğraf · ' + (d.boyut / 1048576).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' MB'; }); };
+    $('#fSil', k).onclick = function () {
+      if (!confirm($('#fGun', k).value + ' günden eski taleplerin fotoğrafları silinsin mi? Talepler silinmez.')) return;
+      api('eski_foto_sil', { gun: +$('#fGun', k).value }).then(function (r) { bildir(NF.format(r.silinen) + ' fotoğraf silindi'); fDurum(); });
+    };
+    fDurum();
+  }
+
   function cizAyarlar(k) {
     k.innerHTML = '<h1 class="bas">Ayarlar</h1><p class="bas-alt">Teklif formülü, firma bilgileri ve robot ayarları.</p><div id="aForm">Yükleniyor…</div>';
     api('ayarlar').then(function (A) {
@@ -661,6 +750,17 @@
         '<label>Vites<select class="girdi" id="sVites"><option>Manuel</option><option>Otomatik</option><option>Yarı Otomatik</option></select></label>' +
         '<label>Boyalı parça<input class="girdi" id="sBoya" value="0"></label><label>Değişen parça<input class="girdi" id="sDeg" value="0"></label><label>Tramer TL<input class="girdi" id="sTramer" value="0"></label></div>' +
         '<div class="satirlar" style="margin-top:10px"><button class="btn koyu" id="sHesap">Hesapla</button></div><div id="sSonuc"></div></div>' +
+        '<div class="kutu"><h2>Parça bazlı boya-değişen kesintileri</h2><p class="soluk" style="margin-top:0">Her parça için ayrı % kesinti yazabilirsin. Boş bıraktığın kutularda yukarıdaki genel oranlar geçerli olur (gri yazı = şu an uygulanan oran).</p>' +
+          '<div class="tablo-kap" style="max-height:none"><table class="xl parca-oran"><tr><th>Parça</th><th>Lokal boyalı %</th><th>Boyalı %</th><th>Değişen %</th></tr>' +
+          Object.keys(PARCA_AD).map(function (p) {
+            var po = {}; try { po = JSON.parse(A.parca_oranlari || '{}') || {}; } catch (e) {}
+            var kat = (p === 'kaput' || p === 'tavan') ? (+String(A.tavan_kat).replace(',', '.') || 1) : 1;
+            var gen = { lokal: (+String(A.lokal_boya).replace(',', '.') || 0) * kat, boyali: (+String(A.boyali).replace(',', '.') || 0) * kat, degisen: (+String(A.degisen).replace(',', '.') || 0) * kat };
+            return '<tr><td>' + esc(PARCA_AD[p]) + '</td>' + ['lokal', 'boyali', 'degisen'].map(function (d) {
+              var v = po[p] && po[p][d] !== undefined && po[p][d] !== null ? po[p][d] : '';
+              return '<td><input class="girdi kucuk-girdi" data-po="' + p + '|' + d + '" value="' + esc(v) + '" placeholder="' + String(Math.round(gen[d] * 100) / 100).replace('.', ',') + '"></td>';
+            }).join('') + '</tr>';
+          }).join('') + '</table></div><div class="satirlar" style="margin-top:10px"><button class="btn ana" id="poKaydet">Kesintileri kaydet</button><button class="btn" id="poTemizle">Hepsini boşalt</button></div></div>' +
         '<div class="kutu"><h2>Şifre değiştir</h2><div class="alanlar"><label>Mevcut şifre<input type="password" class="girdi" id="pEski"></label><label>Yeni şifre<input type="password" class="girdi" id="pYeni"></label></div><div class="satirlar" style="margin-top:10px"><button class="btn" id="pKaydet">Şifreyi değiştir</button></div></div>' +
         '<div class="kutu"><h2>Yedek</h2><p class="soluk" style="margin-top:0">Tüm fiyatlar, talepler ve ayarlar tek dosyada. Ayda bir indirip saklayın.</p><a class="btn" href="api.php?a=yedek_indir">⬇ Veritabanı yedeğini indir</a></div></div></div>';
       $('#aKaydet', k).onclick = function () {
@@ -679,6 +779,13 @@
               '<div class="kalem"><span>Teklif</span><b style="color:var(--v2);font-size:16px">' + (s.min ? tl(s.min) + ' – ' + tl(s.max) + ' TL' : '—') + '</b></div>' + (s.mesaj ? '<p class="soluk">' + esc(s.mesaj) + ' (durum: ' + s.durum + ')</p>' : '') + '</div>';
           });
       };
+      var poKaydet = function () {
+        var o = {};
+        $$('[data-po]', k).forEach(function (i) { var v = i.value.trim().replace(',', '.'); if (v === '' || isNaN(+v)) return; var a = i.dataset.po.split('|'); (o[a[0]] = o[a[0]] || {})[a[1]] = +v; });
+        return api('ayar_kaydet', { parca_oranlari: Object.keys(o).length ? JSON.stringify(o) : '' }).then(function () { bildir('Parça kesintileri kaydedildi'); });
+      };
+      $('#poKaydet', k).onclick = poKaydet;
+      $('#poTemizle', k).onclick = function () { $$('[data-po]', k).forEach(function (i) { i.value = ''; }); poKaydet(); };
       $('#pKaydet', k).onclick = function () { api('sifre_degistir', { eski: $('#pEski', k).value, yeni: $('#pYeni', k).value }).then(function () { bildir('Şifre değiştirildi'); $('#pEski', k).value = $('#pYeni', k).value = ''; }); };
     });
   }

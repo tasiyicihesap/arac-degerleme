@@ -337,8 +337,8 @@ export async function yonetimApi(req, env) {
     // --- görseller ---
     case 'gorsel_yukle': {
       let fd; try { fd = await req.formData(); } catch (e) { return json({ hata: 'Dosya ve marka/model gerekli.' }, 400); }
-      const tur = fd.get('tur') === 'logo' ? 'logo' : 'model';
-      const ad = tur === 'logo' ? gorselSlug(fd.get('marka')) : gorselSlug(fd.get('marka')) + '--' + gorselSlug(fd.get('model'));
+      const tur = ['logo', 'site'].includes(fd.get('tur')) ? fd.get('tur') : 'model';
+      const ad = tur !== 'model' ? gorselSlug(fd.get('marka')) : gorselSlug(fd.get('marka')) + '--' + gorselSlug(fd.get('model'));
       const dosya = fd.get('dosya');
       if (ad === '' || ad === '--' || !dosya || typeof dosya === 'string' || !dosya.size) return json({ hata: 'Dosya ve marka/model gerekli.' }, 400);
       if (dosya.size > 3 * 1024 * 1024) return json({ hata: 'Dosya en fazla 3 MB olabilir.' }, 400);
@@ -355,8 +355,8 @@ export async function yonetimApi(req, env) {
       return json({ ok: 1, url: `yuklemeler/${tur}/${ad}.${uz}` });
     }
     case 'gorsel_sil': {
-      const g = await girdi(); const tur = g.tur === 'logo' ? 'logo' : 'model';
-      const ad = tur === 'logo' ? gorselSlug(g.marka) : gorselSlug(g.marka) + '--' + gorselSlug(g.model);
+      const g = await girdi(); const tur = ['logo', 'site'].includes(g.tur) ? g.tur : 'model';
+      const ad = tur !== 'model' ? gorselSlug(g.marka) : gorselSlug(g.marka) + '--' + gorselSlug(g.model);
       await D.batch([D.prepare('DELETE FROM gorseller WHERE tur = ? AND ad = ?').bind(tur, ad), D.prepare('DELETE FROM gorsel_parca WHERE tur = ? AND ad = ?').bind(tur, ad)]);
       return json({ ok: 1 });
     }
@@ -408,7 +408,56 @@ export async function yonetimApi(req, env) {
       await D.prepare('UPDATE talepler SET durum = ?, notlar = ? WHERE id = ?').bind(kes(g.durum ?? 'Yeni', 30), kes(g.notlar ?? '', 2000), int(g.id)).run();
       return json({ ok: 1 });
     }
-    case 'talep_sil': { const g = await girdi(); await D.prepare('DELETE FROM talepler WHERE id = ?').bind(int(g.id)).run(); return json({ ok: 1 }); }
+    case 'talep_sil': {
+      const g = await girdi();
+      await D.batch([D.prepare('DELETE FROM talep_foto WHERE talep_id = ?').bind(int(g.id)), D.prepare('DELETE FROM talepler WHERE id = ?').bind(int(g.id))]);
+      return json({ ok: 1 });
+    }
+    case 'talep_fotolar': {
+      const g = await girdi();
+      const { results } = await D.prepare('SELECT id, boyut FROM talep_foto WHERE talep_id = ? ORDER BY id').bind(int(g.id)).all();
+      return json(results);
+    }
+    case 'foto': { // panelde talep fotoğrafı
+      const id = int(url.searchParams.get('id'));
+      const f = await D.prepare('SELECT mime, veri FROM talep_foto WHERE id = ?').bind(id).first();
+      if (!f) return json({ hata: 'Fotoğraf bulunamadı' }, 404);
+      return new Response(new Uint8Array(f.veri), { headers: { 'Content-Type': f.mime, 'Cache-Control': 'private, max-age=86400' } });
+    }
+    case 'eski_foto_sil': { // depolama dolmasın diye: X günden eski taleplerin fotoğrafları
+      const g = await girdi(); const gun = Math.max(7, int(g.gun) || 90);
+      const sinir = simdi(Date.now() - gun * 86400000);
+      const r = await D.batch([
+        D.prepare('DELETE FROM talep_foto WHERE talep_id IN (SELECT id FROM talepler WHERE tarih < ?)').bind(sinir),
+        D.prepare('UPDATE talepler SET foto_sayi = 0 WHERE tarih < ? AND foto_sayi > 0').bind(sinir),
+      ]);
+      return json({ ok: 1, silinen: int(r[0].meta.changes) });
+    }
+    case 'foto_durum': {
+      const r = await D.prepare('SELECT COUNT(*) n, COALESCE(SUM(boyut), 0) b FROM talep_foto').first();
+      return json({ adet: int(r.n), boyut: int(r.b) });
+    }
+    // --- site metinleri (panelden düzenlenir) ---
+    case 'metinler': {
+      const { results } = await D.prepare('SELECT k, v FROM metinler').all();
+      const o = {}; for (const r of results) o[r.k] = r.v; return json(o);
+    }
+    case 'metin_kaydet': { // {degerler: {anahtar: metin}} — boş metin varsayılana döndürür
+      const g = await girdi(); const d = g.degerler && typeof g.degerler === 'object' ? g.degerler : {};
+      const st = [];
+      for (const [k, v] of Object.entries(d)) {
+        if (!/^[a-z0-9_]{1,60}$/.test(k)) continue;
+        const m = kes(str(v), 4000);
+        st.push(m.trim() === '' ? D.prepare('DELETE FROM metinler WHERE k = ?').bind(k) : D.prepare('INSERT INTO metinler(k, v) VALUES(?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v').bind(k, m));
+      }
+      for (let i = 0; i < st.length; i += 50) await D.batch(st.slice(i, i + 50));
+      return json({ ok: 1, adet: st.length });
+    }
+    case 'site_gorselleri': {
+      const h = await gorselHaritasi(D); const o = {};
+      for (const [k, v] of Object.entries(h)) if (k.startsWith('site/')) o[k.slice(5)] = v;
+      return json(o);
+    }
 
     // --- ayarlar ---
     case 'ayarlar': { const A = await ayarlar(D); delete A.sifre; return json(A); }
@@ -471,7 +520,7 @@ async function tsbIndir() {
 
 // Tüm fiyatlar, talepler, ayarlar ve işlem geçmişi tek JSON dosyasında (TSB kataloğu hariç: o TSB'den yeniden alınır)
 async function yedekIndir(D) {
-  const tablolar = { ayarlar: 2000, fiyatlar: 3000, versiyonlar: 1000, talepler: 400, islemler: 5, model_eslestirme: 2000, kalibrasyon: 2000, robot_log: 200 };
+  const tablolar = { metinler: 500, ayarlar: 2000, fiyatlar: 3000, versiyonlar: 1000, talepler: 400, islemler: 5, model_eslestirme: 2000, kalibrasyon: 2000, robot_log: 200 };
   const parcalar = [];
   for (const [t, boy] of Object.entries(tablolar)) {
     const { results: kol } = await D.prepare(`PRAGMA table_info(${t})`).all();

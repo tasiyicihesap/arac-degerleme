@@ -1,5 +1,5 @@
 // OTOKABUL — müşteri sitesi API'si (eski api.php)
-import { db, ayarlar, simdi, int, str, kes, dolu, buYil, gorselHaritasi, logoUrl, modelGorselUrl } from './db.js';
+import { db, ayarlar, simdi, int, str, kes, dolu, buYil, gorselHaritasi, logoUrl, modelGorselUrl, donanimlar } from './db.js';
 import { teklifHesapla, PARCALAR, DURUMLAR } from './fiyat.js';
 import { json, rastgeleHex } from './yardim.js';
 
@@ -11,7 +11,18 @@ export async function siteApi(req, env) {
   switch (a) {
     case 'firma': {
       const A = await ayarlar(D);
-      return json({ ad: A.firma_adi, alt: A.firma_alt, telefon: A.telefon, whatsapp: A.whatsapp, adres: A.adres, teklif_goster: A.teklif_goster === '1' });
+      return json({ ad: A.firma_adi, alt: A.firma_alt, telefon: A.telefon, whatsapp: A.whatsapp, adres: A.adres, teklif_goster: A.teklif_goster === '1',
+        donanimlar: donanimlar(A).map((d) => ({ ad: d.ad, kosul: d.kosul })) });
+    }
+    case 'metinler': { // panelden değiştirilen site cümleleri
+      const { results } = await D.prepare('SELECT k, v FROM metinler').all();
+      const o = {}; for (const r of results) o[r.k] = r.v;
+      return json(o, 200, { 'Cache-Control': 'public, max-age=60' });
+    }
+    case 'site_gorselleri': {
+      const h = await gorselHaritasi(D); const o = {};
+      for (const [k, v] of Object.entries(h)) if (k.startsWith('site/')) o[k.slice(5)] = v;
+      return json(o, 200, { 'Cache-Control': 'public, max-age=60' });
     }
     case 'markalar': {
       const [{ results }, h] = await Promise.all([D.prepare('SELECT marka, SUM(adet) n, COUNT(*) c FROM fiyatlar WHERE aktif = 1 GROUP BY marka ORDER BY n DESC').all(), gorselHaritasi(D)]);
@@ -69,12 +80,14 @@ export async function siteApi(req, env) {
       for (const [p, d] of Object.entries(hg)) if (PARCALAR[p] && typeof d === 'string' && DURUMLAR[d] && d !== 'orijinal') hasar[p] = d;
       g.hasar = hasar;
       const A = await ayarlar(D);
+      const dl = donanimlar(A).map((d) => d.ad);
+      g.donanim = Array.isArray(g.donanim) ? [...new Set(g.donanim.map(str).filter((x) => dl.includes(x)))] : [];
       const s = await teklifHesapla(D, g, A);
       const anahtar = rastgeleHex(12);
-      const r = await D.prepare(`INSERT INTO talepler(tarih, ad, tel, il, marka, model, yil, versiyon, yakit, vites, kasa, km, renk, hasar, tramer, agir, baz, teklif_min, teklif_max, detay, ip, anahtar)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(simdi(), ad, tel, kes(g.il, 40), str(g.marka), str(g.model), int(g.yil),
+      const r = await D.prepare(`INSERT INTO talepler(tarih, ad, tel, il, marka, model, yil, versiyon, yakit, vites, kasa, km, renk, hasar, tramer, agir, baz, teklif_min, teklif_max, detay, ip, anahtar, donanim, aciklama)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(simdi(), ad, tel, kes(g.il, 40), str(g.marka), str(g.model), int(g.yil),
         kes(g.versiyon, 80), str(g.yakit), str(g.vites), str(g.kasa), int(g.km), kes(g.renk, 30), Object.keys(hasar).length ? JSON.stringify(hasar) : '[]',
-        int(g.tramer), dolu(g.agir) ? 1 : 0, s.baz, s.min, s.max, JSON.stringify(s), ip, anahtar).run();
+        int(g.tramer), dolu(g.agir) ? 1 : 0, s.baz, s.min, s.max, JSON.stringify(s), ip, anahtar, g.donanim.length ? JSON.stringify(g.donanim) : '', kes(str(g.aciklama).trim(), 1500)).run();
       const no = int(r.meta.last_row_id);
       if (A.teklif_goster !== '1' && s.durum === 'ok') { s.durum = 'gizli'; s.min = s.max = 0; s.mesaj = 'Talebiniz alındı. Uzmanımız teklifimizle birlikte kısa süre içinde sizi arayacak.'; }
       return json({ no, anahtar, durum: s.durum, min: s.min, max: s.max, mesaj: s.mesaj });
@@ -85,6 +98,26 @@ export async function siteApi(req, env) {
       const t = await D.prepare('SELECT id, kabul_tarih FROM talepler WHERE id = ? AND anahtar = ?').bind(int(g.no), str(g.anahtar ?? '-') || '-').first();
       if (!t) return json({ hata: 'Talep bulunamadı. Lütfen bizi telefonla arayın.' }, 404);
       if (!t.kabul_tarih) await D.prepare("UPDATE talepler SET durum = 'Randevu İstedi', kabul_tarih = ? WHERE id = ?").bind(simdi(), t.id).run();
+      return json({ ok: 1 });
+    }
+    case 'foto': { // talebe fotoğraf (tarayıcıda küçültülmüş), talep başına en fazla 10
+      if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);
+      let fd; try { fd = await req.formData(); } catch (e) { return json({ hata: 'Dosya gerekli.' }, 400); }
+      const t = await D.prepare('SELECT id, foto_sayi FROM talepler WHERE id = ? AND anahtar = ?').bind(int(fd.get('no')), str(fd.get('anahtar')) || '-').first();
+      if (!t) return json({ hata: 'Talep bulunamadı.' }, 404);
+      const sayi = await D.prepare('SELECT COUNT(*) n FROM talep_foto WHERE talep_id = ?').bind(t.id).first();
+      if (int(sayi.n) >= 10) return json({ hata: 'En fazla 10 fotoğraf eklenebilir.' }, 400);
+      const dosya = fd.get('dosya');
+      if (!dosya || typeof dosya === 'string' || !dosya.size) return json({ hata: 'Dosya gerekli.' }, 400);
+      if (dosya.size > 1800000) return json({ hata: 'Fotoğraf çok büyük.' }, 400);
+      const b = new Uint8Array(await dosya.arrayBuffer());
+      const bas = (...x) => x.every((v, i) => b[i] === v);
+      const mime = bas(0xff, 0xd8, 0xff) ? 'image/jpeg' : bas(0x89, 0x50, 0x4e, 0x47) ? 'image/png' : bas(0x52, 0x49, 0x46, 0x46) && b[8] === 0x57 ? 'image/webp' : null;
+      if (!mime) return json({ hata: 'Sadece fotoğraf yüklenebilir.' }, 400);
+      await D.batch([
+        D.prepare('INSERT INTO talep_foto(talep_id, mime, boyut, veri) VALUES(?,?,?,?)').bind(t.id, mime, b.length, b.buffer),
+        D.prepare('UPDATE talepler SET foto_sayi = (SELECT COUNT(*) FROM talep_foto WHERE talep_id = ?1) WHERE id = ?1').bind(t.id),
+      ]);
       return json({ ok: 1 });
     }
     default:
