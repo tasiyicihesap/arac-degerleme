@@ -1,6 +1,7 @@
 // OTOKABUL Araç Alım — Cloudflare Worker girişi
 // /api.php ve /yonetim/api.php adresleri eski PHP sürümüyle aynı kaldı; site ve panel dosyaları değişmeden çalışır.
 import { siteApi } from './site.js';
+import { seoSayfa } from './seo.js';
 import { yonetimApi } from './yonetim.js';
 import { db, ayarlar, simdi, kes, str } from './db.js';
 import { anlikBildir, baslikCoz } from './bildirim.js';
@@ -24,6 +25,7 @@ export default {
       if (yol === '/api.php') return await siteApi(req, env, ctx);
       if (yol === '/yonetim/api.php') return await yonetimApi(req, env);
       if (yol.startsWith('/yuklemeler/')) return await gorselSun(req, env, yol);
+      if (yol === '/sitemap.xml' || yol === '/arac-degerleme' || yol.startsWith('/arac-degerleme/')) return await seoSayfa(req, env, ctx, await db(env), yol);
     } catch (e) {
       console.error(e);
       return json({ hata: 'Sunucu hatası: ' + (e && e.message ? e.message : e) }, 500);

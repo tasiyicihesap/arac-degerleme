@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /yonetim/
+Disallow: /api.php
+
+Sitemap: https://otokabul.com.tr/sitemap.xml

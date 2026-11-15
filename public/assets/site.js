@@ -29,6 +29,7 @@
   var S = { hasar: {}, tramerVar: null, agir: null };
   var adim = 0;
   var cache = {};
+  var hedefModel = '';
 
   var ADIMLAR = [
     { ad: 'marka', baslik: 'Aracının markası ne?', ciz: cizMarka, gecerli: function () { return !!S.marka; } },
@@ -148,6 +149,8 @@
           return '<button class="secenek model-kart' + (S.model === o.ad ? ' secili' : '') + '" data-v="' + esc(o.ad) + '">' + (o.gorsel ? '<img src="' + esc(o.gorsel) + '" alt="" loading="lazy">' : silus(o.kasa)) + '<span>' + esc(o.ad) + '</span></button>';
         }).join('') : '<div class="bos">Bu yıl için model bulunamadı. Bizi arayın, değerlendirelim.</div>';
       };
+      // marka/model sayfasından gelindiyse modeli kendiliğinden seç
+      if (hedefModel) { var h = hedefModel; hedefModel = ''; var bul = l.filter(function (o) { return o.ad === h; })[0]; if (bul) { sec('model', bul.ad, true); return; } }
       ciz(''); if (ara) { ara.oninput = function () { ciz(ara.value); }; if (window.innerWidth > 980) ara.focus(); }
       kut.onclick = function (e) { var b = e.target.closest('.secenek'); if (b) sec('model', b.dataset.v, true); };
     }).catch(hataGoster(k));
@@ -513,6 +516,14 @@
       sb.scrollIntoView({ behavior: 'smooth', block: window.innerWidth < 980 ? 'start' : 'center' });
       sb.classList.remove('vurgula'); void sb.offsetWidth; sb.classList.add('vurgula');
       if (adim === 0) { var a = $('.ara', sb); if (a) setTimeout(function () { a.focus({ preventScroll: true }); }, 450); }
+    },
+    // ?marka=Fiat&model=Egea&yil=2020 bağlantıları (marka/model sayfaları) için
+    hazirla: function (o) {
+      if (!o || !o.marka) return;
+      hedefModel = o.model || '';
+      S.marka = o.marka; temizleSonra('marka');
+      if (o.yil) { S.yil = +o.yil; temizleSonra('yil'); git(2); } else git(1);
+      setTimeout(function () { window.OTK.basla(); }, 300);
     },
     marka: function (m) {
       if (adim !== 0) { S = { hasar: {}, tramerVar: null, agir: null, ad: S.ad, tel: S.tel, il: S.il, kvkk: S.kvkk }; sonuc = null; git(0); }

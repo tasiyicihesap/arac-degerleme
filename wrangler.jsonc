@@ -6,7 +6,7 @@
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
-    "run_worker_first": ["/api.php", "/yonetim/api.php", "/yuklemeler/*"]
+    "run_worker_first": ["/api.php", "/yonetim/api.php", "/yuklemeler/*", "/sitemap.xml", "/arac-degerleme", "/arac-degerleme/*"]
   },
   // Veritabanı ilk yayında Cloudflare tarafından otomatik oluşturulur
   // otokabul.com.tr ve www alan adları bu siteye bağlı

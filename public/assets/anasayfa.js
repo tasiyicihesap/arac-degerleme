@@ -96,4 +96,10 @@
       .catch(function () { hata('Mesaj gönderilemedi. Lütfen bizi telefonla ya da WhatsApp\'tan ara.'); })
       .then(function () { btn.disabled = false; });
   });
+
+  // marka/model rehber sayfalarından gelen bağlantı: sihirbazı o araçla başlat
+  try {
+    var pr = new URLSearchParams(location.search);
+    if (pr.get('marka') && window.OTK && window.OTK.hazirla) window.OTK.hazirla({ marka: pr.get('marka'), model: pr.get('model') || '', yil: pr.get('yil') || '' });
+  } catch (e) {}
 })();
