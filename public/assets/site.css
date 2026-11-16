@@ -226,3 +226,10 @@ textarea.alan{resize:vertical;min-height:84px;font-size:15px;line-height:1.45}
 .pt-temizle:hover{color:var(--vurgu)}
 @media (max-width:640px){.hasar-kap{grid-template-columns:1fr}.hasar-kap>div:first-child{max-width:220px;margin:0 auto}.pt-bas,.pt-satir{grid-template-columns:1fr repeat(4,40px)}}
 .bolge-not{margin-top:8px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.5}
+/* hasar: şema üstte, liste altta (sihirbaz kartı dar) */
+.hasar-kap{grid-template-columns:1fr!important}
+.hasar-kap>div:first-child{max-width:190px;margin:0 auto;width:100%}
+.hasar-kap .lejant{justify-content:center}
+.pt-bas,.pt-satir{grid-template-columns:1fr repeat(4,54px)}
+.pt-bas span:not(:first-child){font-size:9.5px;letter-spacing:0}
+@media (max-width:420px){.pt-bas,.pt-satir{grid-template-columns:1fr repeat(4,44px)}.pt-bas span:not(:first-child){font-size:8.5px}}
