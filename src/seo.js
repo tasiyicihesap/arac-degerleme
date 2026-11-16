@@ -192,7 +192,7 @@ export async function seoSayfa(req, env, ctx, D, yol) {
   const url = new URL(req.url);
   // sonda / olmayan adresleri tek biçime getir
   if ((yol.startsWith('/arac-degerleme') || yol.startsWith('/rehber')) && !yol.endsWith('/')) return Response.redirect(url.origin + yol + '/' + url.search, 301);
-  const anahtar = SITE + yol;
+  const anahtar = SITE + yol + '?s=2'; // sürüm: içerik değişince artır
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { try { const c = await cache.match(anahtar); if (c) return c; } catch (e) {} }
   const v = await liste(D);
