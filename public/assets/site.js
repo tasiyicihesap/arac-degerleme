@@ -246,6 +246,15 @@
       // katalog yoksa: ilanlardan toplanan versiyon adları
       api('versiyonlar', { marka: S.marka, model: S.model }).then(function (l) {
         if (!l.length) { S.versiyon = ''; S.katalog_id = 0; git(adim + yon); return; }
+        // seçilen yakıta uymayan paketleri gizle (ad içindeki motor ifadesine göre)
+        var DIZEL = /\b(CDTI|CDI|TDI|TDCI|DCI|HDI|BLUEHDI|CRDI|CRDI|D-?4D|JTD|JTDM|MULTIJET|MJET|DIZEL|DİZEL|DIESEL|SDI|TDDI|DTI|DID|I-?CTDI|I-?DTEC|CRDİ|D)\b/i;
+        var BENZIN = /\b(TSI|TFSI|FSI|MPI|GDI|T-?GDI|VVT-?I|VTEC|I-?VTEC|TCE|PURETECH|ECOBOOST|SCE|16V|8V|BENZIN|BENZİN)\b/i;
+        var uy = l.filter(function (v) {
+          if (S.yakit === 'Benzin' || S.yakit === 'LPG') return !DIZEL.test(v);
+          if (S.yakit === 'Dizel') return !BENZIN.test(v) || DIZEL.test(v);
+          return true;
+        });
+        if (uy.length) l = uy;
         var o = l.map(function (v) { return { ad: v }; }); o.push({ ad: 'Listede yok / Bilmiyorum' });
         aramaListesi(k, o, 'versiyon', { liste: true, yer: 'Paket ara', ipucu: 'Ruhsatta veya satış belgesinde yazan motor ve donanım paketi.' });
         $('#ogeler', k).onclick = function (e) { var b = e.target.closest('.secenek'); if (!b) return; S.katalog_id = 0; sec('versiyon', b.dataset.v === 'Listede yok / Bilmiyorum' ? '' : b.dataset.v, true); };
