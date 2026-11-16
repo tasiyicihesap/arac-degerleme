@@ -193,7 +193,7 @@
       var arac = t.yil + ' ' + t.marka + ' ' + t.model + (t.versiyon ? ' ' + t.versiyon : '');
       var wa = 'https://wa.me/' + tel + '?text=' + encodeURIComponent('Merhaba ' + t.ad + ', OTOKABUL\'dan yazıyoruz. ' + arac + ' aracınız için talebinizi aldık' + (t.teklif_min ? ' (ön teklif: ' + tl(t.teklif_min) + ' – ' + tl(t.teklif_max) + ' TL)' : '') + '. Ekspertiz randevusu için uygun olduğunuz zamanı yazabilir misiniz?');
       $('#cekmeceIc').innerHTML = '<div class="satirlar" style="justify-content:space-between"><h2>#' + t.id + ' · ' + esc(t.ad) + '</h2><button class="btn kucuk" id="kapat">Kapat ✕</button></div>' +
-        '<div class="satirlar"><a class="btn koyu" href="tel:' + esc(t.tel) + '">📞 Ara</a><a class="btn" style="background:#25d366;color:#fff;border-color:#25d366" target="_blank" href="' + wa + '">WhatsApp</a></div>' +
+        '<div class="satirlar"><a class="btn koyu" href="tel:' + esc(t.tel) + '">📞 Ara</a><a class="btn" style="background:#25d366;color:#fff;border-color:#25d366" target="_blank" href="' + wa + '">Müşteriye WhatsApp</a><button class="btn koyu" id="dPaylas">📤 Talebi paylaş</button></div>' +
         '<dl class="bilgi"><dt>Tarih</dt><dd>' + esc(t.tarih) + '</dd><dt>Telefon</dt><dd>' + esc(t.tel) + '</dd><dt>İl</dt><dd>' + esc(t.il) + '</dd>' +
         '<dt>Araç</dt><dd>' + esc(arac) + '</dd><dt>Yakıt / vites</dt><dd>' + esc(t.yakit + ' / ' + t.vites) + (t.kasa ? ' · ' + esc(t.kasa) : '') + '</dd><dt>Kilometre</dt><dd>' + tl(t.km) + ' km</dd><dt>Renk</dt><dd>' + esc(t.renk || '—') + '</dd>' +
         '<dt>Boya / değişen</dt><dd>' + (Object.keys(h).length ? Object.keys(h).map(function (p) { return esc(PARCA_AD[p] || p) + ': ' + DURUM_AD[h[p]]; }).join('<br>') : 'Hatasız') + '</dd>' +
@@ -209,6 +209,7 @@
         '<div class="satirlar" style="margin-top:12px"><button class="btn ana" id="dKaydet">Kaydet</button><button class="btn kirmizi" id="dSil">Sil</button></div>';
       $('#cekmece').hidden = false;
       $('#kapat').onclick = kapat;
+      $('#dPaylas').onclick = function () { paylasimAc(t, h); };
       if (+t.foto_sayi > 0) {
         var fk = document.createElement('div'); fk.className = 'kutu'; fk.innerHTML = '<h2>Fotoğraflar (' + t.foto_sayi + ')</h2><div class="talep-foto">Yükleniyor…</div>';
         var dl = $('#cekmeceIc dl.bilgi'); dl.parentNode.insertBefore(fk, dl.nextSibling);
@@ -221,6 +222,204 @@
     };
     var t = talepCache.find(function (x) { return +x.id === id; });
     if (t) go(t); else api('talepler', { ara: '' }).then(function (l) { talepCache = l; var x = l.find(function (y) { return +y.id === id; }); if (x) go(x); });
+  }
+  // ---------- TALEBİ PAYLAŞ (WhatsApp vb.) ----------
+  // Varsayılan GİZLİ: ad, telefon, il ve plakalar paylaşılmaz; sadece talep no ile işaretlenir.
+  var LOGO_IMG = null;
+  function logoYukle() {
+    if (LOGO_IMG) return Promise.resolve(LOGO_IMG);
+    return new Promise(function (ok) { var i = new Image(); i.onload = function () { LOGO_IMG = i; ok(i); }; i.onerror = function () { ok(null); }; i.src = '../assets/logo-otokabul.png'; });
+  }
+  function resimYukle(src) { return new Promise(function (ok, red) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = red; i.src = src; }); }
+  function sarKelime(c, metin, x, y, gen, sat, max) {
+    var k = String(metin).split(' '), s = '', n = 0;
+    for (var i = 0; i < k.length; i++) {
+      var d = s ? s + ' ' + k[i] : k[i];
+      if (c.measureText(d).width > gen && s) { c.fillText(s, x, y + n * sat); n++; s = k[i]; if (max && n >= max) return n; } else s = d;
+    }
+    if (s) { c.fillText(s, x, y + n * sat); n++; }
+    return n;
+  }
+  function kartCiz(t, h, o) {
+    return logoYukle().then(function (logo) {
+      var W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      var c = cv.getContext('2d');
+      c.fillStyle = '#f6f3ec'; c.fillRect(0, 0, W, H);
+      // üst bant
+      c.fillStyle = '#0f1b2d'; c.fillRect(0, 0, W, 210);
+      c.fillStyle = '#ff5a1f'; c.fillRect(0, 210, W, 8);
+      if (logo) { c.fillStyle = '#fff'; var lh = 96, lw = logo.width * lh / logo.height; c.beginPath(); c.roundRect(56, 56, lw + 36, lh + 24, 18); c.fill(); c.drawImage(logo, 74, 68, lw, lh); }
+      c.fillStyle = '#fff'; c.textAlign = 'right'; c.font = '600 30px Inter, Arial'; c.fillText('ARAÇ BİLGİ KARTI', W - 60, 92);
+      c.font = '800 54px Manrope, Arial'; c.fillStyle = '#ff7a45'; c.fillText('Talep #' + t.id, W - 60, 158);
+      c.textAlign = 'left';
+      var y = 290;
+      c.fillStyle = '#0f1b2d'; c.font = '800 56px Manrope, Arial';
+      y += sarKelime(c, t.yil + ' ' + t.marka + ' ' + t.model, 60, y, W - 120, 64, 2) * 64;
+      if (t.versiyon) { c.font = '500 34px Inter, Arial'; c.fillStyle = '#475569'; y += sarKelime(c, t.versiyon, 60, y, W - 120, 42, 2) * 42; }
+      y += 24;
+      // bilgi kutuları
+      var kutular = [['Kilometre', tl(t.km) + ' km'], ['Yakıt', t.yakit || '—'], ['Vites', t.vites || '—'], ['Kasa', t.kasa || '—'], ['Renk', t.renk || '—'], ['Tramer', t.tramer ? tl(t.tramer) + ' TL' : 'Yok']];
+      var kw = (W - 120 - 2 * 24) / 3, kh = 124;
+      kutular.forEach(function (b, i) {
+        var x = 60 + (i % 3) * (kw + 24), yy = y + Math.floor(i / 3) * (kh + 20);
+        c.fillStyle = '#fff'; c.beginPath(); c.roundRect(x, yy, kw, kh, 20); c.fill();
+        c.fillStyle = '#94a3b8'; c.font = '600 24px Inter, Arial'; c.fillText(b[0].toLocaleUpperCase('tr'), x + 26, yy + 44);
+        c.fillStyle = '#0f1b2d'; c.font = '800 34px Manrope, Arial'; sarKelime(c, b[1], x + 26, yy + 92, kw - 40, 36, 1);
+      });
+      y += 2 * (kh + 20) + 14;
+      // hasar
+      var ks = Object.keys(h);
+      c.fillStyle = '#fff'; var hh = 96 + Math.max(1, Math.ceil(ks.length / 2)) * 44 + (+t.agir === 1 ? 50 : 0);
+      c.beginPath(); c.roundRect(60, y, W - 120, hh, 20); c.fill();
+      c.fillStyle = '#0f1b2d'; c.font = '800 32px Manrope, Arial'; c.fillText('Boya / değişen', 90, y + 54);
+      c.font = '500 28px Inter, Arial';
+      if (!ks.length) { c.fillStyle = '#16a34a'; c.fillText('✓ Hatasız, boyasız (müşteri beyanı)', 90, y + 104); }
+      ks.forEach(function (p, i) {
+        var x = 90 + (i % 2) * ((W - 180) / 2), yy = y + 104 + Math.floor(i / 2) * 44;
+        var renk = { lokal: '#ca8a04', boyali: '#2563eb', degisen: '#dc2626' }[h[p]] || '#475569';
+        c.fillStyle = renk; c.beginPath(); c.arc(x + 9, yy - 9, 9, 0, 7); c.fill();
+        c.fillStyle = '#334155'; c.fillText((PARCA_AD[p] || p) + ': ' + (DURUM_AD[h[p]] || h[p]), x + 28, yy);
+      });
+      if (+t.agir === 1) { c.fillStyle = '#dc2626'; c.font = '700 28px Inter, Arial'; c.fillText('⚠ Ağır hasar kaydı var', 90, y + hh - 28); }
+      y += hh + 24;
+      // teklif / müşteri
+      if (o.teklif && t.teklif_min) {
+        c.fillStyle = '#fff1ea'; c.beginPath(); c.roundRect(60, y, W - 120, 118, 20); c.fill();
+        c.fillStyle = '#9a3412'; c.font = '600 26px Inter, Arial'; c.fillText('ÖN TEKLİF ARALIĞI', 90, y + 46);
+        c.fillStyle = '#ea580c'; c.font = '800 44px Manrope, Arial'; c.fillText(tl(t.teklif_min) + ' – ' + tl(t.teklif_max) + ' TL', 90, y + 98);
+        y += 142;
+      }
+      if (!o.gizle) {
+        c.fillStyle = '#0f1b2d'; c.beginPath(); c.roundRect(60, y, W - 120, 118, 20); c.fill();
+        c.fillStyle = '#9fb0c8'; c.font = '600 26px Inter, Arial'; c.fillText('MÜŞTERİ', 90, y + 46);
+        c.fillStyle = '#fff'; c.font = '700 34px Inter, Arial'; sarKelime(c, t.ad + ' · ' + t.tel + (t.il ? ' · ' + t.il : ''), 90, y + 96, W - 180, 36, 1);
+        y += 142;
+      }
+      // alt bilgi
+      c.fillStyle = '#0f1b2d'; c.fillRect(0, H - 96, W, 96);
+      c.fillStyle = '#fff'; c.font = '700 30px Inter, Arial'; c.fillText('otokabul.com.tr', 60, H - 38);
+      c.textAlign = 'right'; c.fillStyle = '#9fb0c8'; c.font = '500 26px Inter, Arial';
+      c.fillText((o.gizle ? 'Gizli paylaşım · ' : '') + String(t.tarih || '').slice(0, 10).split('-').reverse().join('.'), W - 60, H - 38);
+      c.textAlign = 'left';
+      return cv;
+    });
+  }
+  // fotoğraf: gizli modda işaretlenen plaka alanları kapatılır, köşeye talep no yazılır
+  function fotoCiz(img, kutular, t, gizle) {
+    var max = 1600, s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    var cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * s); cv.height = Math.round(img.naturalHeight * s);
+    var c = cv.getContext('2d'); c.drawImage(img, 0, 0, cv.width, cv.height);
+    if (gizle) (kutular || []).forEach(function (b) {
+      var x = b.x * cv.width, y = b.y * cv.height, w = b.w * cv.width, hh = b.h * cv.height;
+      c.save(); c.filter = 'blur(18px)'; c.drawImage(cv, x, y, w, hh, x, y, w, hh); c.restore();
+      c.fillStyle = '#0f1b2d'; c.beginPath(); c.roundRect(x, y, w, hh, Math.min(w, hh) * 0.15); c.fill();
+      c.fillStyle = '#ff5a1f'; c.font = '800 ' + Math.max(12, Math.round(hh * 0.42)) + 'px Manrope, Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('OTOKABUL', x + w / 2, y + hh / 2); c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+    });
+    var fs = Math.max(18, Math.round(cv.width * 0.028)), pad = fs * 0.6, etiket = 'OTOKABUL · Talep #' + t.id;
+    c.font = '700 ' + fs + 'px Inter, Arial'; var tw = c.measureText(etiket).width;
+    c.fillStyle = 'rgba(15,27,45,.78)'; c.beginPath(); c.roundRect(cv.width - tw - pad * 3, cv.height - fs - pad * 3, tw + pad * 2, fs + pad * 2, fs * 0.4); c.fill();
+    c.fillStyle = '#fff'; c.fillText(etiket, cv.width - tw - pad * 2, cv.height - pad * 2 - fs * 0.12);
+    return cv;
+  }
+  function blobAl(cv, tur) { return new Promise(function (ok) { cv.toBlob(ok, tur || 'image/jpeg', 0.9); }); }
+  function paylasimAc(t, h) {
+    var o = { gizle: true, teklif: false }, fotolar = [], kutular = {};
+    var kap = document.createElement('div'); kap.className = 'paylas-kap';
+    kap.innerHTML = '<div class="paylas-ic"><div class="satirlar" style="justify-content:space-between;margin:0 0 10px"><h2 style="margin:0">Talebi paylaş · #' + t.id + '</h2><button class="btn kucuk" data-k="kapat">Kapat ✕</button></div>' +
+      '<label class="gizle-anahtar"><input type="checkbox" id="pGizle" checked><span><b>🔒 Gizle</b> — müşteri adı, telefonu, ili ve plakalar paylaşılmaz; araç yalnızca talep numarasıyla işaretlenir.</span></label>' +
+      '<label class="gizle-anahtar ikincil"><input type="checkbox" id="pTeklif"><span>Ön teklif aralığını da ekle</span></label>' +
+      '<div class="paylas-onizle"><canvas id="pKart"></canvas></div>' +
+      '<div id="pFotoBas"></div><div class="paylas-fotolar" id="pFotolar"></div>' +
+      '<div class="satirlar" style="margin-top:14px"><button class="btn ana" id="pPaylas" style="background:#25d366;border-color:#25d366">📤 WhatsApp / paylaş</button><button class="btn" id="pIndir">⬇ Görselleri indir</button><button class="btn" id="pKopya">Metni kopyala</button></div>' +
+      '<p class="soluk" id="pDurum" style="margin:8px 0 0"></p></div>';
+    document.body.appendChild(kap);
+    var kapat2 = function () { kap.remove(); };
+    kap.onclick = function (e) { if (e.target === kap || e.target.dataset.k === 'kapat') kapat2(); };
+    var metin = function () {
+      var a = t.yil + ' ' + t.marka + ' ' + t.model + (t.versiyon ? ' ' + t.versiyon : '');
+      var hs = Object.keys(h).map(function (p) { return (PARCA_AD[p] || p) + ' ' + (DURUM_AD[h[p]] || '').toLocaleLowerCase('tr'); });
+      var l = ['🚗 *OTOKABUL · Talep #' + t.id + '*', a, tl(t.km) + ' km · ' + [t.yakit, t.vites, t.kasa].filter(Boolean).join(' / ') + (t.renk ? ' · ' + t.renk : ''),
+        'Boya/değişen: ' + (hs.length ? hs.join(', ') : 'yok'), 'Tramer: ' + (t.tramer ? tl(t.tramer) + ' TL' : 'yok') + (+t.agir === 1 ? ' · AĞIR HASAR KAYDI VAR' : '')];
+      if (o.teklif && t.teklif_min) l.push('Ön teklif: ' + tl(t.teklif_min) + ' – ' + tl(t.teklif_max) + ' TL');
+      if (!o.gizle) l.push('Müşteri: ' + t.ad + ' · ' + t.tel + (t.il ? ' · ' + t.il : ''));
+      return l.join('\n');
+    };
+    var kartYenile = function () {
+      return kartCiz(t, h, o).then(function (cv) { var hedef = $('#pKart', kap); hedef.width = cv.width; hedef.height = cv.height; hedef.getContext('2d').drawImage(cv, 0, 0); });
+    };
+    var fotoCizListe = function () {
+      $('#pFotoBas', kap).innerHTML = fotolar.length ? '<h3 style="margin:16px 0 4px">Fotoğraflar (' + fotolar.length + ')</h3><p class="soluk" style="margin:0 0 8px">' + (o.gizle ? 'Gizli modda <b>plakanın üstünü fareyle/parmakla sürükleyerek işaretle</b>; işaretli alan bulanıklaştırılıp kapatılır. Yanlış işareti üstüne çift tıklayarak sil.' : 'Gizle kapalı: fotoğraflar olduğu gibi gönderilir.') + '</p>' : '';
+      fotolar.forEach(function (f, i) {
+        var el = $('#pFoto' + i, kap); if (!el) return;
+        var cv = fotoCiz(f.img, kutular[i], t, o.gizle), hedef = el.querySelector('canvas');
+        hedef.width = cv.width; hedef.height = cv.height; hedef.getContext('2d').drawImage(cv, 0, 0);
+        el.classList.toggle('eksik', o.gizle && !(kutular[i] || []).length);
+      });
+    };
+    $('#pGizle', kap).onchange = function (e) { o.gizle = e.target.checked; kartYenile(); fotoCizListe(); };
+    $('#pTeklif', kap).onchange = function (e) { o.teklif = e.target.checked; kartYenile(); };
+    kartYenile();
+    if (+t.foto_sayi > 0) {
+      api('talep_fotolar', { id: t.id }).then(function (l) {
+        return Promise.all(l.map(function (f) { return resimYukle('api.php?a=foto&id=' + f.id).then(function (img) { return { img: img }; }).catch(function () { return null; }); }));
+      }).then(function (l) {
+        fotolar = l.filter(Boolean);
+        $('#pFotolar', kap).innerHTML = fotolar.map(function (f, i) { return '<div class="paylas-foto" id="pFoto' + i + '"><canvas></canvas><span class="uyari">Plaka işaretlenmedi</span></div>'; }).join('');
+        fotolar.forEach(function (f, i) {
+          var el = $('#pFoto' + i, kap), cv = el.querySelector('canvas'), bas = null, kutu = document.createElement('div');
+          kutu.className = 'secim'; el.appendChild(kutu);
+          var nokta = function (e) { var r = cv.getBoundingClientRect(), p = e.touches ? e.touches[0] : e; return { x: Math.min(1, Math.max(0, (p.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (p.clientY - r.top) / r.height)) }; };
+          var ciz = function (a, b) { var r = cv.getBoundingClientRect(), er = el.getBoundingClientRect(); kutu.style.cssText = 'display:block;left:' + (r.left - er.left + Math.min(a.x, b.x) * r.width) + 'px;top:' + (r.top - er.top + Math.min(a.y, b.y) * r.height) + 'px;width:' + Math.abs(b.x - a.x) * r.width + 'px;height:' + Math.abs(b.y - a.y) * r.height + 'px'; };
+          var basla = function (e) { if (!o.gizle) return; e.preventDefault(); bas = nokta(e); ciz(bas, bas); };
+          var hareket = function (e) { if (bas) { e.preventDefault(); ciz(bas, nokta(e)); } };
+          var bitir = function (e) {
+            if (!bas) return; var son = e.changedTouches ? (function () { var r = cv.getBoundingClientRect(), p = e.changedTouches[0]; return { x: Math.min(1, Math.max(0, (p.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (p.clientY - r.top) / r.height)) }; })() : nokta(e);
+            var b = { x: Math.min(bas.x, son.x), y: Math.min(bas.y, son.y), w: Math.abs(son.x - bas.x), h: Math.abs(son.y - bas.y) };
+            bas = null; kutu.style.display = 'none';
+            if (b.w > 0.02 && b.h > 0.01) { (kutular[i] = kutular[i] || []).push(b); fotoCizListe(); }
+          };
+          cv.addEventListener('mousedown', basla); window.addEventListener('mousemove', hareket); window.addEventListener('mouseup', bitir);
+          cv.addEventListener('touchstart', basla, { passive: false }); cv.addEventListener('touchmove', hareket, { passive: false }); cv.addEventListener('touchend', bitir);
+          cv.addEventListener('dblclick', function (e) {
+            var p = nokta(e), l = kutular[i] || [];
+            for (var j = l.length - 1; j >= 0; j--) if (p.x >= l[j].x && p.x <= l[j].x + l[j].w && p.y >= l[j].y && p.y <= l[j].y + l[j].h) { l.splice(j, 1); fotoCizListe(); return; }
+          });
+        });
+        fotoCizListe();
+      });
+    }
+    var dosyalar = function () {
+      return kartCiz(t, h, o).then(function (kart) {
+        return Promise.all([blobAl(kart, 'image/png')].concat(fotolar.map(function (f, i) { return blobAl(fotoCiz(f.img, kutular[i], t, o.gizle)); })));
+      }).then(function (bl) {
+        return bl.map(function (b, i) { return new File([b], 'otokabul-talep-' + t.id + (i ? '-foto' + i + '.jpg' : '-kart.png'), { type: b.type }); });
+      });
+    };
+    var eksikVar = function () {
+      if (!o.gizle) return false;
+      var n = fotolar.filter(function (f, i) { return !(kutular[i] || []).length; }).length;
+      return n && !confirm(n + ' fotoğrafta plaka işaretlenmedi. Bu fotoğraflar plakasıyla gidebilir. Yine de devam edilsin mi?');
+    };
+    var durum = function (m) { $('#pDurum', kap).textContent = m; };
+    $('#pPaylas', kap).onclick = function () {
+      if (eksikVar()) return;
+      durum('Hazırlanıyor…');
+      dosyalar().then(function (fl) {
+        if (navigator.canShare && navigator.canShare({ files: fl })) {
+          return navigator.share({ files: fl, text: metin(), title: 'OTOKABUL Talep #' + t.id }).then(function () { durum('Paylaşıldı ✓'); }).catch(function () { durum(''); });
+        }
+        // paylaşım penceresi yoksa: görselleri indir + WhatsApp'ı metinle aç
+        fl.forEach(function (f) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000); });
+        window.open('https://wa.me/?text=' + encodeURIComponent(metin()), '_blank');
+        durum('Görseller indirildi; WhatsApp açıldı. Sohbeti seçip indirilen görselleri sürükleyerek ekle.');
+      });
+    };
+    $('#pIndir', kap).onclick = function () {
+      if (eksikVar()) return;
+      dosyalar().then(function (fl) { fl.forEach(function (f) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }); durum(fl.length + ' görsel indirildi'); });
+    };
+    $('#pKopya', kap).onclick = function () { navigator.clipboard.writeText(metin()).then(function () { durum('Metin kopyalandı'); }); };
   }
   function kapat() { $('#cekmece').hidden = true; }
   $('#cekmece').onclick = function (e) { if (e.target.id === 'cekmece') kapat(); };

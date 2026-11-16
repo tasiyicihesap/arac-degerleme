@@ -148,3 +148,18 @@ table.parca-oran td{padding:3px 6px}
 .il-izgara{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:4px;max-height:260px;overflow:auto;padding:8px;border:1.5px solid var(--c);border-radius:10px}
 .il-izgara label{display:flex;gap:5px;align-items:center;background:#f6f4ef;border-radius:7px;padding:4px 8px;font-size:12.5px;cursor:pointer}
 .il-izgara label:has(input:checked){background:#e8f7ee;color:#166534;font-weight:600}
+/* talep paylaşımı */
+.paylas-kap{position:fixed;inset:0;background:rgba(15,27,45,.55);z-index:80;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px}
+.paylas-ic{background:#fff;border-radius:16px;width:min(760px,100%);padding:20px;box-shadow:0 30px 60px -20px rgba(0,0,0,.4)}
+.gizle-anahtar{display:flex;gap:10px;align-items:flex-start;background:#ecfdf5;border:1.5px solid #86efac;border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer;font-size:13.5px;line-height:1.45}
+.gizle-anahtar:has(input:not(:checked)){background:#fff7ed;border-color:#fdba74}
+.gizle-anahtar.ikincil{background:#f8fafc;border-color:#e2e8f0}
+.gizle-anahtar input{margin-top:3px;width:17px;height:17px}
+.paylas-onizle{background:#f1f5f9;border-radius:12px;padding:10px;display:flex;justify-content:center}
+.paylas-onizle canvas{width:min(100%,340px);height:auto;border-radius:8px;box-shadow:0 8px 20px -10px rgba(0,0,0,.35)}
+.paylas-fotolar{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.paylas-foto{position:relative;border-radius:10px;overflow:hidden;border:2px solid #e2e8f0}
+.paylas-foto canvas{width:100%;height:auto;display:block;cursor:crosshair;touch-action:none}
+.paylas-foto .uyari{display:none;position:absolute;left:8px;top:8px;background:#dc2626;color:#fff;font:700 11.5px Inter,sans-serif;border-radius:6px;padding:3px 7px}
+.paylas-foto.eksik{border-color:#fca5a5}.paylas-foto.eksik .uyari{display:block}
+.paylas-foto .secim{display:none;position:absolute;border:2px dashed #ff5a1f;background:rgba(255,90,31,.18);pointer-events:none}
