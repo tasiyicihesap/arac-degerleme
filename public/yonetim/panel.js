@@ -1059,6 +1059,8 @@
           '<div class="satirlar" style="margin-bottom:8px"><button class="btn kucuk" id="ilMarmara">Marmara + 300 km (önerilen)</button><button class="btn kucuk" id="ilTum">Tümünü aç</button><button class="btn kucuk" id="ilHic">Temizle</button><span class="soluk" id="ilSay"></span></div>' +
           '<div class="il-izgara" id="ilListe">' + ILLER_TUM.map(function (i) { return '<label><input type="checkbox" value="' + esc(i) + '"' + ((',' + (A.hizmet_illeri || '') + ',').indexOf(',' + i + ',') >= 0 ? ' checked' : '') + '>' + esc(i) + '</label>'; }).join('') + '</div>' +
           '<div class="satirlar" style="margin-top:10px"><button class="btn ana" id="ilKaydet">Bölgeyi kaydet</button></div></div>' +
+        '<div class="kutu"><h2>WhatsApp grup köprüsü</h2><p class="soluk" style="margin-top:0">"OTOKABUL Bildirim Köprüsü" Chrome eklentisi, WhatsApp Web açık bir bilgisayarda yeni talepleri gruplara iletir. Eklentiye bu anahtarı yaz. Anahtarı yenilersen eski anahtarlı eklentiler durur.</p>' +
+          '<div class="satirlar"><input class="girdi" id="kAnahtar" readonly style="width:320px;font-family:monospace" value="—"><button class="btn kucuk" id="kGoster">Göster</button><button class="btn kucuk" id="kKopya">Kopyala</button><button class="btn kucuk kirmizi" id="kYenile">Yenile</button></div></div>' +
         '<div class="kutu"><h2>Şifre değiştir</h2><div class="alanlar"><label>Mevcut şifre<input type="password" class="girdi" id="pEski"></label><label>Yeni şifre<input type="password" class="girdi" id="pYeni"></label></div><div class="satirlar" style="margin-top:10px"><button class="btn" id="pKaydet">Şifreyi değiştir</button></div></div>' +
         '<div class="kutu"><h2>Yedek</h2><p class="soluk" style="margin-top:0">Tüm fiyatlar, talepler ve ayarlar tek dosyada. Ayda bir indirip saklayın.</p><a class="btn" href="api.php?a=yedek_indir">⬇ Veritabanı yedeğini indir</a></div></div></div>';
       var ilSay = function () { var n = $$('#ilListe input:checked', k).length; $('#ilSay', k).textContent = n ? n + ' il açık' : 'Tüm Türkiye açık'; };
@@ -1067,6 +1069,10 @@
       $('#ilMarmara', k).onclick = function () { ilAyarla(ILLER_MARMARA); };
       $('#ilTum', k).onclick = function () { ilAyarla(true); };
       $('#ilHic', k).onclick = function () { ilAyarla([]); };
+      var kAl = function (y) { api('kopru_anahtar', { yenile: y ? 1 : 0 }).then(function (r) { $('#kAnahtar', k).value = r.anahtar; if (y) bildir('Yeni anahtar oluşturuldu; eklentilere yeniden yaz.'); }); };
+      $('#kGoster', k).onclick = function () { kAl(false); };
+      $('#kKopya', k).onclick = function () { var v = $('#kAnahtar', k).value; if (v.length > 5) navigator.clipboard.writeText(v).then(function () { bildir('Kopyalandı'); }); else kAl(false); };
+      $('#kYenile', k).onclick = function () { if (confirm('Anahtar yenilensin mi? Eski anahtarlı eklentiler çalışmayı bırakır.')) kAl(true); };
       $('#ilKaydet', k).onclick = function () {
         var l = $$('#ilListe input:checked', k).map(function (i) { return i.value; });
         if (l.length === ILLER_TUM.length) l = [];

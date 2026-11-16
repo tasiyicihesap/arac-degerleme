@@ -131,6 +131,11 @@ async function kur(D) {
   if (!varS.has('donanim')) ek.push(D.prepare("ALTER TABLE talepler ADD COLUMN donanim TEXT DEFAULT ''"));
   if (!varS.has('aciklama')) ek.push(D.prepare("ALTER TABLE talepler ADD COLUMN aciklama TEXT DEFAULT ''"));
   if (!varS.has('foto_sayi')) ek.push(D.prepare('ALTER TABLE talepler ADD COLUMN foto_sayi INTEGER DEFAULT 0'));
+  if (!varS.has('grup_durum')) {
+    // WhatsApp grup köprüsü: eski talepler gruba toplu düşmesin
+    ek.push(D.prepare("ALTER TABLE talepler ADD COLUMN grup_durum TEXT DEFAULT ''"));
+    ek.push(D.prepare("UPDATE talepler SET grup_durum = 'eski'"));
+  }
   if (ek.length) await D.batch(ek);
   const r = await D.prepare("SELECT v FROM ayarlar WHERE k = '_kurulum'").first();
   if (r) return;

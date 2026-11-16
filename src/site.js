@@ -1,6 +1,7 @@
 // OTOKABUL — müşteri sitesi API'si (eski api.php)
 import { kasaBul, modelKasasi } from './kasa.js';
 import { izKaydet } from './istatistik.js';
+import { kopru } from './kopru.js';
 import { db, ayarlar, VARSAYILAN_AYARLAR, simdi, int, str, kes, dolu, buYil, gorselHaritasi, logoUrl, modelGorselUrl, donanimlar } from './db.js';
 import { teklifHesapla, PARCALAR, DURUMLAR } from './fiyat.js';
 import { json, rastgeleHex } from './yardim.js';
@@ -40,6 +41,7 @@ async function siteApiIc(req, env, ctx) {
   try { D = await db(env); } catch (e) { if (a !== 'mesaj') throw e; D = env.DB; }
   switch (a) {
     case 'iz': return izKaydet(req, env, ctx, D); // site istatistikleri
+    case 'kopru': return kopru(req, D); // WhatsApp grup köprüsü (Chrome eklentisi)
     case 'firma': {
       const A = await ayarlar(D);
       return json({ ad: A.firma_adi, alt: A.firma_alt, telefon: A.telefon, whatsapp: A.whatsapp, eposta: A.eposta, adres: A.adres, teklif_goster: A.teklif_goster === '1', iller: hizmetIlleri(A),
