@@ -1,4 +1,5 @@
 // OTOKABUL — müşteri sitesi API'si (eski api.php)
+import { kasaBul, modelKasasi } from './kasa.js';
 import { db, ayarlar, VARSAYILAN_AYARLAR, simdi, int, str, kes, dolu, buYil, gorselHaritasi, logoUrl, modelGorselUrl, donanimlar } from './db.js';
 import { teklifHesapla, PARCALAR, DURUMLAR } from './fiyat.js';
 import { json, rastgeleHex } from './yardim.js';
@@ -68,13 +69,22 @@ async function siteApiIc(req, env, ctx) {
           FROM fiyatlar f WHERE f.aktif = 1 AND f.marka = ?1 GROUP BY f.model HAVING a <= ?2 AND b >= ?2 AND uzak <= 3 ORDER BY f.model COLLATE NOCASE`).bind(marka, yil).all(),
         gorselHaritasi(D),
       ]);
-      return json(results.map((x) => ({ ad: x.model, n: int(x.adet), gorsel: modelGorselUrl(h, marka, x.model), kasa: x.kasa || '' })));
+      return json(results.map((x) => ({ ad: x.model, n: int(x.adet), gorsel: modelGorselUrl(h, marka, x.model), kasa: modelKasasi(marka, x.model) || x.kasa || '' })));
     }
     case 'secenekler': {
       const yol = `$."${int(q('yil'))}"`;
-      const { results } = await D.prepare(`SELECT id, versiyon, kasa, yakit, vites, motor, beygir FROM katalog
+      const { results } = await D.prepare(`SELECT id, versiyon, tip, kasa, yakit, vites, motor, beygir FROM katalog
         WHERE aktif = 1 AND marka = ? AND model = ? AND json_extract(degerler, ?) IS NOT NULL ORDER BY versiyon COLLATE NOCASE`).bind(q('marka'), q('model'), yol).all();
-      return json(results.map((x) => ({ id: int(x.id), ad: x.versiyon, kasa: x.kasa || 'Diğer', yakit: x.yakit, vites: x.vites, motor: x.motor, beygir: int(x.beygir) })));
+      return json(results.map((x) => ({ id: int(x.id), ad: x.versiyon, kasa: kasaBul(q('marka'), q('model'), x.tip + ' ' + x.versiyon, x.kasa), yakit: x.yakit, vites: x.vites, motor: x.motor, beygir: int(x.beygir) })));
+    }
+    // o yıla ait katalog yoksa sihirbazın kasa / yakıt / vites listeleri modelin tüm yıllarından gelir
+    case 'ozellik': {
+      const marka = q('marka'), model = q('model');
+      const { results } = await D.prepare('SELECT tip, versiyon, kasa, yakit, vites FROM katalog WHERE aktif = 1 AND marka = ? AND model = ?').bind(marka, model).all();
+      const say = (f) => { const m = {}; for (const x of results) { const v = f(x); if (v) m[v] = (m[v] || 0) + 1; } return Object.keys(m).sort((a, b) => m[b] - m[a]); };
+      let kasa = say((x) => kasaBul(marka, model, x.tip + ' ' + x.versiyon, x.kasa)).filter((k) => k !== 'Diğer');
+      if (!kasa.length && modelKasasi(marka, model)) kasa = [modelKasasi(marka, model)];
+      return json({ kasa, yakit: say((x) => x.yakit), vites: say((x) => x.vites) });
     }
     case 'modeller': {
       const { results } = await D.prepare('SELECT model, SUM(adet) n, MIN(yil) y1, MAX(yil) y2 FROM fiyatlar WHERE aktif = 1 AND marka = ? GROUP BY model ORDER BY model COLLATE NOCASE').bind(q('marka')).all();

@@ -167,13 +167,21 @@
       return (alan === 'kasa' || !S.kasa || v.kasa === S.kasa) && (alan === 'kasa' || alan === 'yakit' || !S.yakit || v.yakit === S.yakit);
     });
   }
+  // seçilen yıla ait katalog yoksa modelin genel özellikleri (tüm yıllardan)
+  function modelOzellik() {
+    var a = S.marka + '|' + S.model;
+    if (cache.oz && cache.oz.a === a) return Promise.resolve(cache.oz.v);
+    return api('ozellik', { marka: S.marka, model: S.model }).then(function (v) { cache.oz = { a: a, v: v }; return v; }).catch(function () { return {}; });
+  }
+  function sirala(l, alan) { return l.sort(function (a, b) { var x = VARSAYILAN[alan].indexOf(a), y = VARSAYILAN[alan].indexOf(b); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y); }); }
   function cizSecim(k, alan) {
     secenekler().then(function (l) {
-      var liste;
       if (l.length) {
         var say = {}; uygunlar(l, alan).forEach(function (v) { say[v[alan]] = (say[v[alan]] || 0) + 1; });
-        liste = Object.keys(say).sort(function (a, b) { return VARSAYILAN[alan].indexOf(a) - VARSAYILAN[alan].indexOf(b); });
-      } else liste = VARSAYILAN[alan];
+        return sirala(Object.keys(say), alan);
+      }
+      return modelOzellik().then(function (oz) { return oz && oz[alan] && oz[alan].length ? sirala(oz[alan].slice(), alan) : VARSAYILAN[alan]; });
+    }).then(function (liste) {
       // tek seçenek varsa otomatik geç
       if (liste.length === 1) { if (S[alan] !== liste[0]) { S[alan] = liste[0]; temizleSonra(alan); } git(adim + yon); return; }
       k.innerHTML = '<div class="izgara' + (alan === 'kasa' ? '' : '') + '" id="ogeler">' + liste.map(function (s) {

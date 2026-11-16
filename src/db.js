@@ -25,7 +25,7 @@ export const VARSAYILAN_AYARLAR = {
   yakit_Benzin: '0', yakit_Dizel: '0', yakit_LPG: '-4', yakit_Hibrit: '0', yakit_Elektrik: '0',
   vites_Manuel: '-2', vites_Otomatik: '2', 'vites_Yarı Otomatik': '0',
   teklif_goster: '1',
-  min_yil: '2005',
+  min_yil: '2002',
   max_km: '350000',
   robot_url: 'https://raw.githubusercontent.com/tasiyicihesap/aracradar/main/data/meta.json',
   robot_min_adet: '3',
