@@ -145,3 +145,6 @@ a.btn{text-decoration:none;display:inline-block}
 table.parca-oran td{padding:3px 6px}
 .talep-foto{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
 .talep-foto img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block}
+.il-izgara{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:4px;max-height:260px;overflow:auto;padding:8px;border:1.5px solid var(--c);border-radius:10px}
+.il-izgara label{display:flex;gap:5px;align-items:center;background:#f6f4ef;border-radius:7px;padding:4px 8px;font-size:12.5px;cursor:pointer}
+.il-izgara label:has(input:checked){background:#e8f7ee;color:#166534;font-weight:600}

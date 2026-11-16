@@ -16,6 +16,9 @@
   };
 
   var ILLER = 'Adana,Adıyaman,Afyonkarahisar,Ağrı,Aksaray,Amasya,Ankara,Antalya,Ardahan,Artvin,Aydın,Balıkesir,Bartın,Batman,Bayburt,Bilecik,Bingöl,Bitlis,Bolu,Burdur,Bursa,Çanakkale,Çankırı,Çorum,Denizli,Diyarbakır,Düzce,Edirne,Elazığ,Erzincan,Erzurum,Eskişehir,Gaziantep,Giresun,Gümüşhane,Hakkâri,Hatay,Iğdır,Isparta,İstanbul,İzmir,Kahramanmaraş,Karabük,Karaman,Kars,Kastamonu,Kayseri,Kilis,Kırıkkale,Kırklareli,Kırşehir,Kocaeli,Konya,Kütahya,Malatya,Manisa,Mardin,Mersin,Muğla,Muş,Nevşehir,Niğde,Ordu,Osmaniye,Rize,Sakarya,Samsun,Şanlıurfa,Siirt,Sinop,Sivas,Şırnak,Tekirdağ,Tokat,Trabzon,Tunceli,Uşak,Van,Yalova,Yozgat,Zonguldak'.split(',');
+  // talep alınan iller (panelden yönetilir); liste boşsa tüm iller
+  function hizmetIlleri() { var l = (firma && firma.iller) || []; return l.length ? l : ILLER; }
+  function bolgeVar() { return !!(firma && firma.iller && firma.iller.length); }
   var PARCALAR = [
     ['on_tampon', 'Ön Tampon'], ['kaput', 'Motor Kaputu'], ['tavan', 'Tavan'], ['bagaj', 'Bagaj Kapağı'], ['arka_tampon', 'Arka Tampon'],
     ['sol_on_camurluk', 'Sol Ön Çamurluk'], ['sol_on_kapi', 'Sol Ön Kapı'], ['sol_arka_kapi', 'Sol Arka Kapı'], ['sol_arka_camurluk', 'Sol Arka Çamurluk'],
@@ -43,7 +46,7 @@
     { ad: 'km', baslik: 'Kilometre ve renk', ciz: cizKm, gecerli: function () { return S.km > 0; } },
     { ad: 'hasar', baslik: 'Hasar durumu', ciz: cizHasar, gecerli: function () { return S.tramerVar !== null && S.agir !== null && (!S.tramerVar || S.tramer > 0); } },
     { ad: 'ek', baslik: 'Donanım, açıklama ve fotoğraflar', ciz: cizEk },
-    { ad: 'iletisim', baslik: 'Teklifini nereye iletelim?', ciz: cizIletisim, gecerli: function () { return S.ad && S.ad.trim().length > 1 && (S.tel || '').replace(/\D/g, '').length >= 10 && S.kvkk; } },
+    { ad: 'iletisim', baslik: 'Teklifini nereye iletelim?', ciz: cizIletisim, gecerli: function () { return S.ad && S.ad.trim().length > 1 && (S.tel || '').replace(/\D/g, '').length >= 10 && S.kvkk && S.il !== '__diger'; } },
     { ad: 'sonuc', baslik: '', ciz: cizSonuc }
   ];
 
@@ -453,13 +456,20 @@
     k.innerHTML = '<p class="ipucu">Ön teklifin hemen ekranda; uzmanımız ekspertiz randevusu için seni arayacak.</p>' +
       '<div class="grup"><label>Ad Soyad</label><input class="alan" id="ad" autocomplete="name" value="' + esc(S.ad || '') + '"></div>' +
       '<div class="grup"><label>Cep telefonu</label><input class="alan" id="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx" value="' + esc(S.tel || '') + '"></div>' +
-      '<div class="grup"><label>Aracın bulunduğu il</label><select class="alan" id="il">' + ILLER.map(function (i) { return '<option' + ((S.il || 'İstanbul') === i ? ' selected' : '') + '>' + i + '</option>'; }).join('') + '</select></div>' +
+      '<div class="grup"><label>Aracın bulunduğu il</label><select class="alan" id="il">' + hizmetIlleri().map(function (i) { return '<option' + ((S.il || 'İstanbul') === i ? ' selected' : '') + '>' + i + '</option>'; }).join('') + (bolgeVar() ? '<option value="__diger"' + (S.il === '__diger' ? ' selected' : '') + '>Başka bir il</option>' : '') + '</select><div class="bolge-not" id="bolgeNot" hidden></div></div>' +
       '<label class="onay"><input type="checkbox" id="kvkk"' + (S.kvkk ? ' checked' : '') + '> Bilgilerimin teklif ve randevu için kullanılmasını ve benimle telefonla/WhatsApp ile iletişime geçilmesini kabul ediyorum.</label>' +
       '<div class="hata" id="hata"></div>';
-    S.il = S.il || 'İstanbul';
+    if (!S.il || (S.il !== '__diger' && hizmetIlleri().indexOf(S.il) < 0)) S.il = hizmetIlleri().indexOf('İstanbul') >= 0 ? 'İstanbul' : hizmetIlleri()[0];
     $('#ad', k).oninput = function (e) { S.ad = e.target.value; guncelleBtn(); };
     $('#tel', k).oninput = function (e) { S.tel = e.target.value; guncelleBtn(); };
-    $('#il', k).onchange = function (e) { S.il = e.target.value; };
+    var bolgeUyar = function () {
+      var n = $('#bolgeNot', k), dis = S.il === '__diger';
+      n.hidden = !dis;
+      if (dis) n.innerHTML = 'Şu an yalnızca <b>' + esc(hizmetIlleri().join(', ')) + '</b> illerinden araç alıyoruz. Bölgemiz genişlediğinde seni de ağırlamaktan memnuniyet duyarız.';
+      guncelleBtn();
+    };
+    $('#il', k).onchange = function (e) { S.il = e.target.value; bolgeUyar(); };
+    bolgeUyar();
     $('#kvkk', k).onchange = function (e) { S.kvkk = e.target.checked; guncelleBtn(); };
   }
 

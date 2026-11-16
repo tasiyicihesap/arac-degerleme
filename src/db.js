@@ -49,6 +49,8 @@ export const VARSAYILAN_AYARLAR = {
   tg_token: '',
   tg_chat: '',
   bildirim_talep: '1',
+  // talep alınan iller (virgüllü). Boş = tüm Türkiye. Varsayılan: İstanbul'a ~300 km çevre
+  hizmet_illeri: 'İstanbul,Kocaeli,Sakarya,Yalova,Bursa,Bilecik,Düzce,Bolu,Tekirdağ,Kırklareli,Edirne',
   sifre: '',
 };
 

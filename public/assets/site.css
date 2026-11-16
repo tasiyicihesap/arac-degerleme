@@ -225,3 +225,4 @@ textarea.alan{resize:vertical;min-height:84px;font-size:15px;line-height:1.45}
 .pt-temizle{display:block;width:100%;border:0;border-top:1px solid #f1ede4;background:#fafaf7;color:#64748b;font:600 12px Inter,sans-serif;padding:7px;cursor:pointer}
 .pt-temizle:hover{color:var(--vurgu)}
 @media (max-width:640px){.hasar-kap{grid-template-columns:1fr}.hasar-kap>div:first-child{max-width:220px;margin:0 auto}.pt-bas,.pt-satir{grid-template-columns:1fr repeat(4,40px)}}
+.bolge-not{margin-top:8px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.5}

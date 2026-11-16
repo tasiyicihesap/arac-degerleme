@@ -3,6 +3,8 @@ import { kasaBul, modelKasasi } from './kasa.js';
 import { db, ayarlar, VARSAYILAN_AYARLAR, simdi, int, str, kes, dolu, buYil, gorselHaritasi, logoUrl, modelGorselUrl, donanimlar } from './db.js';
 import { teklifHesapla, PARCALAR, DURUMLAR } from './fiyat.js';
 import { json, rastgeleHex } from './yardim.js';
+
+const hizmetIlleri = (A) => str(A.hizmet_illeri).split(',').map((x) => x.trim()).filter(Boolean);
 import { epostaGonder, anlikBildir } from './bildirim.js';
 
 // Sık okunan, nadiren değişen cevaplar bellekte ve Cloudflare önbelleğinde tutulur (ücretsiz plandaki günlük okuma kotası için)
@@ -38,7 +40,7 @@ async function siteApiIc(req, env, ctx) {
   switch (a) {
     case 'firma': {
       const A = await ayarlar(D);
-      return json({ ad: A.firma_adi, alt: A.firma_alt, telefon: A.telefon, whatsapp: A.whatsapp, eposta: A.eposta, adres: A.adres, teklif_goster: A.teklif_goster === '1',
+      return json({ ad: A.firma_adi, alt: A.firma_alt, telefon: A.telefon, whatsapp: A.whatsapp, eposta: A.eposta, adres: A.adres, teklif_goster: A.teklif_goster === '1', iller: hizmetIlleri(A),
         donanimlar: donanimlar(A).map((d) => ({ ad: d.ad, kosul: d.kosul })) });
     }
     case 'metinler': { // panelden değiştirilen site cümleleri
@@ -107,6 +109,10 @@ async function siteApiIc(req, env, ctx) {
       const ad = kes(str(g.ad).trim(), 80).trim();
       const tel = str(g.tel).replace(/[^\d+]/g, '');
       if (ad === '' || tel.replace(/\D/g, '').length < 10) return json({ hata: 'Ad ve geçerli bir telefon numarası gerekli.' }, 400);
+      {
+        const iller = hizmetIlleri(await ayarlar(D));
+        if (iller.length && !iller.includes(str(g.il).trim())) return json({ hata: `Şu an yalnızca ${iller.join(', ')} illerinden araç alıyoruz. Bölgemiz genişlediğinde seni de ağırlamaktan memnuniyet duyarız.`, bolge: 1 }, 400);
+      }
       const ip = req.headers.get('CF-Connecting-IP') || '';
       const c = await D.prepare('SELECT COUNT(*) n FROM talepler WHERE ip = ? AND tarih > ?').bind(ip, simdi(Date.now() - 3600 * 1000)).first();
       if (int(c.n) >= 15) return json({ hata: 'Çok fazla talep gönderildi, lütfen bizi telefonla arayın.' }, 429);

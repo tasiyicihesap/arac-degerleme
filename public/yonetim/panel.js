@@ -783,6 +783,8 @@
     fDurum();
   }
 
+  var ILLER_TUM = 'Adana,Adıyaman,Afyonkarahisar,Ağrı,Aksaray,Amasya,Ankara,Antalya,Ardahan,Artvin,Aydın,Balıkesir,Bartın,Batman,Bayburt,Bilecik,Bingöl,Bitlis,Bolu,Burdur,Bursa,Çanakkale,Çankırı,Çorum,Denizli,Diyarbakır,Düzce,Edirne,Elazığ,Erzincan,Erzurum,Eskişehir,Gaziantep,Giresun,Gümüşhane,Hakkâri,Hatay,Iğdır,Isparta,İstanbul,İzmir,Kahramanmaraş,Karabük,Karaman,Kars,Kastamonu,Kayseri,Kilis,Kırıkkale,Kırklareli,Kırşehir,Kocaeli,Konya,Kütahya,Malatya,Manisa,Mardin,Mersin,Muğla,Muş,Nevşehir,Niğde,Ordu,Osmaniye,Rize,Sakarya,Samsun,Şanlıurfa,Siirt,Sinop,Sivas,Şırnak,Tekirdağ,Tokat,Trabzon,Tunceli,Uşak,Van,Yalova,Yozgat,Zonguldak'.split(',');
+  var ILLER_MARMARA = ['İstanbul', 'Kocaeli', 'Sakarya', 'Yalova', 'Bursa', 'Bilecik', 'Düzce', 'Bolu', 'Tekirdağ', 'Kırklareli', 'Edirne'];
   function cizAyarlar(k) {
     k.innerHTML = '<h1 class="bas">Ayarlar</h1><p class="bas-alt">Teklif formülü, firma bilgileri ve robot ayarları.</p><div id="aForm">Yükleniyor…</div>';
     api('ayarlar').then(function (A) {
@@ -817,8 +819,23 @@
         '<div class="kutu"><h2>WhatsApp bildirimleri (CallMeBot)</h2><p class="soluk" style="margin-top:0">Siteden mesaj, yeni teklif talebi ya da bilgi@ adresine e-posta gelince telefonuna WhatsApp mesajı gelir. Ücretsiz CallMeBot servisiyle çalışır, bir kez kurulur:</p>' +
           '<ol style="margin:0 0 12px;padding-left:20px;line-height:1.7"><li>Bildirimin geleceği telefonda CallMeBot\'un WhatsApp numarasını rehbere kaydet (güncel numara: <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noopener">callmebot.com</a>).</li><li>Bu numaraya WhatsApp\'tan şu mesajı gönder: <b>I allow callmebot to send me messages</b></li><li>Birkaç dakika içinde gelen mesajdaki <b>APIKEY</b> sayısını yukarıdaki "WhatsApp bildirim anahtarı" kutusuna yaz, ayarları kaydet.</li></ol>' +
           '<div class="satirlar"><button class="btn koyu" id="bDene">Deneme bildirimi gönder</button></div><div id="bSonuc" class="soluk" style="margin-top:8px"></div></div>' +
+        '<div class="kutu"><h2>Hizmet bölgesi</h2><p class="soluk" style="margin-top:0">Sadece işaretli illerden teklif talebi alınır; diğer illerden gelen ziyaretçiye nazik bir bilgi mesajı gösterilir. Hiçbiri işaretli değilse tüm Türkiye açıktır.</p>' +
+          '<div class="satirlar" style="margin-bottom:8px"><button class="btn kucuk" id="ilMarmara">Marmara + 300 km (önerilen)</button><button class="btn kucuk" id="ilTum">Tümünü aç</button><button class="btn kucuk" id="ilHic">Temizle</button><span class="soluk" id="ilSay"></span></div>' +
+          '<div class="il-izgara" id="ilListe">' + ILLER_TUM.map(function (i) { return '<label><input type="checkbox" value="' + esc(i) + '"' + ((',' + (A.hizmet_illeri || '') + ',').indexOf(',' + i + ',') >= 0 ? ' checked' : '') + '>' + esc(i) + '</label>'; }).join('') + '</div>' +
+          '<div class="satirlar" style="margin-top:10px"><button class="btn ana" id="ilKaydet">Bölgeyi kaydet</button></div></div>' +
         '<div class="kutu"><h2>Şifre değiştir</h2><div class="alanlar"><label>Mevcut şifre<input type="password" class="girdi" id="pEski"></label><label>Yeni şifre<input type="password" class="girdi" id="pYeni"></label></div><div class="satirlar" style="margin-top:10px"><button class="btn" id="pKaydet">Şifreyi değiştir</button></div></div>' +
         '<div class="kutu"><h2>Yedek</h2><p class="soluk" style="margin-top:0">Tüm fiyatlar, talepler ve ayarlar tek dosyada. Ayda bir indirip saklayın.</p><a class="btn" href="api.php?a=yedek_indir">⬇ Veritabanı yedeğini indir</a></div></div></div>';
+      var ilSay = function () { var n = $$('#ilListe input:checked', k).length; $('#ilSay', k).textContent = n ? n + ' il açık' : 'Tüm Türkiye açık'; };
+      var ilAyarla = function (l) { $$('#ilListe input', k).forEach(function (i) { i.checked = l === true || (l && l.indexOf(i.value) >= 0); }); ilSay(); };
+      $('#ilListe', k).onchange = ilSay; ilSay();
+      $('#ilMarmara', k).onclick = function () { ilAyarla(ILLER_MARMARA); };
+      $('#ilTum', k).onclick = function () { ilAyarla(true); };
+      $('#ilHic', k).onclick = function () { ilAyarla([]); };
+      $('#ilKaydet', k).onclick = function () {
+        var l = $$('#ilListe input:checked', k).map(function (i) { return i.value; });
+        if (l.length === ILLER_TUM.length) l = [];
+        api('ayar_kaydet', { hizmet_illeri: l.join(',') }).then(function () { bildir(l.length ? l.length + ' ilden talep alınacak' : 'Tüm Türkiye açıldı'); });
+      };
       $('#aKaydet', k).onclick = function () {
         var d = {}; $$('[data-k]', k).forEach(function (i) { d[i.dataset.k] = i.value.replace(',', '.'); });
         if (d.robot_url !== undefined) d.robot_url = $('[data-k="robot_url"]', k).value.trim();
