@@ -4,6 +4,7 @@ import {
   piyasaYaz, katalogTemizle, katalogParcaYaz, kaskoFiyatlariniGuncelle, MODEL_EKLE, gorselSlug, gorselHaritasi, logoUrl, modelGorselUrl,
 } from './db.js';
 import { teklifHesapla, bazFiyat } from './fiyat.js';
+import { istatistikOzet } from './istatistik.js';
 import { epostaGonder, anlikBildir, telegramGonder } from './bildirim.js';
 import { json, rastgeleHex, sifreOzet, sifreDogrula, CEREZ, oturumYaz, oturumOku, cerezAl, cerezBaslik } from './yardim.js';
 
@@ -413,6 +414,7 @@ export async function yonetimApi(req, env) {
       return json({ ok: 1 });
     }
     // --- iletişim formu ve gelen e-postalar ---
+    case 'istatistik': { const g = await girdi(); return istatistikOzet(D, g.gun); }
     case 'mesajlar': {
       const { results } = await D.prepare('SELECT id, tarih, kaynak, ad, tel, eposta, konu, mesaj, okundu, eposta_durum, wa_durum FROM mesajlar ORDER BY id DESC LIMIT 500').all();
       return json(results);

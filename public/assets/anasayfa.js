@@ -90,7 +90,7 @@
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (r.status >= 500) throw new Error(); return j; }); })
       .then(function (j) {
         if (j.hata) { hata(j.hata); return; }
-        mf.reset();
+        mf.reset(); if (window.OKIZ) window.OKIZ('mesaj');
         durum.className = 'mf-durum tamam'; durum.textContent = 'Teşekkürler, mesajın bize ulaştı. En kısa sürede dönüş yapacağız.';
       })
       .catch(function () { hata('Mesaj gönderilemedi. Lütfen bizi telefonla ya da WhatsApp\'tan ara.'); })

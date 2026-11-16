@@ -48,7 +48,7 @@
   });
 
   // ---------- gezinme ----------
-  var SAYFALAR = { ozet: cizOzet, talepler: cizTalepler, mesajlar: cizMesajlar, fiyatlar: cizFiyatlar, toplu: cizToplu, robot: cizRobot, katalog: cizKatalog, icerik: cizIcerik, ayarlar: cizAyarlar };
+  var SAYFALAR = { ozet: cizOzet, talepler: cizTalepler, mesajlar: cizMesajlar, istatistik: cizIstatistik, fiyatlar: cizFiyatlar, toplu: cizToplu, robot: cizRobot, katalog: cizKatalog, icerik: cizIcerik, ayarlar: cizAyarlar };
   var markaListesi = [];
   function sayfa(ad, veri) {
     $$('#menu a').forEach(function (a) { a.classList.toggle('aktif', a.dataset.s === ad); });
@@ -82,6 +82,43 @@
   }
 
   // ---------- ÖZET ----------
+  // ---------- SİTE İSTATİSTİKLERİ ----------
+  var istGun = 7;
+  function cizIstatistik(k) {
+    k.innerHTML = '<h1 class="bas">Site İstatistikleri</h1><p class="bas-alt">Ziyaretçilerin nereden geldiği, hangi cihaz ve tarayıcıyı kullandığı, kaçının teklif aldığı. Kendi sayacımızdır; çerez ve kişisel bilgi tutulmaz.</p>' +
+      '<div class="satirlar" id="iDonem">' + [[1, 'Bugün'], [7, 'Son 7 gün'], [30, 'Son 30 gün'], [90, 'Son 90 gün']].map(function (d) { return '<button class="btn kucuk' + (d[0] === istGun ? ' koyu' : '') + '" data-g="' + d[0] + '">' + d[1] + '</button>'; }).join('') + '</div>' +
+      '<div id="iIc">Yükleniyor…</div>';
+    $('#iDonem', k).onclick = function (e) { var b = e.target.closest('[data-g]'); if (b) { istGun = +b.dataset.g; cizIstatistik(k); } };
+    api('istatistik', { gun: istGun }).then(function (r) {
+      var o = r.ozet, ol = o.olaylar || {}, NF0 = function (n) { return NF.format(n || 0); };
+      var oran = function (a, b) { return b ? (Math.round(a / b * 1000) / 10).toString().replace('.', ',') + '%' : '—'; };
+      var kart = function (b, d, alt) { return '<div class="ist-kart"><span>' + b + '</span><b>' + d + '</b>' + (alt ? '<small>' + alt + '</small>' : '') + '</div>'; };
+      var cubuk = function (bas, l, etiket) {
+        var top = l.reduce(function (a, x) { return a + (+x.n); }, 0), mx = Math.max.apply(null, l.map(function (x) { return +x.n; }).concat([1]));
+        return '<div class="kutu ist-kutu"><h2>' + bas + '</h2>' + (l.length ? l.map(function (x) {
+          return '<div class="ist-satir"><span title="' + esc(x.ad) + '">' + esc(etiket ? etiket(x.ad) : x.ad) + '</span><i><em style="width:' + Math.max(2, x.n / mx * 100) + '%"></em></i><b>' + NF0(x.n) + '</b><small>' + oran(x.n, top) + '</small></div>';
+        }).join('') : '<p class="soluk">Henüz veri yok.</p>') + '</div>';
+      };
+      var gm = Math.max.apply(null, r.gunluk.map(function (x) { return +x.ziy; }).concat([1]));
+      var sm = Math.max.apply(null, r.saat.map(function (x) { return +x.n; }).concat([1])), saat = {}; r.saat.forEach(function (x) { saat[x.ad] = +x.n; });
+      $('#iIc', k).innerHTML =
+        '<div class="ist-kartlar">' + kart('Tekil ziyaretçi', NF0(o.ziyaretci), NF0(o.geri_donen) + ' geri dönen') + kart('Oturum', NF0(o.oturum)) + kart('Sayfa görüntüleme', NF0(o.goruntuleme), o.oturum ? (Math.round(o.goruntuleme / o.oturum * 10) / 10).toString().replace('.', ',') + ' sayfa / oturum' : '') +
+        kart('Değerlemeye başlayan', NF0(ol.sihirbaz), oran(ol.sihirbaz, o.oturum) + ' oturum') + kart('Teklif alan', NF0(ol.teklif), oran(ol.teklif, o.oturum) + ' dönüşüm') + kart('Randevu isteyen', NF0(ol.randevu)) +
+        kart('WhatsApp tıklaması', NF0(ol.whatsapp)) + kart('Telefon tıklaması', NF0(ol.telefon)) + kart('İletişim formu', NF0(ol.mesaj)) + '</div>' +
+        '<div class="kutu"><h2>Günlük ziyaretçi</h2><div class="ist-grafik">' + (r.gunluk.length ? r.gunluk.map(function (x) {
+          return '<div title="' + esc(x.ad) + ': ' + x.ziy + ' ziyaretçi, ' + x.gor + ' görüntüleme"><em style="height:' + Math.max(3, x.ziy / gm * 100) + '%"></em><span>' + x.ad.slice(8, 10) + '.' + x.ad.slice(5, 7) + '</span></div>';
+        }).join('') : '<p class="soluk">Henüz veri yok.</p>') + '</div></div>' +
+        '<div class="ist-izgara">' +
+        cubuk('Nereden geldiler?', r.kaynak) +
+        '<div class="kutu ist-kutu"><h2>Kaynağa göre teklif dönüşümü</h2>' + (r.donusum.length ? '<table class="xl"><tr><th>Kaynak</th><th>Oturum</th><th>Teklif</th><th>Oran</th></tr>' + r.donusum.map(function (x) { return '<tr><td>' + esc(x.ad || '—') + '</td><td>' + NF0(x.oturum) + '</td><td>' + NF0(x.teklif) + '</td><td>' + oran(x.teklif, x.oturum) + '</td></tr>'; }).join('') + '</table>' : '<p class="soluk">Henüz veri yok.</p>') + '</div>' +
+        cubuk('Yönlendiren siteler', r.siteler) + cubuk('Reklam kampanyaları (utm)', r.kampanya) +
+        cubuk('Cihaz', r.cihaz) + cubuk('İşletim sistemi', r.isletim) + cubuk('Tarayıcı', r.tarayici) + cubuk('Şehir', r.sehir) +
+        cubuk('En çok bakılan sayfalar', r.sayfa, function (p) { return p === '/' ? 'Ana sayfa' : decodeURIComponent(p); }) +
+        '<div class="kutu ist-kutu"><h2>Saatlere göre ziyaret</h2><div class="ist-grafik saatler">' + Array.apply(null, Array(24)).map(function (_, i) { var n = saat[i] || 0; return '<div title="' + i + ':00 — ' + n + '"><em style="height:' + Math.max(2, n / sm * 100) + '%"></em><span>' + (i % 3 === 0 ? i : '') + '</span></div>'; }).join('') + '</div></div>' +
+        '</div>' +
+        '<p class="alt-not">İpucu: Reklam bağlantılarına <code>?utm_source=instagram&amp;utm_campaign=kasim</code> gibi ekler koyarsan hangi kampanyanın teklif getirdiği burada ayrı görünür. Şehir bilgisi ziyaretçinin internet bağlantısından yaklaşık olarak belirlenir.</p>';
+    }).catch(function () { $('#iIc', k).innerHTML = '<p class="azl">İstatistikler yüklenemedi.</p>'; });
+  }
   function cizOzet(k) {
     k.innerHTML = '<h1 class="bas">Özet</h1><p class="bas-alt">Bugünün durumu</p><div id="oz">Yükleniyor…</div>';
     api('ozet').then(function (o) {

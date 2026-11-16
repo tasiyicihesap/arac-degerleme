@@ -70,6 +70,7 @@ ${govde}
   <div><h4>İletişim</h4><a href="tel:${ILETISIM.telLink}">☎ ${ILETISIM.tel}</a><a href="https://wa.me/${ILETISIM.wa}" target="_blank" rel="noopener">WhatsApp</a><a href="mailto:${ILETISIM.eposta}">${ILETISIM.eposta}</a><span>${ILETISIM.adres}</span></div>
 </div><div class="kap alt-son"><span>© ${buYil()} <b>OTOKABUL</b>.COM.TR · Tüm hakları saklıdır.</span><span>otokabul.com.tr</span></div></footer>
 <a class="wa-sabit" href="https://wa.me/${ILETISIM.wa}?text=${encodeURIComponent('Merhaba, aracımı satmak istiyorum.')}" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Z"/></svg></a>
+<script src="/assets/iz.js" defer></script>
 </body>
 </html>`;
 }
@@ -192,7 +193,7 @@ export async function seoSayfa(req, env, ctx, D, yol) {
   const url = new URL(req.url);
   // sonda / olmayan adresleri tek biçime getir
   if ((yol.startsWith('/arac-degerleme') || yol.startsWith('/rehber')) && !yol.endsWith('/')) return Response.redirect(url.origin + yol + '/' + url.search, 301);
-  const anahtar = SITE + yol + '?s=3'; // sürüm: içerik değişince artır
+  const anahtar = SITE + yol + '?s=4'; // sürüm: içerik değişince artır
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { try { const c = await cache.match(anahtar); if (c) return c; } catch (e) {} }
   const v = await liste(D);

@@ -163,3 +163,21 @@ table.parca-oran td{padding:3px 6px}
 .paylas-foto .uyari{display:none;position:absolute;left:8px;top:8px;background:#dc2626;color:#fff;font:700 11.5px Inter,sans-serif;border-radius:6px;padding:3px 7px}
 .paylas-foto.eksik{border-color:#fca5a5}.paylas-foto.eksik .uyari{display:block}
 .paylas-foto .secim{display:none;position:absolute;border:2px dashed #ff5a1f;background:rgba(255,90,31,.18);pointer-events:none}
+/* istatistikler */
+.ist-kartlar{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin:14px 0}
+.ist-kart{background:#fff;border:1px solid var(--c);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.ist-kart span{font-size:12px;color:#64748b;font-weight:600}
+.ist-kart b{font-size:24px;color:#0f1b2d}
+.ist-kart small{font-size:11.5px;color:#94a3b8}
+.ist-izgara{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.ist-kutu{margin:0}
+.ist-satir{display:grid;grid-template-columns:minmax(90px,38%) 1fr 54px 48px;gap:8px;align-items:center;font-size:13px;padding:4px 0}
+.ist-satir span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ist-satir i{height:9px;background:#f1ede4;border-radius:5px;overflow:hidden;display:block}
+.ist-satir em{display:block;height:100%;background:var(--v,#ff5a1f);border-radius:5px}
+.ist-satir b{text-align:right}.ist-satir small{text-align:right;color:#94a3b8}
+.ist-grafik{display:flex;align-items:flex-end;gap:3px;height:150px;padding-top:6px}
+.ist-grafik div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
+.ist-grafik em{display:block;width:100%;max-width:34px;background:#ff5a1f;border-radius:4px 4px 0 0}
+.ist-grafik span{font-size:10px;color:#94a3b8;margin-top:4px;height:12px}
+.ist-grafik.saatler{height:110px}

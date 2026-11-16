@@ -92,6 +92,7 @@
     if (i >= 0) { SIRA.slice(i + 1).forEach(function (k) { delete S[k]; if (k === 'motor') delete S.motorAd; }); if (i < 7) S.katalog_id = 0; }
   }
   function sec(alan, deger, otoIlerle) {
+    if (window.OKIZ) window.OKIZ('sihirbaz');
     S[alan] = deger;
     // üst seçim değişirse alt seçimleri temizle
     temizleSonra(alan);
@@ -477,7 +478,7 @@
   function gonder() {
     btnI.disabled = true; btnI.textContent = 'Hesaplanıyor…';
     var g = { ad: S.ad, tel: S.tel, il: S.il, marka: S.marka, model: S.model, yil: S.yil, versiyon: S.versiyon || '', katalog_id: S.katalog_id || 0, yakit: S.yakit, vites: S.vites, kasa: S.kasa || '', km: S.km, renk: S.renk || '', hasar: S.hasar, tramer: S.tramerVar ? S.tramer : 0, agir: !!S.agir, donanim: S.donanim || [], aciklama: S.aciklama || '' };
-    api('teklif', null, g).then(function (s) { sonuc = s; git(ADIMLAR.length - 1); })
+    api('teklif', null, g).then(function (s) { sonuc = s; if (window.OKIZ) window.OKIZ('teklif'); git(ADIMLAR.length - 1); })
       .catch(function (e) { var h = $('#hata'); if (h) h.textContent = hataMetni(e); btnI.textContent = 'Teklifimi göster →'; guncelleBtn(); });
   }
   function cizSonuc(k) {
@@ -500,6 +501,7 @@
         .then(function (n) { var d = $('#fotoDurum'); if (d) { d.textContent = n ? '✓ ' + n + ' fotoğraf talebine eklendi.' : 'Fotoğraflar gönderilemedi; WhatsApp\'tan iletebilirsin.'; d.classList.add(n ? 'tamam' : 'olmadi'); } });
     }
     $('#randevu', k).onclick = function () {
+      if (window.OKIZ) window.OKIZ('randevu');
       var b = this; b.disabled = true; b.textContent = 'Gönderiliyor…';
       api('randevu', null, { no: s.no, anahtar: s.anahtar }).then(function () {
         $('#randevuKutu', k).innerHTML = '<div class="randevu-ok"><div class="randevu-ikon">✓</div><b>Randevu talebin bize ulaştı</b>' +
