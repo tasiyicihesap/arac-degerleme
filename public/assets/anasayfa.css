@@ -280,3 +280,14 @@ body.ana{background:#fff;color:var(--murekkep)}
 .btn-eposta:hover{border-color:var(--vurgu)}
 .alt-kolonlar a span{display:inline;margin:0}
 @media (max-width:980px){.serit #seritEposta{display:none!important}}
+/* logo + OTOCLASS işbirliği rozeti */
+.marka-blok{display:flex;align-items:center;gap:14px;min-width:0}
+.logo.logo-gorsel{display:block;line-height:0}
+.logo-gorsel img{height:44px;width:auto;display:block}
+.logo-gorsel small{display:none}
+.isbirligi{display:inline-flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;border-left:1px solid #e5e7eb;margin-left:2px;padding-left:14px;white-space:nowrap}
+.isbirligi img{height:22px;width:auto;display:block;border-radius:6px;background:#000;padding:3px 6px;box-shadow:0 2px 8px -3px rgba(0,0,0,.35)}
+.isbirligi em{font:600 11.5px/1.15 Inter,sans-serif;font-style:normal;color:#64748b;letter-spacing:.02em}
+@media (max-width:900px){.logo-gorsel img{height:38px}.isbirligi{padding-left:10px;gap:6px}.isbirligi img{height:18px}}
+@media (max-width:620px){.marka-blok{gap:8px}.logo-gorsel img{height:30px}.isbirligi{padding-left:8px}.isbirligi img{height:15px;padding:2px 4px}.isbirligi em{font-size:10px}}
+@media (max-width:380px){.isbirligi em{display:none}}

@@ -56,7 +56,7 @@ ${ld.map((x) => `<script type="application/ld+json">${JSON.stringify(x).replace(
 </head>
 <body class="ana rehber">
 <header class="ust"><div class="kap ust-ic">
-  <a class="logo" href="/" aria-label="OTOKABUL.COM.TR ana sayfa"><span class="logo-a">OTO</span><span class="logo-b">KABUL</span><span class="logo-c">.COM.TR</span></a>
+  <div class="marka-blok"><a class="logo logo-gorsel" href="/" aria-label="OTOKABUL.COM.TR ana sayfa"><img src="/assets/logo-otokabul.png" alt="OTOKABUL.COM.TR" width="160" height="50"></a><span class="isbirligi" title="OTOCLASS işbirliği ile"><img src="/assets/logo-otoclass.png" alt="OTOCLASS" width="88" height="20"><em>işbirliği ile</em></span></div>
   <nav><a href="/arac-degerleme/">Markalar</a><a href="/rehber/">Rehber</a><a href="/#nasil">Nasıl işliyor?</a><a href="/#sss">Sorular</a><a class="ust-tel" href="tel:${ILETISIM.telLink}">☎ <span>${ILETISIM.tel}</span></a><a class="ust-cta" href="/#degerle">Aracımı değerle</a></nav>
 </div></header>
 <main class="kap rh-ana">
