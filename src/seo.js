@@ -12,7 +12,14 @@ const h = (s) => str(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;',
 // aktif marka/model listesi (tek sorgu, 6 saat bellekte)
 async function liste(D) {
   if (listeOnbellek && listeOnbellek.son > Date.now()) return listeOnbellek.v;
-  const { results } = await D.prepare('SELECT marka, model, MIN(yil) y1, MAX(yil) y2 FROM fiyatlar WHERE aktif = 1 GROUP BY marka, model').all();
+  // soğuk başlayan her Worker örneği fiyatlar tablosunu baştan taramasın: ham liste 6 saat Cloudflare önbelleğinde
+  const ck = SITE + '/__seo_liste_v1', cache = typeof caches !== 'undefined' ? caches.default : null;
+  let results = null;
+  if (cache) { try { const c = await cache.match(ck); if (c) results = await c.json(); } catch (e) { results = null; } }
+  if (!results) {
+    results = (await D.prepare('SELECT marka, model, MIN(yil) y1, MAX(yil) y2 FROM fiyatlar WHERE aktif = 1 GROUP BY marka, model').all()).results;
+    if (cache) { try { await cache.put(ck, new Response(JSON.stringify(results), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=21600' } })); } catch (e) {} }
+  }
   const markalar = new Map();
   for (const r of results) {
     const ms = gorselSlug(r.marka), mos = gorselSlug(r.model);
@@ -189,21 +196,24 @@ function siteHaritasi(v) {
 
 const bulunamadi = () => new Response(sayfa({ baslik: 'Sayfa bulunamadı | OTOKABUL.COM.TR', aciklama: 'Aradığın sayfa bulunamadı.', yol: '/arac-degerleme/', kirinti: [['Ana sayfa', '/'], ['Araç değerleme', '/arac-degerleme/']], govde: `<section class="rh-bas"><h1>Bu sayfayı bulamadık</h1><p>Aracının markasını aşağıdaki listeden seçebilir ya da doğrudan değerleme ekranına geçebilirsin.</p></section>${cta('Aracını hemen değerle', '/#degerle')}<p><a href="/arac-degerleme/">Tüm markalar →</a></p>` }).replace('index, follow', 'noindex, follow'), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 
-export async function seoSayfa(req, env, ctx, D, yol) {
+export async function seoSayfa(req, env, ctx, dbAl, yol) {
   const url = new URL(req.url);
   // sonda / olmayan adresleri tek biçime getir
   if ((yol.startsWith('/arac-degerleme') || yol.startsWith('/rehber')) && !yol.endsWith('/')) return Response.redirect(url.origin + yol + '/' + url.search, 301);
   const anahtar = SITE + yol + '?s=4'; // sürüm: içerik değişince artır
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { try { const c = await cache.match(anahtar); if (c) return c; } catch (e) {} }
-  const v = await liste(D);
   let govde, tur = 'text/html; charset=utf-8';
-  if (yol === '/sitemap.xml') { govde = siteHaritasi(v); tur = 'application/xml; charset=utf-8'; }
-  else if (yol.startsWith('/rehber/')) {
+  // rehber yazıları veritabanına hiç dokunmaz
+  if (yol.startsWith('/rehber/')) {
     const p = yol.split('/').filter(Boolean);
     if (p.length === 1) govde = rehberListe();
     else { const y = p.length === 2 && YAZILAR.find((x) => x.slug === p[1]); if (!y) return bulunamadi(); govde = rehberYazi(y); }
   }
+  const D = govde ? null : await dbAl();
+  const v = govde ? null : await liste(D);
+  if (govde) { /* rehber */ }
+  else if (yol === '/sitemap.xml') { govde = siteHaritasi(v); tur = 'application/xml; charset=utf-8'; }
   else {
     const p = yol.split('/').filter(Boolean); // ['arac-degerleme', marka?, model?]
     if (p.length === 1) govde = anaSayfa(v);

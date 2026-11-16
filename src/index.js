@@ -25,7 +25,7 @@ export default {
       if (yol === '/api.php') return await siteApi(req, env, ctx);
       if (yol === '/yonetim/api.php') return await yonetimApi(req, env);
       if (yol.startsWith('/yuklemeler/')) return await gorselSun(req, env, yol);
-      if (yol === '/sitemap.xml' || yol === '/arac-degerleme' || yol.startsWith('/arac-degerleme/') || yol === '/rehber' || yol.startsWith('/rehber/')) return await seoSayfa(req, env, ctx, await db(env), yol);
+      if (yol === '/sitemap.xml' || yol === '/arac-degerleme' || yol.startsWith('/arac-degerleme/') || yol === '/rehber' || yol.startsWith('/rehber/')) return await seoSayfa(req, env, ctx, () => db(env), yol);
     } catch (e) {
       console.error(e);
       return json({ hata: 'Sunucu hatası: ' + (e && e.message ? e.message : e) }, 500);
