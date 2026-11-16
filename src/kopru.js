@@ -37,7 +37,7 @@ export function tamMesaj(t) {
     `💥 *Tramer:* ${int(t.tramer) ? tf(t.tramer) + ' TL' : 'Yok'}${int(t.agir) ? '  ⚠️ *AĞIR HASAR KAYDI VAR*' : ''}`,
     dn.length ? `🧰 *Donanım:* ${dn.map(str).join(', ')}` : '',
     t.aciklama ? `📝 *Müşteri notu:* ${kes(str(t.aciklama), 500)}` : '',
-    int(t.foto_sayi) ? `📸 *Fotoğraf:* ${int(t.foto_sayi)} adet (panelde)` : '',
+    int(t.foto_sayi) ? `📸 *Fotoğraf:* ${int(t.foto_sayi)} adet (aşağıda)` : '',
     '',
     int(t.teklif_min) ? `💰 *Ön teklif:* ${tf(t.teklif_min)} – ${tf(t.teklif_max)} TL` : '💰 *Ön teklif:* otomatik verilmedi (uzman değerlendirecek)',
     t.kabul_tarih ? '✅ *Müşteri randevu istedi*' : '',
@@ -82,6 +82,11 @@ export async function kopru(req, D) {
     await D.prepare("UPDATE talepler SET grup_durum = ? WHERE id = ?").bind('gönderildi ' + simdi(), id).run();
     return json({ ok: 1 });
   }
+  if (islem === 'foto' && id) { // talep fotoğrafı (gruba iletmek için)
+    const f = await D.prepare('SELECT mime, veri FROM talep_foto WHERE id = ?').bind(id).first();
+    if (!f) return json({ hata: 'yok' }, 404);
+    return new Response(new Uint8Array(f.veri), { headers: { 'Content-Type': f.mime, 'Cache-Control': 'no-store' } });
+  }
   if (islem === 'iade' && id) {
     await D.prepare("UPDATE talepler SET grup_durum = '' WHERE id = ? AND grup_durum LIKE 'alındı%'").bind(id).run();
     return json({ ok: 1 });
@@ -93,5 +98,10 @@ export async function kopru(req, D) {
     RETURNING id, tarih, ad, tel, il, marka, model, yil, versiyon, yakit, vites, kasa, km, renk, hasar, tramer, agir, teklif_min, teklif_max, donanim, aciklama, foto_sayi, kabul_tarih`)
     .bind(simd, esik, zaman).all();
   results.sort((x, y) => x.id - y.id);
-  return json({ talepler: results.map((t) => ({ id: int(t.id), tam: tamMesaj(t), kisa: kisaMesaj(t) })) });
+  const fotolar = {};
+  if (results.length) {
+    const { results: fl } = await D.prepare(`SELECT id, talep_id FROM talep_foto WHERE talep_id IN (${results.map(() => '?').join(',')}) ORDER BY id`).bind(...results.map((t) => t.id)).all();
+    for (const f of fl) (fotolar[f.talep_id] = fotolar[f.talep_id] || []).push(int(f.id));
+  }
+  return json({ talepler: results.map((t) => ({ id: int(t.id), tam: tamMesaj(t), kisa: kisaMesaj(t), fotolar: fotolar[t.id] || [] })) });
 }
