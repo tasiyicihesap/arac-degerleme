@@ -32,3 +32,16 @@
 .rh-sss summary{font-weight:700;color:var(--murekkep);cursor:pointer}
 .rh-sss p{margin:10px 0 0;color:#475569;line-height:1.6}
 @media (max-width:620px){.rh-cta{flex-direction:column;align-items:stretch}.rh-btn{text-align:center}.rehber .ust nav a:not(.ust-cta){display:none}}
+/* rehber yazıları */
+.rh-yazilar{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:18px}
+.rh-yazi-kart{display:flex;flex-direction:column;gap:6px;background:#fff;border:1px solid #ece8df;border-radius:14px;padding:18px;text-decoration:none;transition:border-color .15s,transform .15s}
+.rh-yazi-kart:hover{border-color:var(--vurgu);transform:translateY(-1px)}
+.rh-yazi-kart b{color:var(--murekkep);font:800 17px/1.3 Manrope,sans-serif}
+.rh-yazi-kart span{color:#64748b;font-size:14.5px;line-height:1.55}
+.rh-yazi-kart i{font-style:normal;color:var(--vurgu);font-weight:700;font-size:14px;margin-top:auto}
+.rh-yazi{max-width:780px;margin-bottom:24px}
+.rh-yazi h1{font:800 clamp(28px,4vw,40px)/1.15 Manrope,sans-serif;letter-spacing:-.02em;color:var(--murekkep);margin:0 0 8px}
+.rh-tarih{color:#94a3b8;font-size:14px;margin:0 0 22px}
+.rh-yazi h2{font:800 21px Manrope,sans-serif;color:var(--murekkep);margin:28px 0 10px}
+.rh-yazi p,.rh-yazi li{font-size:16.5px;line-height:1.75;color:#334155}
+.rh-yazi ul{padding-left:20px}

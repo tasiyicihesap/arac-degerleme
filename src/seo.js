@@ -1,6 +1,7 @@
 // OTOKABUL — arama motorları için marka/model sayfaları ve site haritası
 // Sayfalar sunucuda üretilir ve 1 gün önbellekte tutulur (ücretsiz plandaki okuma kotası için).
 import { gorselSlug, int, str, buYil } from './db.js';
+import { YAZILAR } from './rehber.js';
 
 const SITE = 'https://otokabul.com.tr';
 const SURE = 86400;
@@ -56,7 +57,7 @@ ${ld.map((x) => `<script type="application/ld+json">${JSON.stringify(x).replace(
 <body class="ana rehber">
 <header class="ust"><div class="kap ust-ic">
   <a class="logo" href="/" aria-label="OTOKABUL.COM.TR ana sayfa"><span class="logo-a">OTO</span><span class="logo-b">KABUL</span><span class="logo-c">.COM.TR</span></a>
-  <nav><a href="/arac-degerleme/">Markalar</a><a href="/#nasil">Nasıl işliyor?</a><a href="/#sss">Sorular</a><a class="ust-tel" href="tel:${ILETISIM.telLink}">☎ <span>${ILETISIM.tel}</span></a><a class="ust-cta" href="/#degerle">Aracımı değerle</a></nav>
+  <nav><a href="/arac-degerleme/">Markalar</a><a href="/rehber/">Rehber</a><a href="/#nasil">Nasıl işliyor?</a><a href="/#sss">Sorular</a><a class="ust-tel" href="tel:${ILETISIM.telLink}">☎ <span>${ILETISIM.tel}</span></a><a class="ust-cta" href="/#degerle">Aracımı değerle</a></nav>
 </div></header>
 <main class="kap rh-ana">
 <nav class="rh-kirinti" aria-label="Konum">${kirinti.map((k, i) => (i < kirinti.length - 1 ? `<a href="${k[1]}">${h(k[0])}</a><span>›</span>` : `<b>${h(k[0])}</b>`)).join('')}</nav>
@@ -65,7 +66,7 @@ ${govde}
 <footer class="alt-bilgi"><div class="kap alt-kolonlar">
   <div class="ak-marka"><a class="logo" href="/"><span class="logo-a">OTO</span><span class="logo-b">KABUL</span><span class="logo-c">.COM.TR</span></a><p>Aracını galeriye götürmeden, ilan vermeden; güncel piyasa fiyatıyla ve aynı gün ödemeyle sat.</p></div>
   <div><h4>Hizmetlerimiz</h4><a href="/#degerle">Aracını sat</a><a href="/#degerle">Ücretsiz ön teklif</a><a href="/#nasil">Ücretsiz ekspertiz</a></div>
-  <div><h4>Rehber</h4><a href="/arac-degerleme/">Marka marka araç değerleme</a><a href="/#fiyat">Fiyat nasıl belirleniyor?</a><a href="/#sss">Sık sorulanlar</a></div>
+  <div><h4>Rehber</h4><a href="/rehber/">Araç satış rehberi</a><a href="/arac-degerleme/">Marka marka araç değerleme</a><a href="/#fiyat">Fiyat nasıl belirleniyor?</a><a href="/#sss">Sık sorulanlar</a></div>
   <div><h4>İletişim</h4><a href="tel:${ILETISIM.telLink}">☎ ${ILETISIM.tel}</a><a href="https://wa.me/${ILETISIM.wa}" target="_blank" rel="noopener">WhatsApp</a><a href="mailto:${ILETISIM.eposta}">${ILETISIM.eposta}</a><span>${ILETISIM.adres}</span></div>
 </div><div class="kap alt-son"><span>© ${buYil()} <b>OTOKABUL</b>.COM.TR · Tüm hakları saklıdır.</span><span>otokabul.com.tr</span></div></footer>
 <a class="wa-sabit" href="https://wa.me/${ILETISIM.wa}?text=${encodeURIComponent('Merhaba, aracımı satmak istiyorum.')}" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Z"/></svg></a>
@@ -156,9 +157,31 @@ ${diger.length ? `<h2 class="rh-alt-baslik">Diğer ${h(m.ad)} modelleri</h2><div
   });
 }
 
+function rehberListe() {
+  const govde = `<section class="rh-bas"><h1>Araç satış rehberi</h1>
+<p>Aracını satmadan önce bilmen gerekenleri sade bir dille anlattık: hazırlık, ekspertiz, boya-değişen, tramer ve kilometrenin fiyata etkisi.</p></section>
+<div class="rh-yazilar">${YAZILAR.map((y) => `<a class="rh-yazi-kart" href="/rehber/${y.slug}/"><b>${h(y.baslik)}</b><span>${h(y.ozet)}</span><i>Devamını oku →</i></a>`).join('')}</div>
+${cta('Aracının değerini hemen öğren', '/#degerle')}`;
+  return sayfa({ baslik: 'Araç Satış Rehberi: Ekspertiz, Boya-Değişen, Kilometre | OTOKABUL', aciklama: 'Aracını satarken bilmen gerekenler: satış öncesi hazırlık, ekspertiz raporu, boya-değişen ve tramerin fiyata etkisi, kilometre ve araç değeri.', yol: '/rehber/', kirinti: [['Ana sayfa', '/'], ['Rehber', '/rehber/']], govde });
+}
+
+function rehberYazi(y) {
+  const diger = YAZILAR.filter((x) => x.slug !== y.slug);
+  const govde = `<article class="rh-yazi"><h1>${h(y.baslik)}</h1>
+<p class="rh-tarih">OTOKABUL.COM.TR · ${y.tarih.split('-').reverse().join('.')}</p>
+${y.govde}</article>
+${cta('Aracının değerini birkaç dakikada öğren', '/#degerle')}
+${faqHtml(y.sss)}
+<h2 class="rh-alt-baslik">Diğer rehber yazıları</h2>
+<div class="rh-yazilar">${diger.map((x) => `<a class="rh-yazi-kart" href="/rehber/${x.slug}/"><b>${h(x.baslik)}</b><span>${h(x.ozet)}</span></a>`).join('')}</div>`;
+  const art = { '@context': 'https://schema.org', '@type': 'Article', headline: y.baslik, description: y.aciklama, datePublished: y.tarih, dateModified: y.tarih, inLanguage: 'tr-TR', mainEntityOfPage: `${SITE}/rehber/${y.slug}/`, image: `${SITE}/assets/paylasim.png`, author: { '@type': 'Organization', name: 'OTOKABUL.COM.TR', url: SITE + '/' }, publisher: { '@type': 'Organization', name: 'OTOKABUL.COM.TR', logo: { '@type': 'ImageObject', url: `${SITE}/assets/paylasim.png` } } };
+  return sayfa({ baslik: `${y.baslik} | OTOKABUL`, aciklama: y.aciklama, yol: `/rehber/${y.slug}/`, kirinti: [['Ana sayfa', '/'], ['Rehber', '/rehber/'], [y.baslik, `/rehber/${y.slug}/`]], govde, ekLd: [art, faqLd(y.sss)] });
+}
+
 function siteHaritasi(v) {
   const bugun = new Date().toISOString().slice(0, 10);
   const u = [[SITE + '/', '1.0'], [SITE + '/arac-degerleme/', '0.8']];
+  u.push([SITE + '/rehber/', '0.7']); for (const y of YAZILAR) u.push([`${SITE}/rehber/${y.slug}/`, '0.7']);
   for (const m of v) { u.push([`${SITE}/arac-degerleme/${m.slug}/`, '0.7']); for (const x of m.liste) u.push([`${SITE}/arac-degerleme/${m.slug}/${x.slug}/`, '0.6']); }
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${u.map(([l, p]) => `<url><loc>${l}</loc><lastmod>${bugun}</lastmod><priority>${p}</priority></url>`).join('\n')}\n</urlset>\n`;
 }
@@ -168,13 +191,18 @@ const bulunamadi = () => new Response(sayfa({ baslik: 'Sayfa bulunamadı | OTOKA
 export async function seoSayfa(req, env, ctx, D, yol) {
   const url = new URL(req.url);
   // sonda / olmayan adresleri tek biçime getir
-  if (yol.startsWith('/arac-degerleme') && !yol.endsWith('/')) return Response.redirect(url.origin + yol + '/' + url.search, 301);
+  if ((yol.startsWith('/arac-degerleme') || yol.startsWith('/rehber')) && !yol.endsWith('/')) return Response.redirect(url.origin + yol + '/' + url.search, 301);
   const anahtar = SITE + yol;
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { try { const c = await cache.match(anahtar); if (c) return c; } catch (e) {} }
   const v = await liste(D);
   let govde, tur = 'text/html; charset=utf-8';
   if (yol === '/sitemap.xml') { govde = siteHaritasi(v); tur = 'application/xml; charset=utf-8'; }
+  else if (yol.startsWith('/rehber/')) {
+    const p = yol.split('/').filter(Boolean);
+    if (p.length === 1) govde = rehberListe();
+    else { const y = p.length === 2 && YAZILAR.find((x) => x.slug === p[1]); if (!y) return bulunamadi(); govde = rehberYazi(y); }
+  }
   else {
     const p = yol.split('/').filter(Boolean); // ['arac-degerleme', marka?, model?]
     if (p.length === 1) govde = anaSayfa(v);
