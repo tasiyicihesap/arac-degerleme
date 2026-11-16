@@ -130,7 +130,7 @@ async function modelSayfa(D, m, mo) {
     [`${ad} kaç para?`, `${ad} aracının değeri model yılı, motor ve paket seçeneği, kilometresi, boya-değişen durumu ve tramer kaydına göre değişir. Değerleme ekranında bilgilerini girdiğinde güncel ön teklifini hemen görürsün.`],
     [`${ad} için hangi model yıllarını değerliyorsunuz?`, `${mo.y1 === mo.y2 ? mo.y1 + ' model' : mo.y1 + ' ile ' + mo.y2 + ' arasındaki model yıllarındaki'} ${ad} araçlarını değerliyoruz.`],
     [`${ad} boyalı ya da değişen parçası varsa teklif verir misiniz?`, 'Evet. Değerleme ekranındaki araç şemasında hangi parçanın lokal boyalı, boyalı ya da değişen olduğunu işaretlersin; teklif buna göre hesaplanır. Ağır hasar kayıtlı araçlar için ekspertiz sonrası özel değerlendirme yaparız.'],
-    [`${ad} satarken nelere ihtiyacım var?`, 'Ruhsat, kimlik ve aracın kendisi yeterli. Ekspertiz ücretsizdir, noter işlemlerini biz takip ederiz ve ödeme aynı gün yapılır.'],
+    [`${ad} satarken nelere ihtiyacım var?`, 'Önce ücretsiz ön teklifini al. Ekspertiz ücretsizdir; noter satışı için gereken belgeleri uzmanımız randevudan önce sana tek tek bildirir. Noter işlemlerini biz takip ederiz, ödeme aynı gün yapılır.'],
   ];
   const diger = m.liste.filter((x) => x.slug !== mo.slug).slice(0, 18);
   const govde = `<section class="rh-bas"><h1>${h(ad)} kaç para? Ücretsiz ${h(ad)} değerleme</h1>
