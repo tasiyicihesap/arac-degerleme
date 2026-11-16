@@ -285,9 +285,13 @@ body.ana{background:#fff;color:var(--murekkep)}
 .logo.logo-gorsel{display:block;line-height:0}
 .logo-gorsel img{height:44px;width:auto;display:block}
 .logo-gorsel small{display:none}
-.isbirligi{display:inline-flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;border-left:1px solid #e5e7eb;margin-left:2px;padding-left:14px;white-space:nowrap}
-.isbirligi img{height:34px;width:auto;display:block;border-radius:7px;background:#000;box-shadow:0 3px 10px -4px rgba(0,0,0,.45)}
-.isbirligi em{font:600 12.5px/1.15 Inter,sans-serif;font-style:normal;color:#64748b;letter-spacing:.02em}
+.isbirligi{display:inline-flex;flex-direction:column;align-items:flex-start;gap:3px;padding:5px 10px 5px 5px;border-left:1px solid #e5e7eb;margin-left:2px;padding-left:14px;white-space:nowrap}
+.isbirligi img{height:30px;width:auto;display:block;border-radius:7px;background:#000;box-shadow:0 3px 10px -4px rgba(0,0,0,.45)}
+.isbirligi em{font:600 11px/1 Inter,sans-serif;padding-left:2px;font-style:normal;color:#64748b;letter-spacing:.02em}
 @media (max-width:900px){.logo-gorsel img{height:38px}.isbirligi{padding-left:10px;gap:6px}.isbirligi img{height:28px}}
 @media (max-width:620px){.marka-blok{gap:8px}.logo-gorsel img{height:30px}.isbirligi{padding-left:8px}.isbirligi img{height:22px}.isbirligi em{font-size:10px}}
 @media (max-width:380px){.isbirligi em{display:none}}
+
+.ana .ust nav a{white-space:nowrap}
+@media (max-width:1200px){.ana .ust nav{gap:18px}.ana .ust nav a[href="#fiyat"]{display:none}}
+@media (max-width:1020px){.ana .ust nav a[href="#neden"]{display:none}}
