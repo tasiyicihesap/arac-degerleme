@@ -316,10 +316,11 @@
       '</svg>';
   }
   function cizHasar(k) {
-    k.innerHTML = '<p class="ipucu">Boyalı veya değişen parçaya dokun. Her dokunuşta durum sırayla değişir ve parçanın üstünde yazar.</p>' +
-      '<div class="hasar-kap"><div>' + aracSvg() + '</div><div>' +
-      '<div class="lejant"><span><i class="l-orijinal"></i>Orijinal</span><span><i class="l-lokal"></i>Lokal boyalı</span><span><i class="l-boyali"></i>Boyalı</span><span><i class="l-degisen"></i>Değişen</span></div>' +
-      '<div class="parca-liste" id="parcaListe"></div>' +
+    k.innerHTML = '<p class="ipucu">Parçayı şemadan seçebilir ya da yandaki listeden işaretleyebilirsin; ikisi birlikte güncellenir.</p>' +
+      '<div class="hasar-kap"><div>' + aracSvg() + '<div class="lejant"><span><i class="l-orijinal"></i>Orijinal</span><span><i class="l-lokal"></i>Lokal</span><span><i class="l-boyali"></i>Boyalı</span><span><i class="l-degisen"></i>Değişen</span></div></div><div>' +
+      '<div class="parca-tablo" id="parcaListe"><div class="pt-bas"><span>Parça</span><span>Orijinal</span><span>Lokal</span><span>Boyalı</span><span>Değişen</span></div>' +
+      PARCALAR.map(function (p) { return '<div class="pt-satir" data-p="' + p[0] + '"><span>' + p[1] + '</span>' + DURUM_SIRA.map(function (d) { return '<label class="pt-k k-' + d + '" title="' + DURUM_AD[d] + '"><input type="radio" name="pt_' + p[0] + '" value="' + d + '"><i></i></label>'; }).join('') + '</div>'; }).join('') +
+      '<button type="button" class="pt-temizle" id="ptTemizle">Tümünü orijinal yap</button></div>' +
       '<div class="grup"><label>Tramer (hasar) kaydı</label><div class="cift" data-ev="tramerVar"><button class="secenek" data-v="0">Yok</button><button class="secenek" data-v="1">Var</button></div>' +
       '<input class="alan" id="tramer" inputmode="numeric" placeholder="Toplam tramer tutarı (TL)" style="margin-top:8px;display:none"></div>' +
       '<div class="grup"><label>Ağır hasar kaydı</label><div class="cift" data-ev="agir"><button class="secenek" data-v="0">Yok</button><button class="secenek" data-v="1">Var</button></div></div>' +
@@ -343,9 +344,18 @@
         var d = S.hasar[el.dataset.p] || 'orijinal'; el.setAttribute('class', 'parca ' + d);
         var t = yazilar[el.dataset.p]; if (t) { t.textContent = KISA[d]; t.setAttribute('class', 'parca-yazi y-' + d); }
       });
-      var ks = Object.keys(S.hasar);
-      liste.innerHTML = ks.length ? ks.map(function (p) { return '<div><span>' + PAD[p] + '</span><b>' + DURUM_AD[S.hasar[p]] + '</b></div>'; }).join('') : '<div><span>Tüm parçalar orijinal</span><b>✓</b></div>';
+      liste.querySelectorAll('.pt-satir').forEach(function (r) {
+        var d = S.hasar[r.dataset.p] || 'orijinal';
+        r.querySelectorAll('input').forEach(function (i) { i.checked = i.value === d; });
+        r.className = 'pt-satir d-' + d;
+      });
     }
+    liste.onchange = function (e) {
+      var i = e.target; if (!i.name || i.name.indexOf('pt_') !== 0) return;
+      var p = i.name.slice(3); if (i.value === 'orijinal') delete S.hasar[p]; else S.hasar[p] = i.value;
+      boya();
+    };
+    $('#ptTemizle', k).onclick = function () { S.hasar = {}; boya(); };
     svg.onclick = function (e) {
       var el = e.target.closest('.parca'); if (!el) return;
       var p = el.dataset.p, d = S.hasar[p] || 'orijinal', y = DURUM_SIRA[(DURUM_SIRA.indexOf(d) + 1) % 4];

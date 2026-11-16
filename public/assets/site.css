@@ -206,3 +206,22 @@ textarea.alan{resize:vertical;min-height:84px;font-size:15px;line-height:1.45}
 .bakim-butonlar a{flex:1 1 160px;text-align:center;text-decoration:none;font-weight:700;border-radius:11px;padding:12px 14px;color:#fff}
 .bakim-butonlar .btn-ara{background:#0f1b2d}
 .bakim-butonlar .btn-wa{background:#25d366}
+/* hasar: kutucuklu parça listesi */
+.hasar-kap .lejant{margin:8px 0 0;font-size:11.5px;gap:4px 10px}
+.parca-tablo{font-size:12.5px;border:1px solid #ece8df;border-radius:10px;overflow:hidden;margin-bottom:12px;background:#fff}
+.pt-bas,.pt-satir{display:grid;grid-template-columns:1fr repeat(4,44px);align-items:center}
+.pt-bas{background:#f7f5f0;font-weight:700;color:#475569;font-size:10.5px;text-transform:uppercase;letter-spacing:.02em}
+.pt-bas span,.pt-satir span{padding:6px 8px}
+.pt-bas span:not(:first-child){text-align:center;padding:6px 0}
+.pt-satir{border-top:1px solid #f1ede4}
+.pt-satir.d-lokal{background:#fffbe6}.pt-satir.d-boyali{background:#eef5ff}.pt-satir.d-degisen{background:#fff0f0}
+.pt-k{display:flex;justify-content:center;cursor:pointer;padding:5px 0}
+.pt-k input{position:absolute;opacity:0;pointer-events:none}
+.pt-k i{width:18px;height:18px;border-radius:5px;border:1.5px solid #b8c0cc;background:#fff;display:block;transition:all .12s}
+.pt-k:hover i{border-color:var(--vurgu)}
+.pt-k input:checked+i{border-color:transparent;box-shadow:inset 0 0 0 4px #fff}
+.k-orijinal input:checked+i{background:#94a3b8}.k-lokal input:checked+i{background:#eab308}.k-boyali input:checked+i{background:#3b82f6}.k-degisen input:checked+i{background:#ef4444}
+.pt-k input:focus-visible+i{outline:2px solid var(--vurgu);outline-offset:1px}
+.pt-temizle{display:block;width:100%;border:0;border-top:1px solid #f1ede4;background:#fafaf7;color:#64748b;font:600 12px Inter,sans-serif;padding:7px;cursor:pointer}
+.pt-temizle:hover{color:var(--vurgu)}
+@media (max-width:640px){.hasar-kap{grid-template-columns:1fr}.hasar-kap>div:first-child{max-width:220px;margin:0 auto}.pt-bas,.pt-satir{grid-template-columns:1fr repeat(4,40px)}}
