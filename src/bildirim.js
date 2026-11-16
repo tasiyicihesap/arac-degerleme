@@ -29,7 +29,9 @@ export async function whatsappGonder(A, metin) {
     const r = await fetch(u, { signal: AbortSignal.timeout(15000) });
     const t = await r.text();
     if (!r.ok || /error|invalid|not\s+(allowed|valid)/i.test(t.replace(/<[^>]+>/g, ' ').slice(0, 600))) return 'hata: ' + t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 150);
-    return 'gönderildi';
+    const duz = t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    // CallMeBot başarılı istekte "Message queued" der; başka bir yanıt gelirse (engel, sınır vb.) metni sakla
+    return /queued|sent|enviado/i.test(duz) ? 'gönderildi' : 'yanıt: ' + duz.slice(0, 160);
   } catch (e) {
     return 'hata: ' + String(e && e.message ? e.message : e).slice(0, 150);
   }
