@@ -25,7 +25,7 @@ export async function whatsappGonder(A, metin) {
   const anahtar = str(A.wa_bildirim_anahtar).trim();
   if (!tel || !anahtar) return 'kapalı';
   try {
-    const u = 'https://api.callmebot.com/whatsapp.php?phone=%2B' + tel + '&apikey=' + encodeURIComponent(anahtar) + '&text=' + encodeURIComponent(metin.slice(0, 1500));
+    const u = 'https://api.callmebot.com/whatsapp.php?phone=' + tel + '&apikey=' + encodeURIComponent(anahtar) + '&text=' + encodeURIComponent(metin.slice(0, 1500));
     const r = await fetch(u, { signal: AbortSignal.timeout(15000) });
     const t = await r.text();
     if (!r.ok || /error|invalid|not\s+(allowed|valid)/i.test(t.replace(/<[^>]+>/g, ' ').slice(0, 600))) return 'hata: ' + t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 150);
