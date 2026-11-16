@@ -500,7 +500,14 @@
     var waMetin = encodeURIComponent('Merhaba, ' + arac + ' (' + new Intl.NumberFormat('tr-TR').format(S.km) + ' km) için ön teklif aldım' + (fiyatli ? ': ' + tl(s.min) + ' – ' + tl(s.max) : '') + '. Talep no: ' + (s.no || '') + '. Ekspertiz randevusu almak istiyorum.');
     var wa = firma.whatsapp ? '<a class="btn-wa" target="_blank" rel="noopener" href="https://wa.me/' + firma.whatsapp.replace(/\D/g, '') + '?text=' + waMetin + '">WhatsApp\'tan yaz</a>' : '';
     var ara = firma.telefon ? '<a class="btn-ara" href="tel:' + firma.telefon.replace(/[^\d+]/g, '') + '">Hemen ara</a>' : '';
-    k.innerHTML = '<div class="sonuc">' + ust +
+    var onc = s.onceki, oncNot = '';
+    if (onc) {
+      var tr = function (t) { return t ? t.slice(8, 10) + '.' + t.slice(5, 7) + '.' + t.slice(0, 4) : ''; };
+      oncNot = onc.ayni
+        ? '<div class="onceki-not">🔁 <b>' + esc(onc.arac) + '</b> için ' + tr(onc.tarih) + ' tarihinde de değerleme yapmıştın' + (onc.min ? ' (o günkü ön teklif: ' + tl(onc.min) + ' – ' + tl(onc.max) + ')' : '') + '. Yukarıdaki, aynı aracın <b>güncel teklifimiz</b>.</div>'
+        : '<div class="onceki-not">🔁 Daha önce <b>' + esc(onc.arac) + '</b> için de değerleme yapmıştın (' + tr(onc.tarih) + '). O aracı da satmayı düşünürsen tek aramayla ikisini birlikte değerlendirebiliriz.</div>';
+    }
+    k.innerHTML = '<div class="sonuc">' + ust + oncNot +
       '<div class="butonlar">' + wa + ara + '<button class="btn-yeni" id="yeni">Başka araç değerle</button></div>' +
       '<div id="randevuKutu"><button class="btn-randevu" id="randevu">📅 RANDEVU AL</button>' + (fiyatli ? '<div class="randevu-alt">Teklifi uygun bulduysan tıkla, seni arayalım.</div>' : '') + '</div>' +
       ((S.fotolar || []).length ? '<div class="foto-durum" id="fotoDurum">Fotoğraflar gönderiliyor…</div>' : '') + '</div>';

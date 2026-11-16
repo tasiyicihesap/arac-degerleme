@@ -233,3 +233,4 @@ textarea.alan{resize:vertical;min-height:84px;font-size:15px;line-height:1.45}
 .pt-bas,.pt-satir{grid-template-columns:1fr repeat(4,54px)}
 .pt-bas span:not(:first-child){font-size:9.5px;letter-spacing:0}
 @media (max-width:420px){.pt-bas,.pt-satir{grid-template-columns:1fr repeat(4,44px)}.pt-bas span:not(:first-child){font-size:8.5px}}
+.onceki-not{margin:12px 0 4px;background:#f0f9ff;border:1px solid #bae6fd;color:#0c4a6e;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.5;text-align:left}

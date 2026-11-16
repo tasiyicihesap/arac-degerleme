@@ -937,6 +937,7 @@
     ['Yakıt ve vites farkı (%)', [['yakit_Benzin', 'Benzin'], ['yakit_Dizel', 'Dizel'], ['yakit_LPG', 'LPG'], ['yakit_Hibrit', 'Hibrit'], ['yakit_Elektrik', 'Elektrik'], ['vites_Manuel', 'Manuel'], ['vites_Otomatik', 'Otomatik'], ['vites_Yarı Otomatik', 'Yarı Otomatik']]],
     ['Bildirimler', [['bildirim_eposta', 'Bildirim e-postası', 'Mesajlar ve talepler buraya gelir; Cloudflare\'de doğrulanmış adres olmalı'], ['tg_token', 'Telegram bot anahtarı', 'Sağdaki "Telegram bildirimleri" kutusundaki adımlarla alınır'], ['wa_bildirim_tel', 'WhatsApp bildirim numarası', '90 ile, ör. 905418673478'],
       ['wa_bildirim_anahtar', 'WhatsApp bildirim anahtarı (CallMeBot)', 'Aşağıdaki kutudaki adımlarla alınır'], ['bildirim_talep', 'Yeni teklif talebinde de bildir', '1 = evet, 0 = hayır']]],
+    ['Değerleme sınırı', [['sorgu_gunluk', 'Bir numara günde en fazla kaç değerleme yapabilir'], ['sorgu_muaf', 'Sınırsız numaralar', 'Virgülle ayır, ör. 05011763994. 3 gün peş peşe değerleme yapan numara sırayla 3 gün, 1 hafta, 10 gün bekletilir']]],
     ['Robot', [['robot_url', 'AraçRadar veri adresi'], ['robot_min_adet', 'En az ilan sayısı'], ['robot_oto', 'Panel açılınca otomatik tara', '1 = son tarama 24 saatten eskiyse tara ve kaydet']]]
   ];
   // ---------- site içeriği: metinler, donanım listesi, görseller ----------

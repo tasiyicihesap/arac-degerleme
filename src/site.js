@@ -117,6 +117,21 @@ async function siteApiIc(req, env, ctx) {
         const iller = hizmetIlleri(await ayarlar(D));
         if (iller.length && !iller.includes(str(g.il).trim())) return json({ hata: `Şu an yalnızca ${iller.join(', ')} illerinden araç alıyoruz. Bölgemiz genişlediğinde seni de ağırlamaktan memnuniyet duyarız.`, bolge: 1 }, 400);
       }
+      const telN = tel.replace(/\D/g, '').slice(-10);
+      const AK = await ayarlar(D);
+      const muaf = str(AK.sorgu_muaf).split(',').map((x) => x.replace(/\D/g, '').slice(-10)).filter(Boolean).includes(telN);
+      if (!muaf) {
+        const kisit = await D.prepare('SELECT bitis FROM tel_kisit WHERE tel = ? AND bitis > ?').bind(telN, simdi()).first();
+        if (kisit) {
+          const b = str(kisit.bitis);
+          return json({ hata: `Bu numarayla kısa sürede çok sayıda değerleme yapıldığı için ${b.slice(8, 10)}.${b.slice(5, 7)}.${b.slice(0, 4)} tarihine kadar yeni değerleme yapılamıyor. Aracınız için bizi ${str(AK.telefon) || 'telefonla'} arayabilirsiniz; memnuniyetle yardımcı oluruz.`, kisit: 1 }, 429);
+        }
+        const bugunN = await D.prepare('SELECT COUNT(*) n FROM talepler WHERE tel_n = ? AND substr(tarih, 1, 10) = ?').bind(telN, simdi().slice(0, 10)).first();
+        const limit = Math.max(1, int(AK.sorgu_gunluk) || 3);
+        if (int(bugunN.n) >= limit) return json({ hata: `Bir telefon numarasıyla günde en fazla ${limit} değerleme yapılabiliyor. Yarın tekrar deneyebilir ya da bizi ${str(AK.telefon) || 'telefonla'} arayabilirsiniz.`, kisit: 1 }, 429);
+      }
+      // aynı numaranın önceki talebi (teklif sayfasında hatırlatma için)
+      const onceki = await D.prepare('SELECT marka, model, yil, teklif_min, teklif_max, tarih FROM talepler WHERE tel_n = ? ORDER BY id DESC LIMIT 1').bind(telN).first();
       const ip = req.headers.get('CF-Connecting-IP') || '';
       const c = await D.prepare('SELECT COUNT(*) n FROM talepler WHERE ip = ? AND tarih > ?').bind(ip, simdi(Date.now() - 3600 * 1000)).first();
       if (int(c.n) >= 15) return json({ hata: 'Çok fazla talep gönderildi, lütfen bizi telefonla arayın.' }, 429);
@@ -130,11 +145,23 @@ async function siteApiIc(req, env, ctx) {
       g.donanim = Array.isArray(g.donanim) ? [...new Set(g.donanim.map(str).filter((x) => dl.includes(x)))] : [];
       const s = await teklifHesapla(D, g, A);
       const anahtar = rastgeleHex(12);
-      const r = await D.prepare(`INSERT INTO talepler(tarih, ad, tel, il, marka, model, yil, versiyon, yakit, vites, kasa, km, renk, hasar, tramer, agir, baz, teklif_min, teklif_max, detay, ip, anahtar, donanim, aciklama)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(simdi(), ad, tel, kes(g.il, 40), str(g.marka), str(g.model), int(g.yil),
+      const r = await D.prepare(`INSERT INTO talepler(tarih, ad, tel, il, marka, model, yil, versiyon, yakit, vites, kasa, km, renk, hasar, tramer, agir, baz, teklif_min, teklif_max, detay, ip, anahtar, donanim, aciklama, tel_n)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(simdi(), ad, tel, kes(g.il, 40), str(g.marka), str(g.model), int(g.yil),
         kes(g.versiyon, 80), str(g.yakit), str(g.vites), str(g.kasa), int(g.km), kes(g.renk, 30), Object.keys(hasar).length ? JSON.stringify(hasar) : '[]',
-        int(g.tramer), dolu(g.agir) ? 1 : 0, s.baz, s.min, s.max, JSON.stringify(s), ip, anahtar, g.donanim.length ? JSON.stringify(g.donanim) : '', kes(str(g.aciklama).trim(), 1500)).run();
+        int(g.tramer), dolu(g.agir) ? 1 : 0, s.baz, s.min, s.max, JSON.stringify(s), ip, anahtar, g.donanim.length ? JSON.stringify(g.donanim) : '', kes(str(g.aciklama).trim(), 1500), telN).run();
       const no = int(r.meta.last_row_id);
+      // 10 gün içinde 3 gün peş peşe değerleme → kısıt: 3 gün, sonra 1 hafta, sonra 10 gün
+      if (!muaf) arkada((async () => {
+        const gunler = (await D.prepare("SELECT DISTINCT substr(tarih, 1, 10) g FROM talepler WHERE tel_n = ? AND tarih >= ? ORDER BY g DESC").bind(telN, simdi(Date.now() - 10 * 864e5).slice(0, 10)).all()).results.map((x) => x.g);
+        const gun = (n) => simdi(Date.now() - n * 864e5).slice(0, 10);
+        if (gunler.includes(gun(0)) && gunler.includes(gun(1)) && gunler.includes(gun(2))) {
+          const k = await D.prepare('SELECT seviye, son FROM tel_kisit WHERE tel = ?').bind(telN).first();
+          const eskiSeviye = k && str(k.son) > simdi(Date.now() - 60 * 864e5) ? int(k.seviye) : 0;
+          const seviye = Math.min(3, eskiSeviye + 1), sure = [3, 7, 10][seviye - 1];
+          await D.prepare('INSERT INTO tel_kisit(tel, bitis, seviye, son) VALUES(?1, ?2, ?3, ?4) ON CONFLICT(tel) DO UPDATE SET bitis = ?2, seviye = ?3, son = ?4')
+            .bind(telN, simdi(Date.now() + sure * 864e5), seviye, simdi()).run();
+        }
+      })());
       if (A.bildirim_talep === '1') {
         const tf = (n) => new Intl.NumberFormat('tr-TR').format(n);
         const hs = Object.keys(hasar).length;
@@ -145,7 +172,12 @@ async function siteApiIc(req, env, ctx) {
         ]));
       }
       if (A.teklif_goster !== '1' && s.durum === 'ok') { s.durum = 'gizli'; s.min = s.max = 0; s.mesaj = 'Talebiniz alındı. Uzmanımız teklifimizle birlikte kısa süre içinde sizi arayacak.'; }
-      return json({ no, anahtar, durum: s.durum, min: s.min, max: s.max, mesaj: s.mesaj });
+      let onc = null;
+      if (onceki) {
+        const ayni = str(onceki.marka) === str(g.marka) && str(onceki.model) === str(g.model) && int(onceki.yil) === int(g.yil);
+        onc = { arac: `${int(onceki.yil)} ${str(onceki.marka)} ${str(onceki.model)}`, tarih: str(onceki.tarih).slice(0, 10), ayni, min: ayni && A.teklif_goster === '1' ? int(onceki.teklif_min) : 0, max: ayni && A.teklif_goster === '1' ? int(onceki.teklif_max) : 0 };
+      }
+      return json({ no, anahtar, durum: s.durum, min: s.min, max: s.max, mesaj: s.mesaj, onceki: onc });
     }
     case 'mesaj': { // ana sayfadaki iletişim formu
       if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);

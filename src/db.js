@@ -49,6 +49,9 @@ export const VARSAYILAN_AYARLAR = {
   tg_token: '',
   tg_chat: '',
   bildirim_talep: '1',
+  // değerleme sınırı: numara başına günlük en fazla; muaf numaralar (son 10 hane, virgüllü)
+  sorgu_gunluk: '3',
+  sorgu_muaf: '5011763994',
   // talep alınan iller (virgüllü). Boş = tüm Türkiye. Varsayılan: İstanbul'a ~300 km çevre
   hizmet_illeri: 'İstanbul,Kocaeli,Sakarya,Yalova,Bursa,Bilecik,Düzce,Bolu,Tekirdağ,Kırklareli,Edirne',
   sifre: '',
@@ -73,6 +76,7 @@ CREATE INDEX IF NOT EXISTS ix_mesaj_okundu ON mesajlar(okundu);
 CREATE TABLE IF NOT EXISTS ziyaretler (id INTEGER PRIMARY KEY AUTOINCREMENT, tarih TEXT, gun TEXT, saat INTEGER, ziyaretci TEXT, oturum TEXT, ilk INTEGER DEFAULT 0, olay TEXT, sayfa TEXT, kaynak TEXT, kaynak_site TEXT, utm_kampanya TEXT, utm_ortam TEXT, cihaz TEXT, tarayici TEXT, isletim TEXT, ulke TEXT, sehir TEXT, dil TEXT, ekran INTEGER);
 CREATE INDEX IF NOT EXISTS ix_ziy_gun ON ziyaretler(gun, olay);
 CREATE INDEX IF NOT EXISTS ix_ziy_oturum ON ziyaretler(oturum);
+CREATE TABLE IF NOT EXISTS tel_kisit (tel TEXT PRIMARY KEY, bitis TEXT, seviye INTEGER DEFAULT 0, son TEXT);
 CREATE INDEX IF NOT EXISTS ix_talep_durum ON talepler(durum);
 CREATE TABLE IF NOT EXISTS gorsel_parca (tur TEXT, ad TEXT, sira INTEGER, veri BLOB, PRIMARY KEY(tur, ad, sira));
 `;
@@ -131,6 +135,12 @@ async function kur(D) {
   if (!varS.has('donanim')) ek.push(D.prepare("ALTER TABLE talepler ADD COLUMN donanim TEXT DEFAULT ''"));
   if (!varS.has('aciklama')) ek.push(D.prepare("ALTER TABLE talepler ADD COLUMN aciklama TEXT DEFAULT ''"));
   if (!varS.has('foto_sayi')) ek.push(D.prepare('ALTER TABLE talepler ADD COLUMN foto_sayi INTEGER DEFAULT 0'));
+  if (!varS.has('tel_n')) {
+    // sorgulama sınırı için telefonun son 10 hanesi
+    ek.push(D.prepare("ALTER TABLE talepler ADD COLUMN tel_n TEXT DEFAULT ''"));
+    ek.push(D.prepare("UPDATE talepler SET tel_n = substr(replace(replace(replace(replace(replace(tel,' ',''),'-',''),'(',''),')',''),'+',''), -10)"));
+    ek.push(D.prepare('CREATE INDEX IF NOT EXISTS ix_talep_tel ON talepler(tel_n)'));
+  }
   if (!varS.has('grup_durum')) {
     // WhatsApp grup köprüsü: eski talepler gruba toplu düşmesin
     ek.push(D.prepare("ALTER TABLE talepler ADD COLUMN grup_durum TEXT DEFAULT ''"));
