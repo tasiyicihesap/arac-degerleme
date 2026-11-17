@@ -6,6 +6,7 @@ import {
 import { teklifHesapla, bazFiyat } from './fiyat.js';
 import { istatistikOzet } from './istatistik.js';
 import { kopruAnahtari } from './kopru.js';
+import { araclariTemizle, MARKA_IZIN_VARSAYILAN } from './temizlik.js';
 import { durumDegisti, talepMesajlari, denemePlanla, mesajOzet, telN } from './musteri.js';
 import { epostaGonder, anlikBildir, telegramGonder } from './bildirim.js';
 import { json, rastgeleHex, sifreOzet, sifreDogrula, CEREZ, oturumYaz, oturumOku, cerezAl, cerezBaslik } from './yardim.js';
@@ -291,8 +292,11 @@ export async function yonetimApi(req, env) {
       const s = await kaskoFiyatlariniGuncelle(D);
       await D.prepare(`UPDATE fiyatlar SET aktif = 0 WHERE kaynak = 'kasko' AND kilit = 0 AND aktif = 1 AND NOT EXISTS
         (SELECT 1 FROM katalog k WHERE k.marka = fiyatlar.marka AND k.model = fiyatlar.model AND json_extract(k.degerler, '$."' || fiyatlar.yil || '"') IS NOT NULL)`).run();
-      return json({ ok: 1, ...s });
+      const tz = await araclariTemizle(D, (await ayarlar(D)).marka_izin).catch(() => null);
+      return json({ ok: 1, ...s, temizlik: tz });
     }
+    case 'arac_temizle': { const g = await girdi(); const A = await ayarlar(D); return json({ ok: 1, ...(await araclariTemizle(D, A.marka_izin, !!g.deneme)) }); }
+    case 'marka_izin_varsayilan': return json({ liste: MARKA_IZIN_VARSAYILAN });
     case 'kalibre_et': return json({ ok: 1, ...(await kaskoFiyatlariniGuncelle(D)) });
     case 'katalog_liste': {
       const g = await girdi(); const w = ['1=1']; const p = [];

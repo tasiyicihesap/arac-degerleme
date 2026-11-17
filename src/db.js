@@ -54,6 +54,8 @@ export const VARSAYILAN_AYARLAR = {
   sorgu_muaf: '5011763994',
   // talep alınan iller (virgüllü). Boş = tüm Türkiye. Varsayılan: İstanbul'a ~300 km çevre
   hizmet_illeri: 'İstanbul,Kocaeli,Sakarya,Yalova,Bursa,Bilecik,Düzce,Bolu,Tekirdağ,Kırklareli,Edirne',
+  // sitede görünen markalar (virgüllü). Boş bırakılırsa varsayılan liste kullanılır
+  marka_izin: '',
   // müşteriye WhatsApp mesajları (Bildirim Köprüsü eklentisi gönderir). {ad} {arac} {teklif} {firma} {tel}
   musteri_mesaj: '1',
   musteri_saat: '9-20',
