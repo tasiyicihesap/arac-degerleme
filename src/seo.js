@@ -17,7 +17,15 @@ async function liste(D) {
   let results = null;
   if (cache) { try { const c = await cache.match(ck); if (c) results = await c.json(); } catch (e) { results = null; } }
   if (!results) {
-    results = (await D.prepare('SELECT marka, model, MIN(yil) y1, MAX(yil) y2 FROM fiyatlar WHERE aktif = 1 GROUP BY marka, model').all()).results;
+    // kenar önbelleği boşsa: hazır liste veritabanında tek satır olarak tutulur (10 bin satır yerine 1 satır okunur), 12 saatte bir yenilenir
+    try {
+      const r = await D.prepare("SELECT v FROM ayarlar WHERE k = '_seo_liste'").first();
+      if (r && r.v) { const o = JSON.parse(r.v); if (o && o.t > Date.now() - 12 * 3600 * 1000 && Array.isArray(o.l)) results = o.l; }
+    } catch (e) { results = null; }
+    if (!results) {
+      results = (await D.prepare('SELECT marka, model, MIN(yil) y1, MAX(yil) y2 FROM fiyatlar WHERE aktif = 1 GROUP BY marka, model').all()).results;
+      try { await D.prepare("INSERT INTO ayarlar(k, v) VALUES('_seo_liste', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(JSON.stringify({ t: Date.now(), l: results })).run(); } catch (e) {}
+    }
     if (cache) { try { await cache.put(ck, new Response(JSON.stringify(results), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=21600' } })); } catch (e) {} }
   }
   const markalar = new Map();
