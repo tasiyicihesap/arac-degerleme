@@ -66,12 +66,39 @@
     document.querySelectorAll('[data-gorsel-arka]').forEach(function (el) {
       var u = g[el.dataset.gorselArka]; if (u) { el.style.backgroundImage = 'url("' + u.replace(/"/g, '%22') + '")'; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center'; el.classList.add('foto-var'); if (!el.querySelector('.kb-arka')) { var kb = document.createElement('div'); kb.className = 'kb-arka'; kb.style.backgroundImage = el.style.backgroundImage; el.insertBefore(kb, el.firstChild); } if (!el.querySelector('.foto-logo')) { var fl = document.createElement('span'); fl.className = 'foto-logo'; fl.innerHTML = '<img src="assets/logo-otokabul.png" alt="OTOKABUL.COM.TR">'; el.appendChild(fl); } }
     });
+    // tanıtım animasyonu sahneleri
+    document.querySelectorAll('[data-gorsel-film]').forEach(function (el) {
+      var u = g[el.dataset.gorselFilm]; if (!u) return;
+      var kb = document.createElement('div'); kb.className = 'kb-film'; kb.style.backgroundImage = 'url("' + u.replace(/"/g, '%22') + '")'; el.insertBefore(kb, el.firstChild);
+    });
+    filmBasla();
     var gal = [], i; for (i = 1; i <= 8; i++) if (g['galeri' + i]) gal.push(g['galeri' + i]);
     if (gal.length) {
       $('#galeriIzgara').innerHTML = gal.map(function (u) { return '<figure><img src="' + esc(u) + '" alt="" loading="lazy"></figure>'; }).join('');
       $('#galeri').hidden = false;
     }
   }).catch(function () {});
+
+  // 15 saniyelik tanıtım: sahneler sırayla, ekranda görünmüyorsa durur
+  var filmBasladi = false;
+  function filmBasla() {
+    var f = $('#film'); if (!f || filmBasladi) return; filmBasladi = true;
+    var sahneler = f.querySelectorAll('.film-sahne'), cubuk = $('#filmCubuk'), SURE = 3600, i = 0, t0 = 0, gorunur = true, raf = null;
+    var goster = function (k) { Array.prototype.forEach.call(sahneler, function (s, j) { s.classList.toggle('aktif', j === k); if (j === k) { var kb = s.querySelector('.kb-film'); if (kb) { kb.style.animation = 'none'; void kb.offsetWidth; kb.style.animation = ''; } } }); };
+    var adim = function (ts) {
+      if (!gorunur) { raf = null; return; }
+      if (!t0) t0 = ts;
+      var gecen = ts - t0, toplam = SURE * sahneler.length;
+      if (gecen >= SURE * (i + 1)) { i = (i + 1) % sahneler.length; if (i === 0) t0 = ts; goster(i); }
+      cubuk.style.width = Math.min(100, ((ts - t0) % toplam) / toplam * 100) + '%';
+      raf = requestAnimationFrame(adim);
+    };
+    goster(0);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (e) { gorunur = e[0].isIntersecting; if (gorunur && !raf) { t0 = 0; i = 0; goster(0); raf = requestAnimationFrame(adim); } }, { threshold: 0.25 }).observe(f);
+    else raf = requestAnimationFrame(adim);
+  }
+  setTimeout(filmBasla, 2500); // görseller gelmese de çalışsın
 
   // dönen manşet: 6 sn'de bir kayar, dokunarak / oklarla geçilir
   (function () {
