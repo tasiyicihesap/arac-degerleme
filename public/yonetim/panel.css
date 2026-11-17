@@ -181,3 +181,10 @@ table.parca-oran td{padding:3px 6px}
 .ist-grafik em{display:block;width:100%;max-width:34px;background:#ff5a1f;border-radius:4px 4px 0 0}
 .ist-grafik span{font-size:10px;color:#94a3b8;margin-top:4px;height:12px}
 .ist-grafik.saatler{height:110px}
+
+.kayitli-bolge{border:1.5px solid #bbf7d0;background:#f0fdf4;border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.kb-ust{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;color:#166534}
+.kb-iller{display:flex;flex-wrap:wrap;gap:5px}
+.kb-iller span{background:#dcfce7;color:#166534;font-weight:600;font-size:12.5px;border-radius:7px;padding:3px 9px}
+.kb-iller em{font-size:12.5px;color:#4b5563;align-self:center;margin-left:4px}
+.kb-uyari{margin-top:8px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:8px;padding:6px 10px;font-size:12.5px}

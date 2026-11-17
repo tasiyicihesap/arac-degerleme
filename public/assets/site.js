@@ -547,6 +547,11 @@
     $('#altAdres').textContent = f.adres || '';
     if (f.telefon) { var t = $('#ustTel'); t.hidden = false; t.href = 'tel:' + f.telefon.replace(/[^\d+]/g, ''); $('span', t).textContent = f.telefon; $('#altTel').textContent = '☎ ' + f.telefon; }
     if (f.whatsapp) { var w = $('#waSabit'); w.hidden = false; w.href = 'https://wa.me/' + f.whatsapp.replace(/\D/g, ''); }
+    var sb = $('#sbBolge'), il = (f.iller || []).filter(Boolean);
+    if (sb && il.length) {
+      sb.innerHTML = '<span class="ikon">📍</span><span>Şu an <b>' + esc(il.length > 1 ? il.slice(0, -1).join(', ') + ' ve ' + il[il.length - 1] : il[0]) + '</b> ' + (il.length > 1 ? 'illerinden' : 'ilinden') + ' araç alıyoruz.</span>';
+      sb.hidden = false;
+    }
     document.dispatchEvent(new CustomEvent('otk:firma', { detail: f }));
   }).catch(function () {});
   api('markalar').then(function (l) {

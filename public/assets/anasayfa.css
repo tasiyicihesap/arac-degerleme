@@ -295,3 +295,7 @@ body.ana{background:#fff;color:var(--murekkep)}
 .ana .ust nav a{white-space:nowrap}
 @media (max-width:1200px){.ana .ust nav{gap:18px}.ana .ust nav a[href="#fiyat"]{display:none}}
 @media (max-width:1020px){.ana .ust nav a[href="#neden"]{display:none}}
+
+.sb-bolge{display:flex;gap:8px;align-items:flex-start;background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:10px;padding:8px 11px;font-size:13px;line-height:1.45;margin:-4px 0 12px}
+.sb-bolge b{color:#9a3412}
+.sb-bolge .ikon{flex:none}
