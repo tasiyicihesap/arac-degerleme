@@ -40,6 +40,9 @@ export async function araclariTemizle(D, izinMetni, deneme) {
       else if (!/\s/.test(m) && m.length >= 15) ok = false; // bitişik yazılmış uzun kasko adları
       else if (ilanAd.has(g.marka + '|' + a)) ok = false; // ilan verisindeki modelin tekrarı
       else if ((g.marka === 'BMW' || g.marka === 'Mercedes-Benz') && /^(m?\d{3}|1m$|[a-z]{1,3}\d{2}$)/i.test(m)) ok = false; // motor kodları (320i, C63…)
+      else if (g.marka === 'BMW' && /^(İ|i)\d|^(İ|i)x|^m\d$/i.test(m)) ok = false; // ilan verisinde "i Serisi" / "M Serisi" var
+      else if (g.marka === 'Ford' && /^transit\s/i.test(m) && !/^transit (connect|courier|custom|van|kombi)$/i.test(m)) ok = false; // Transit tonaj/şasi varyantları
+      else if (g.marka === 'Ford' && /^tourneo \w+journey$/i.test(m)) ok = false
       else if (m.length <= 2 && !/^[a-z]\d$/i.test(m) && m.toUpperCase() !== 'CC') ok = false;
       else {
         const kk = g.marka + '|' + a; // kasko içi tekrar: boşluklu / düzgün yazılmış olan kalır
