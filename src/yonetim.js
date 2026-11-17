@@ -1,4 +1,5 @@
 // OTOKABUL — yönetim paneli API'si (eski yonetim/api.php)
+import { kopruCanli } from './dogrula.js';
 import {
   db, R, ayarlar, ayarKaydet, gizliAyar, simdi, bugun, buYil, buAy, int, flt, str, kes, yuvar, nf, VARSAYILAN_AYARLAR,
   piyasaYaz, katalogTemizle, katalogParcaYaz, kaskoFiyatlariniGuncelle, MODEL_EKLE, gorselSlug, gorselHaritasi, logoUrl, modelGorselUrl,
@@ -527,6 +528,11 @@ export async function yonetimApi(req, env) {
 
     // --- ayarlar ---
     case 'ayarlar': { const A = await ayarlar(D); delete A.sifre; return json(A); }
+    case 'dogrula_durum_panel': {
+      const A = await ayarlar(D);
+      const b = await D.prepare("SELECT COUNT(*) n FROM tel_dogrula WHERE durum = 'onay' AND onay_zaman >= ?").bind(simdi().slice(0, 10)).first();
+      return json({ canli: await kopruCanli(D), acik: A.tel_dogrulama !== '0', bugun: int(b && b.n) });
+    }
     case 'ayar_kaydet': {
       const g = await girdi(); const d = {};
       for (const k of Object.keys(VARSAYILAN_AYARLAR)) if (k !== 'sifre' && k in g) d[k] = str(g[k]).trim();

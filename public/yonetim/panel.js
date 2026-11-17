@@ -207,7 +207,7 @@
     if (!l.length) return '<p class="soluk">Henüz talep yok.</p>';
     return '<div class="tablo-kap" style="max-height:none"><table class="xl"><tr><th>No</th><th>Tarih</th><th>Ad</th><th>Telefon</th>' + (kisa ? '' : '<th>İl</th>') + '<th>Araç</th><th>Km</th>' + (kisa ? '' : '<th>Hasar</th><th>Tramer</th>') + '<th>Ön teklif</th><th>Durum</th></tr>' +
       l.map(function (t) {
-        return '<tr data-id="' + t.id + '" style="cursor:pointer"><td class="sat-no">' + t.id + '</td><td>' + esc(String(t.tarih).slice(5, 16)) + '</td><td>' + esc(t.ad) + '</td><td>' + esc(t.tel) + '</td>' + (kisa ? '' : '<td>' + esc(t.il) + '</td>') +
+        return '<tr data-id="' + t.id + '" style="cursor:pointer"><td class="sat-no">' + t.id + '</td><td>' + esc(String(t.tarih).slice(5, 16)) + '</td><td>' + esc(t.ad) + '</td><td>' + esc(t.tel) + (t.tel_dogru == 1 ? ' <span title="WhatsApp ile doğrulandı" style="color:#16a34a">✓</span>' : '') + '</td>' + (kisa ? '' : '<td>' + esc(t.il) + '</td>') +
           '<td>' + esc(t.yil + ' ' + t.marka + ' ' + t.model) + '</td><td class="s">' + tl(t.km) + '</td>' + (kisa ? '' : '<td>' + hasarOzet(t.hasar) + (t.agir == 1 ? ' <b class="azl">AĞIR</b>' : '') + '</td><td class="s">' + (t.tramer ? tl(t.tramer) : '—') + '</td>') +
           '<td class="s">' + (t.teklif_min ? tl(t.teklif_min) + ' – ' + tl(t.teklif_max) : '<span class="soluk">ekspertiz</span>') + '</td><td><span class="rozet ' + esc(String(t.durum).split(' ')[0]) + '">' + esc(t.durum) + '</span></td></tr>';
       }).join('') + '</table></div>';
@@ -289,7 +289,7 @@
       var wa = 'https://wa.me/' + tel + '?text=' + encodeURIComponent('Merhaba ' + t.ad + ', OTOKABUL\'dan yazıyoruz. ' + arac + ' aracınız için talebinizi aldık' + (t.teklif_min ? ' (ön teklif: ' + tl(t.teklif_min) + ' – ' + tl(t.teklif_max) + ' TL)' : '') + '. Ekspertiz randevusu için uygun olduğunuz zamanı yazabilir misiniz?');
       $('#cekmeceIc').innerHTML = '<div class="satirlar" style="justify-content:space-between"><h2>#' + t.id + ' · ' + esc(t.ad) + '</h2><button class="btn kucuk" id="kapat">Kapat ✕</button></div>' +
         '<div class="satirlar"><a class="btn koyu" href="tel:' + esc(t.tel) + '">📞 Ara</a><a class="btn" style="background:#25d366;color:#fff;border-color:#25d366" target="_blank" href="' + wa + '">Müşteriye WhatsApp</a><button class="btn koyu" id="dPaylas">📤 Talebi paylaş</button></div>' +
-        '<dl class="bilgi"><dt>Tarih</dt><dd>' + esc(t.tarih) + '</dd><dt>Telefon</dt><dd>' + esc(t.tel) + '</dd><dt>İl</dt><dd>' + esc(t.il) + '</dd>' +
+        '<dl class="bilgi"><dt>Tarih</dt><dd>' + esc(t.tarih) + '</dd><dt>Telefon</dt><dd>' + esc(t.tel) + (t.tel_dogru == 1 ? ' <b style="color:#16a34a">✓ WhatsApp ile doğrulandı</b>' : '') + '</dd><dt>İl</dt><dd>' + esc(t.il) + '</dd>' +
         '<dt>Araç</dt><dd>' + esc(arac) + '</dd><dt>Yakıt / vites</dt><dd>' + esc(t.yakit + ' / ' + t.vites) + (t.kasa ? ' · ' + esc(t.kasa) : '') + '</dd><dt>Kilometre</dt><dd>' + tl(t.km) + ' km</dd><dt>Renk</dt><dd>' + esc(t.renk || '—') + '</dd>' +
         '<dt>Boya / değişen</dt><dd>' + (Object.keys(h).length ? Object.keys(h).map(function (p) { return esc(PARCA_AD[p] || p) + ': ' + DURUM_AD[h[p]]; }).join('<br>') : 'Hatasız') + '</dd>' +
         '<dt>Tramer</dt><dd>' + (t.tramer ? tl(t.tramer) + ' TL' : 'Yok') + '</dd><dt>Ağır hasar</dt><dd>' + (t.agir == 1 ? '<span class="azl">VAR</span>' : 'Yok') + '</dd>' +
@@ -1136,6 +1136,9 @@
         '<div class="kutu"><h2>🚗 Sitede görünen markalar</h2><p class="soluk" style="margin-top:0">Sihirbazda yalnızca bu markalar çıkar (otomobil, arazi-SUV-pickup, elektrikli, minivan-panelvan). Kamyon, otobüs, traktör, motosiklet ve kasko listesindeki bozuk/tekrar eden model adları pasiftir. Boş bırakırsan varsayılan liste kullanılır. Değiştirince "Kaydet ve uygula"ya bas; işlem "Toplu Fiyat Değişimi → son işlemler"den geri alınabilir.</p>' +
           '<textarea class="girdi" id="mIzin" rows="4" style="width:100%" placeholder="Varsayılan liste">' + esc(A.marka_izin || '') + '</textarea>' +
           '<div class="satirlar" style="margin-top:8px"><button class="btn kucuk" id="mVars">Varsayılan listeyi getir</button><button class="btn ana" id="mUygula">Kaydet ve uygula</button><span class="soluk" id="mSonuc"></span></div></div>' +
+        '<div class="kutu"><h2>📱 Telefon doğrulama (WhatsApp ile)</h2><p class="soluk" style="margin-top:0">Müşteri teklif almadan önce "WhatsApp ile doğrula"ya basar; WhatsApp\'ta kodu yazılı hazır bir mesaj açılır, müşteri bunu bize gönderir ve Bildirim Köprüsü eklentisi numarayı birkaç saniyede onaylar. Böylece sahte numaralar elenir. <b>Köprü çalışmıyorsa</b> (bilgisayar ya da WhatsApp Web kapalıysa) doğrulama otomatik atlanır; müşteri hiçbir zaman takılı kalmaz. Doğrulanan numaralar taleplerde <b style="color:#16a34a">✓</b> ile görünür.</p>' +
+          '<div class="alanlar"><label>Doğrulama<select class="girdi" id="tdAcik"><option value="1"' + (A.tel_dogrulama !== '0' ? ' selected' : '') + '>Açık</option><option value="0"' + (A.tel_dogrulama === '0' ? ' selected' : '') + '>Kapalı</option></select></label></div>' +
+          '<div class="satirlar" style="margin-top:8px"><button class="btn ana" id="tdKaydet">Kaydet</button><span class="soluk" id="tdDurum"></span></div></div>' +
         '<div class="kutu" id="mmKutu"><h2>💬 Müşteriye otomatik WhatsApp mesajları</h2><p class="soluk" style="margin-top:0">Randevu isteyen müşteriye hemen teşekkür ve "sizi arayacağız" mesajı gider. Randevu istemeyene 1 gün, 3 gün ve 15 gün sonra birer hatırlatma gider, sonra bir daha yazılmaz. Mesajları Bildirim Köprüsü eklentisi, WhatsApp Web açık bilgisayardan gönderir. Müşteri <b>DUR</b> yazarsa ya da sohbette cevap verirse hatırlatmalar durur; randevu alınca veya talebin durumunu değiştirince bekleyen hatırlatmalar iptal olur.</p>' +
           '<div class="alanlar"><label>Otomatik mesajlar<select class="girdi" id="mmAcik"><option value="1"' + (A.musteri_mesaj === '1' ? ' selected' : '') + '>Açık</option><option value="0"' + (A.musteri_mesaj !== '1' ? ' selected' : '') + '>Kapalı</option></select></label>' +
           '<label>Gönderim saatleri<input class="girdi" id="mmSaat" value="' + esc(A.musteri_saat || '9-20') + '" placeholder="9-20"></label></div>' +
@@ -1183,6 +1186,9 @@
       };
       mmOzet();
       $('#mmOzet', k).onclick = function (e) { var a = e.target.closest('[data-ret]'); if (!a) return; e.preventDefault(); if (confirm('0' + a.dataset.ret + ' numarasına yeniden otomatik mesaj gidebilsin mi?')) api('mm_ret_kaldir', { tel: a.dataset.ret }).then(mmOzet); };
+      $('#tdKaydet', k).onclick = function () { api('ayar_kaydet', { tel_dogrulama: $('#tdAcik', k).value }).then(function () { bildir('Doğrulama ayarı kaydedildi'); tdDurum(); }); };
+      function tdDurum() { api('dogrula_durum_panel').then(function (r) { var e = $('#tdDurum', k); if (e) e.innerHTML = r.canli ? '<b style="color:#16a34a">● Köprü çalışıyor</b> — doğrulama ' + (r.acik ? 'sitede aktif' : 'kapalı') + ' · bugün ' + r.bugun + ' numara doğrulandı' : '<b style="color:#b45309">● Köprü şu an çalışmıyor</b> — doğrulama atlanıyor (eklentinin 1.4.0 sürümü ve WhatsApp Web açık olmalı)'; }).catch(function () {}); }
+      tdDurum();
       $('#mmKaydet', k).onclick = function () {
         var d = { musteri_mesaj: $('#mmAcik', k).value, musteri_saat: $('#mmSaat', k).value.replace(/\s/g, '') || '9-20' };
         $$('[data-mm]', k).forEach(function (t) { d[t.dataset.mm] = t.value; });

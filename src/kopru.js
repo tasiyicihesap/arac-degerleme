@@ -4,6 +4,7 @@
 // Birden fazla bilgisayarda açık olsa bile her talep yalnızca bir kez alınır (sunucu tarafında "sahiplenme").
 import { simdi, int, str, kes, gizliAyar, ayarlar } from './db.js';
 import { mesajAl, mesajSonuc } from './musteri.js';
+import { kopruNabiz, dogrulaKopru } from './dogrula.js';
 import { json, rastgeleHex } from './yardim.js';
 import { PARCALAR, DURUMLAR } from './fiyat.js';
 
@@ -29,7 +30,7 @@ export function tamMesaj(t) {
     `🚗 *${acil ? 'ACİL SAT · TALEP' : 'YENİ TEKLİF TALEBİ'} #${int(t.id)}*`,
     '━━━━━━━━━━━━━━━━━━',
     `👤 *Müşteri:* ${str(t.ad)}`,
-    `📞 *Telefon:* ${str(t.tel)}` + (wa ? `\n💬 *WhatsApp:* ${wa}` : ''),
+    `📞 *Telefon:* ${str(t.tel)}` + (int(t.tel_dogru) ? ' ✅ _doğrulandı_' : '') + (wa ? `\n💬 *WhatsApp:* ${wa}` : ''),
     `📍 *İl:* ${str(t.il) || '—'}`,
     '',
     `🚘 *Araç:* ${arac}`,
@@ -123,6 +124,12 @@ export async function kopru(req, D) {
     return json({ ok: 1, adet: l.length });
   }
   // müşteriye WhatsApp mesajları
+  if (islem === 'dogrula' && req.method === 'POST') { // WhatsApp'a gelen doğrulama kodu
+    let g = {}; try { g = (await req.json()) || {}; } catch (e) {}
+    await kopruNabiz(D).catch(() => {});
+    return json(await dogrulaKopru(D, g || {}));
+  }
+  if (islem === 'nabiz') { await kopruNabiz(D); return json({ ok: 1 }); }
   if (islem === 'mesaj_al') return json(await mesajAl(D, await ayarlar(D)));
   if (islem === 'mesaj_sonuc' && id) { await mesajSonuc(D, id, q('s'), q('not')); return json({ ok: 1 }); }
   if (islem === 'onay' && id) {
@@ -138,11 +145,13 @@ export async function kopru(req, D) {
     await D.prepare("UPDATE talepler SET grup_durum = '' WHERE id = ? AND grup_durum LIKE 'alındı%'").bind(id).run();
     return json({ ok: 1 });
   }
+  // doğrulama kodlarını okuyabilen eklenti sürümü (dg=1) her turda yaşadığını bildirir
+  if (q('dg') === '1') await kopruNabiz(D).catch(() => {});
   // al: fotoğraflar yüklensin diye en az 90 sn eski talepler; 10 dk içinde onaylanmayan sahiplenme tekrar alınabilir
   const simd = simdi(), esik = simdi(Date.now() - 90e3), zaman = simdi(Date.now() - 600e3);
   const { results } = await D.prepare(`UPDATE talepler SET grup_durum = 'alındı ' || ?1
     WHERE id IN (SELECT id FROM talepler WHERE tarih <= ?2 AND (grup_durum = '' OR grup_durum IS NULL OR (grup_durum LIKE 'alındı %' AND substr(grup_durum, 8) < ?3)) ORDER BY id LIMIT 5)
-    RETURNING id, tarih, ad, tel, il, marka, model, yil, versiyon, yakit, vites, kasa, km, renk, hasar, tramer, agir, teklif_min, teklif_max, donanim, aciklama, foto_sayi, kabul_tarih, acil`)
+    RETURNING id, tarih, ad, tel, il, marka, model, yil, versiyon, yakit, vites, kasa, km, renk, hasar, tramer, agir, teklif_min, teklif_max, donanim, aciklama, foto_sayi, kabul_tarih, acil, tel_dogru`)
     .bind(simd, esik, zaman).all();
   results.sort((x, y) => x.id - y.id);
   const fotolar = {};

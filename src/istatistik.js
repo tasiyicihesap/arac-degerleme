@@ -67,7 +67,7 @@ export async function izKaydet(req, env, ctx, D) {
   if (!ua || BOT.test(ua)) return bos;
   let g = {}; try { g = (await req.json()) || {}; } catch (e) { return bos; }
   const olay = str(g.o);
-  if (!/^(goruntuleme|sihirbaz|teklif|mesaj|telefon|whatsapp|randevu)$/.test(olay)) return bos;
+  if (!/^(goruntuleme|sihirbaz|teklif|mesaj|telefon|whatsapp|randevu|acil|dogrula|dogrulandi)$/.test(olay)) return bos;
   const v = kes(str(g.v).replace(/[^a-z0-9]/gi, ''), 32), s = kes(str(g.s).replace(/[^a-z0-9]/gi, ''), 32);
   if (!v || !s) return bos;
   const cf = req.cf || {};

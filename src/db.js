@@ -58,6 +58,7 @@ export const VARSAYILAN_AYARLAR = {
   marka_izin: '',
   // müşteriye WhatsApp mesajları (Bildirim Köprüsü eklentisi gönderir). {ad} {arac} {teklif} {firma} {tel}
   musteri_mesaj: '1',
+  tel_dogrulama: '1', // müşteri numarasını WhatsApp'tan kod göndererek doğrular (köprü çalışıyorsa)
   musteri_saat: '9-20',
   mm_kabul1: 'Merhaba {ad} 👋\n\n*{arac}* için randevu talebiniz bize ulaştı, teşekkür ederiz!\n\n_{firma}_',
   mm_kabul2: '📞 Ekibimiz sizi en kısa sürede bu numaradan arayarak aracınızı görmek için uygun gün ve saati birlikte belirleyecek.\n\nBu arada sorunuz olursa bu mesaja yazabilir ya da *{tel}* numarasından bize ulaşabilirsiniz.',
@@ -97,6 +98,8 @@ CREATE INDEX IF NOT EXISTS ix_ilan_aktif ON ilanlar(aktif);
 CREATE TABLE IF NOT EXISTS musteri_rehber (anahtar TEXT PRIMARY KEY, ad TEXT, tel TEXT, eposta TEXT, ilk TEXT, son TEXT, talep INTEGER DEFAULT 0, mesaj INTEGER DEFAULT 0, son_arac TEXT DEFAULT '');
 CREATE INDEX IF NOT EXISTS ix_talep_durum ON talepler(durum);
 CREATE TABLE IF NOT EXISTS gorsel_parca (tur TEXT, ad TEXT, sira INTEGER, veri BLOB, PRIMARY KEY(tur, ad, sira));
+CREATE TABLE IF NOT EXISTS tel_dogrula (token TEXT PRIMARY KEY, kod TEXT, tel TEXT, ip TEXT, olusma TEXT, durum TEXT DEFAULT 'bekliyor', onay_tel TEXT DEFAULT '', onay_ad TEXT DEFAULT '', onay_zaman TEXT DEFAULT '');
+CREATE INDEX IF NOT EXISTS ix_dogrula_kod ON tel_dogrula(kod);
 `;
 
 // ---- yardımcılar ----
@@ -165,6 +168,7 @@ async function kur(D) {
     ek.push(D.prepare("UPDATE talepler SET grup_durum = 'eski'"));
   }
   if (!varS.has('acil')) ek.push(D.prepare('ALTER TABLE talepler ADD COLUMN acil INTEGER DEFAULT 0')); // 1: gruba yeniden acil uyarı, 3: ilk gönderim acil, 2: iletildi
+  if (!varS.has('tel_dogru')) ek.push(D.prepare('ALTER TABLE talepler ADD COLUMN tel_dogru INTEGER DEFAULT 0')); // 1: WhatsApp ile doğrulandı
   if (ek.length) await D.batch(ek);
   // müşteri rehberi: her talep ve mesajda telefon/e-posta ayrı tabloya da yazılır (talep silinse bile kalır)
   const tr = await D.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type = 'trigger' AND name IN ('tr_rehber_talep','tr_rehber_mesaj')").first();

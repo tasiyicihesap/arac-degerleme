@@ -1,4 +1,5 @@
 // OTOKABUL — müşteri sitesi API'si (eski api.php)
+import { dogrulaBaslat, dogrulaDurum, dogrulanmisTel, dogrulamaGerekli } from './dogrula.js';
 import { kasaBul, modelKasasi } from './kasa.js';
 import { izKaydet } from './istatistik.js';
 import { kopru } from './kopru.js';
@@ -120,13 +121,27 @@ async function siteApiIc(req, env, ctx) {
       const r = await D.prepare('SELECT liste FROM versiyonlar WHERE marka = ? AND model = ?').bind(q('marka'), q('model')).first();
       return json(r ? JSON.parse(r.liste) : []);
     }
+    case 'dogrula_baslat': {
+      if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);
+      let g = {}; try { g = (await req.json()) || {}; } catch (e) {}
+      const r = await dogrulaBaslat(D, await ayarlar(D), req.headers.get('CF-Connecting-IP') || '', g && g.tel);
+      return json(r, r.hata ? 400 : 200);
+    }
+    case 'dogrula_durum': return json(await dogrulaDurum(D, q('t')));
     case 'teklif': {
       if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);
       let g = {}; try { g = (await req.json()) || {}; } catch (e) {}
       if (typeof g !== 'object' || Array.isArray(g)) g = {};
       const ad = kes(str(g.ad).trim(), 80).trim();
-      const tel = str(g.tel).replace(/[^\d+]/g, '');
+      let tel = str(g.tel).replace(/[^\d+]/g, '');
       if (ad === '' || tel.replace(/\D/g, '').length < 10) return json({ hata: 'Ad ve geçerli bir telefon numarası gerekli.' }, 400);
+      // telefon doğrulama: WhatsApp'tan kod gönderilerek doğrulanan numara esas alınır
+      let telDogru = 0;
+      {
+        const dt = await dogrulanmisTel(D, g.dogrula);
+        if (dt) { tel = '0' + dt; telDogru = 1; }
+        else if (await dogrulamaGerekli(D, await ayarlar(D))) return json({ hata: 'Devam etmek için telefon numaranı WhatsApp ile doğrulaman gerekiyor.', dogrula: 1 }, 400);
+      }
       {
         const iller = hizmetIlleri(await ayarlar(D));
         if (iller.length && !iller.includes(str(g.il).trim())) return json({ hata: `Şu an yalnızca ${iller.join(', ')} illerinden araç alıyoruz. Bölgemiz genişlediğinde seni de ağırlamaktan memnuniyet duyarız.`, bolge: 1 }, 400);
@@ -159,10 +174,10 @@ async function siteApiIc(req, env, ctx) {
       g.donanim = Array.isArray(g.donanim) ? [...new Set(g.donanim.map(str).filter((x) => dl.includes(x)))] : [];
       const s = await teklifHesapla(D, g, A);
       const anahtar = rastgeleHex(12);
-      const r = await D.prepare(`INSERT INTO talepler(tarih, ad, tel, il, marka, model, yil, versiyon, yakit, vites, kasa, km, renk, hasar, tramer, agir, baz, teklif_min, teklif_max, detay, ip, anahtar, donanim, aciklama, tel_n)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(simdi(), ad, tel, kes(g.il, 40), str(g.marka), str(g.model), int(g.yil),
+      const r = await D.prepare(`INSERT INTO talepler(tarih, ad, tel, il, marka, model, yil, versiyon, yakit, vites, kasa, km, renk, hasar, tramer, agir, baz, teklif_min, teklif_max, detay, ip, anahtar, donanim, aciklama, tel_n, tel_dogru)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(simdi(), ad, tel, kes(g.il, 40), str(g.marka), str(g.model), int(g.yil),
         kes(g.versiyon, 80), str(g.yakit), str(g.vites), str(g.kasa), int(g.km), kes(g.renk, 30), Object.keys(hasar).length ? JSON.stringify(hasar) : '[]',
-        int(g.tramer), dolu(g.agir) ? 1 : 0, s.baz, s.min, s.max, JSON.stringify(s), ip, anahtar, g.donanim.length ? JSON.stringify(g.donanim) : '', kes(str(g.aciklama).trim(), 1500), telN).run();
+        int(g.tramer), dolu(g.agir) ? 1 : 0, s.baz, s.min, s.max, JSON.stringify(s), ip, anahtar, g.donanim.length ? JSON.stringify(g.donanim) : '', kes(str(g.aciklama).trim(), 1500), telN, telDogru).run();
       const no = int(r.meta.last_row_id);
       arkada(takipPlanla(D, A, no, telN).catch(() => {}));
       // 10 gün içinde 3 gün peş peşe değerleme → kısıt: 3 gün, sonra 1 hafta, sonra 10 gün

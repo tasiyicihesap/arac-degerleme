@@ -18,7 +18,7 @@
     return fetch(url, govde ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(govde) } : {})
       .then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (j) {
-          if (!r.ok) { var e = new Error(r.status >= 500 || !j.hata ? 'SİSTEM' : j.hata); e.sistem = r.status >= 500 || !j.hata; throw e; }
+          if (!r.ok) { var e = new Error(r.status >= 500 || !j.hata ? 'SİSTEM' : j.hata); e.sistem = r.status >= 500 || !j.hata; e.veri = j; throw e; }
           return j;
         });
       }, function () { var e = new Error('SİSTEM'); e.sistem = true; throw e; });
@@ -542,10 +542,10 @@
       '<div class="grup"><label>Cep telefonu</label><input class="alan" id="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx" value="' + esc(S.tel || '') + '"></div>' +
       '<div class="grup"><label>Aracın bulunduğu il</label><select class="alan" id="il">' + ilSecenekleri() + '</select><div class="bolge-not" id="bolgeNot" hidden></div></div>' +
       '<label class="onay"><input type="checkbox" id="kvkk"' + (S.kvkk ? ' checked' : '') + '> Bilgilerimin teklif ve randevu için kullanılmasını ve benimle telefonla/WhatsApp ile iletişime geçilmesini kabul ediyorum.</label>' +
-      '<div class="hata" id="hata"></div>';
+      '<div class="dogrula-kutu" id="dogrulaKutu" hidden></div><div class="hata" id="hata"></div>';
     if (!S.il || (S.il !== '__diger' && hizmetIlleri().indexOf(S.il) < 0)) S.il = hizmetIlleri().indexOf('İstanbul') >= 0 ? 'İstanbul' : hizmetIlleri()[0];
     $('#ad', k).oninput = function (e) { S.ad = e.target.value; guncelleBtn(); };
-    $('#tel', k).oninput = function (e) { S.tel = e.target.value; guncelleBtn(); };
+    $('#tel', k).oninput = function (e) { S.tel = e.target.value; if (S.dogrulaTel && S.tel.replace(/\D/g, '').slice(-10) !== S.dogrulaTel) { S.dogrula = ''; S.dogrulaTel = ''; } dogrulaKapat(); guncelleBtn(); };
     var bolgeUyar = function () {
       var n = $('#bolgeNot', k);
       n.hidden = !bolgeVar();
@@ -557,12 +557,69 @@
     $('#kvkk', k).onchange = function (e) { S.kvkk = e.target.checked; guncelleBtn(); };
   }
 
-  var sonuc = null;
+  // ---- telefon doğrulama (WhatsApp'tan kod gönderilerek; SMS firması yok) ----
+  // Köprü (WhatsApp Web açık bilgisayar) çalışmıyorsa sunucu "gerekmez" der ve teklif doğrudan hesaplanır.
+  var dgZaman = null, dgSon = 0, dgToken = '';
+  function dogrulaKapat() { if (dgZaman) { clearTimeout(dgZaman); dgZaman = null; } var b = $('#dogrulaKutu'); if (b) { b.hidden = true; b.innerHTML = ''; } }
+  function dogrulaBaslat() {
+    btnI.disabled = true; btnI.textContent = 'Kontrol ediliyor…';
+    var h = $('#hata'); if (h) h.textContent = '';
+    return api('dogrula_baslat', null, { tel: S.tel }).then(function (r) {
+      if (r.gerekmez) { dogrulaKapat(); return teklifIste(); }
+      if (r.durum === 'onay') return dogrulandi(r.token, r.tel);
+      dogrulaGoster(r);
+    }).catch(function (e) { if (h) h.textContent = hataMetni(e); btnI.textContent = 'Teklifimi göster →'; guncelleBtn(); });
+  }
+  function dogrulaGoster(r) {
+    var b = $('#dogrulaKutu'); if (!b) return;
+    var link = 'https://wa.me/' + r.wa + '?text=' + encodeURIComponent(r.metin);
+    b.hidden = false;
+    b.innerHTML = '<div class="dg-bas">📱 Son adım: numaranı doğrula</div>' +
+      '<p>Aşağıdaki düğmeye bas; WhatsApp\'ta içinde kodun yazılı olduğu <b>hazır bir mesaj</b> açılacak. Sadece <b>gönder</b> tuşuna basman yeterli, sonra bu sayfaya dön.</p>' +
+      '<a class="dg-btn" id="dgWa" href="' + link + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.4-.7-2.8-1.1-4.6-4-4.8-4.2-.1-.2-1.1-1.5-1.1-2.9 0-1.4.7-2 1-2.3.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.3 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.7-.1l1.9.9c.3.1.5.2.5.3.1.2.1.8-.2 1.4Z"/></svg> WhatsApp\'ta kodu gönder</a>' +
+      '<div class="dg-kod">Kodun: <b>OTK-' + esc(r.kod) + '</b> · numara: ' + esc(S.tel) + '</div>' +
+      '<div class="dg-durum" id="dgDurum"><span class="dg-nokta"></span>Mesajın bekleniyor… Gönderdikten sonra birkaç saniye içinde onaylanır.</div>';
+    btnI.textContent = 'Doğrulama bekleniyor…'; btnI.disabled = true;
+    if (b.scrollIntoView) b.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    $('#dgWa', b).onclick = function () { if (window.OKIZ) window.OKIZ('dogrula'); };
+    dgSon = Date.now();
+    dogrulaSor(r.token, 0);
+  }
+  function dogrulaSor(token, n) {
+    if (dgZaman) clearTimeout(dgZaman);
+    dgToken = token;
+    dgZaman = setTimeout(function () {
+      if (!$('#dogrulaKutu') || $('#dogrulaKutu').hidden) return;
+      api('dogrula_durum', { t: token }).then(function (r) {
+        if (r.durum === 'onay') return dogrulandi(token, r.tel);
+        if (r.durum === 'sure' || r.durum === 'yok') { var d = $('#dgDurum'); if (d) d.innerHTML = 'Kodun süresi doldu. <a href="#" id="dgYeni">Yeni kod al</a>'; var y = $('#dgYeni'); if (y) y.onclick = function (e) { e.preventDefault(); dogrulaBaslat(); }; return; }
+        // 30 sn'de bir köprünün hâlâ çalıştığı kontrol edilir; durduysa doğrulama atlanır
+        if (Date.now() - dgSon > 30000) { dgSon = Date.now(); return api('dogrula_baslat', null, { tel: S.tel }).then(function (x) { if (x.gerekmez) { dogrulaKapat(); return teklifIste(); } dogrulaSor(token, n + 1); }, function () { dogrulaSor(token, n + 1); }); }
+        dogrulaSor(token, n + 1);
+      }, function () { dogrulaSor(token, n + 1); });
+    }, n < 0 ? 200 : n < 1 ? 1500 : 2000);
+  }
+  // müşteri WhatsApp'tan sayfaya dönünce beklemeden sor
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && dgZaman && dgToken && $('#dogrulaKutu') && !$('#dogrulaKutu').hidden) dogrulaSor(dgToken, -1); });
+  function dogrulandi(token, tel) {
+    if (dgZaman) { clearTimeout(dgZaman); dgZaman = null; }
+    S.dogrula = token; if (tel) S.tel = tel; S.dogrulaTel = (S.tel || '').replace(/\D/g, '').slice(-10);
+    var i = $('#tel'); if (i && tel) i.value = tel;
+    var b = $('#dogrulaKutu'); if (b) { b.hidden = false; b.innerHTML = '<div class="dg-ok">✓ Numaran doğrulandı: <b>' + esc(S.tel) + '</b></div>'; }
+    if (window.OKIZ) window.OKIZ('dogrulandi');
+    setTimeout(teklifIste, 700);
+  }
   function gonder() {
+    if (S.dogrula && S.dogrulaTel === (S.tel || '').replace(/\D/g, '').slice(-10)) return teklifIste();
+    return dogrulaBaslat();
+  }
+
+  var sonuc = null;
+  function teklifIste() {
     btnI.disabled = true; btnI.textContent = 'Hesaplanıyor…';
-    var g = { ad: S.ad, tel: S.tel, il: S.il, marka: S.marka, model: S.model, yil: S.yil, versiyon: S.versiyon || '', katalog_id: S.katalog_id || 0, yakit: S.yakit, vites: S.vites, kasa: S.kasa || '', km: S.km, renk: S.renk || '', hasar: S.hasar, tramer: S.tramerVar ? S.tramer : 0, agir: !!S.agir, donanim: S.donanim || [], aciklama: S.aciklama || '' };
+    var g = { dogrula: S.dogrula || '', ad: S.ad, tel: S.tel, il: S.il, marka: S.marka, model: S.model, yil: S.yil, versiyon: S.versiyon || '', katalog_id: S.katalog_id || 0, yakit: S.yakit, vites: S.vites, kasa: S.kasa || '', km: S.km, renk: S.renk || '', hasar: S.hasar, tramer: S.tramerVar ? S.tramer : 0, agir: !!S.agir, donanim: S.donanim || [], aciklama: S.aciklama || '' };
     api('teklif', null, g).then(function (s) { sonuc = s; if (window.OKIZ) window.OKIZ('teklif'); git(ADIMLAR.length - 1); })
-      .catch(function (e) { var h = $('#hata'); if (h) h.textContent = hataMetni(e); btnI.textContent = 'Teklifimi göster →'; guncelleBtn(); });
+      .catch(function (e) { if (e && e.veri && e.veri.dogrula) { S.dogrula = ''; return dogrulaBaslat(); } var h = $('#hata'); if (h) h.textContent = hataMetni(e); btnI.textContent = 'Teklifimi göster →'; guncelleBtn(); });
   }
   function cizSonuc(k) {
     var s = sonuc || {}, arac = S.yil + ' ' + S.marka + ' ' + S.model + (S.versiyon ? ' ' + S.versiyon : '');
@@ -608,7 +665,7 @@
         var kutu = $('#randevuKutu', k); if (kutu && kutu.scrollIntoView) kutu.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }).catch(function (e) { b.disabled = false; b.textContent = '📅 RANDEVU AL'; alert(hataMetni(e)); });
     };
-    $('#yeni', k).onclick = function () { var ad = S.ad, tel = S.tel, il = S.il, kvkk = S.kvkk; S = { hasar: {}, tramerVar: null, agir: null, ad: ad, tel: tel, il: il, kvkk: kvkk }; sonuc = null; git(0); };
+    $('#yeni', k).onclick = function () { var ad = S.ad, tel = S.tel, il = S.il, kvkk = S.kvkk, dg = S.dogrula, dgt = S.dogrulaTel; S = { hasar: {}, tramerVar: null, agir: null, ad: ad, tel: tel, il: il, kvkk: kvkk, dogrula: dg, dogrulaTel: dgt }; sonuc = null; git(0); };
   }
   // sunucu sorunu olursa müşteriye teknik hata yerine bize ulaşma yolu gösterilir
   function sistemMesaji() {
@@ -659,7 +716,7 @@
       setTimeout(function () { window.OTK.basla(); }, 300);
     },
     marka: function (m) {
-      if (adim !== 0) { S = { hasar: {}, tramerVar: null, agir: null, ad: S.ad, tel: S.tel, il: S.il, kvkk: S.kvkk }; sonuc = null; git(0, true); }
+      if (adim !== 0) { S = { hasar: {}, tramerVar: null, agir: null, ad: S.ad, tel: S.tel, il: S.il, kvkk: S.kvkk, dogrula: S.dogrula, dogrulaTel: S.dogrulaTel }; sonuc = null; git(0, true); }
       sec('marka', m, true);
       $('#sihirbaz').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
