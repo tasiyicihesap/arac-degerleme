@@ -90,6 +90,21 @@ export async function kopru(req, D) {
   if (!a || q('anahtar') !== a) return json({ hata: 'yetkisiz' }, 401);
   const islem = q('islem');
   const id = int(q('id'));
+  // manşet görseli (yapay zekâ ile üretilip panele aktarılan): yalnızca site/mansetN
+  if (islem === 'gorsel' && req.method === 'POST') {
+    let fd; try { fd = await req.formData(); } catch (e) { return json({ hata: 'form' }, 400); }
+    const ad = str(fd.get('ad')); const dosya = fd.get('dosya');
+    if (!/^manset\d{1,2}$/.test(ad) || !dosya || typeof dosya === 'string' || !dosya.size || dosya.size > 3 * 1024 * 1024) return json({ hata: 'geçersiz' }, 400);
+    const b = new Uint8Array(await dosya.arrayBuffer());
+    const uz = b[0] === 0xff && b[1] === 0xd8 ? 'jpg' : b[0] === 0x89 && b[1] === 0x50 ? 'png' : b[8] === 0x57 && b[9] === 0x45 ? 'webp' : null;
+    if (!uz) return json({ hata: 'biçim' }, 400);
+    const mime = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' }[uz];
+    const P = 1500000; const st = [D.prepare("DELETE FROM gorsel_parca WHERE tur = 'site' AND ad = ?").bind(ad)];
+    let sira = 0; for (let i = 0; i < b.length; i += P) st.push(D.prepare("INSERT INTO gorsel_parca(tur, ad, sira, veri) VALUES('site',?,?,?)").bind(ad, sira++, b.slice(i, i + P).buffer));
+    st.push(D.prepare("INSERT OR REPLACE INTO gorseller(tur, ad, uz, mime, boyut, parca, zaman) VALUES('site',?,?,?,?,?,?)").bind(ad, uz, mime, b.length, sira, Math.floor(Date.now() / 1000)));
+    await D.batch(st);
+    return json({ ok: 1 });
+  }
   // müşteriye WhatsApp mesajları
   if (islem === 'mesaj_al') return json(await mesajAl(D, await ayarlar(D)));
   if (islem === 'mesaj_sonuc' && id) { await mesajSonuc(D, id, q('s'), q('not')); return json({ ok: 1 }); }

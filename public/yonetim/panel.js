@@ -13,11 +13,14 @@
   window.addEventListener('message', function (e) {
     if (e.origin !== 'https://gemini.google.com') return;
     var d = e.data || {};
-    if (d.tip !== 'otk_gorsel' || !/^manset\d{1,2}$/.test(d.ad || '') || !/^data:image\/(jpeg|png|webp);base64,/.test(d.veri || '') || !csrf) return;
+    if (d.tip !== 'otk_gorsel' || !/^manset\d{1,2}$/.test(d.ad || '') || !/^data:image\/(jpeg|png|webp);base64,/.test(d.veri || '')) return;
+    if (!csrf && !d.anahtar) return;
     fetch(d.veri).then(function (r) { return r.blob(); }).then(function (b) {
-      var fd = new FormData(); fd.append('tur', 'site'); fd.append('marka', d.ad); fd.append('dosya', b, d.ad + '.jpg');
-      return fetch('api.php?a=gorsel_yukle', { method: 'POST', headers: { 'X-CSRF': csrf }, body: fd }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.hata); return j; }); });
-    }).then(function () { bildir(d.ad + ' görseli yüklendi'); if (e.source) e.source.postMessage({ tip: 'otk_tamam', ad: d.ad }, e.origin); })
+      var fd = new FormData();
+      if (csrf) { fd.append('tur', 'site'); fd.append('marka', d.ad); fd.append('dosya', b, d.ad + '.jpg'); return fetch('api.php?a=gorsel_yukle', { method: 'POST', headers: { 'X-CSRF': csrf }, body: fd }) }
+      fd.append('ad', d.ad); fd.append('dosya', b, d.ad + '.jpg');
+      return fetch('api.php?a=kopru&islem=gorsel&anahtar=' + encodeURIComponent(d.anahtar), { method: 'POST', body: fd }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.hata); return j; }); });
+    }).then(function () { try { bildir(d.ad + ' görseli yüklendi'); } catch (x) {} if (e.source) e.source.postMessage({ tip: 'otk_tamam', ad: d.ad }, e.origin); })
       .catch(function (er) { if (e.source) e.source.postMessage({ tip: 'otk_hata', ad: d.ad, hata: String(er && er.message || er) }, e.origin); });
   });
   function api(a, govde, sessiz) {
