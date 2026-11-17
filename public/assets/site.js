@@ -330,7 +330,8 @@
   function cizKm(k) {
     k.innerHTML = '<div class="grup"><label>Kilometre</label><input class="alan buyuk" id="km" inputmode="numeric" placeholder="ör. 85.000" value="' + (S.km ? new Intl.NumberFormat('tr-TR').format(S.km) : '') + '">' +
       '<div class="km-not">Göstergede yazan güncel kilometre.</div></div>' +
-      cipGrubu('Renk (isteğe bağlı)', 'renk', ['Beyaz', 'Siyah', 'Gri', 'Gümüş', 'Kırmızı', 'Mavi', 'Lacivert', 'Kahverengi', 'Diğer'], '');
+      cipGrubu('Renk (isteğe bağlı)', 'renk', RENKLER, '') +
+      '<div class="renk-diger"><label for="renkDiger">Aracının rengi listede yoksa buraya yazabilirsin</label><input class="alan" id="renkDiger" maxlength="30" autocomplete="off" placeholder="ör. Bordo, Turuncu, Şampanya, Yeşil" value="' + esc(S.renk && RENKLER.indexOf(S.renk) < 0 ? S.renk : '') + '"></div>';
     var i = $('#km', k);
     i.oninput = function () {
       var n = parseInt(i.value.replace(/\D/g, ''), 10) || 0;
@@ -341,7 +342,22 @@
     i.onkeydown = function (e) { if (e.key === 'Enter') sonraki(); };
     if (window.innerWidth > 980) i.focus();
     cipBagla(k);
+    // listede olmayan renk: yazınca butonlardaki seçim kalkar; butona basınca yazılan silinir
+    var rd = $('#renkDiger', k), rg = k.querySelector('[data-alan="renk"]');
+    rd.oninput = function () {
+      var v = rd.value.replace(/\s+/g, ' ').trimStart();
+      rg.querySelectorAll('.secenek').forEach(function (x) { x.classList.remove('secili'); });
+      S.renk = v.trim() ? v.trim().charAt(0).toLocaleUpperCase('tr') + v.trim().slice(1) : '';
+      guncelleBtn();
+    };
+    rd.onkeydown = function (e) { if (e.key === 'Enter') sonraki(); };
+    rg.addEventListener('click', function (e) {
+      var b = e.target.closest('.secenek'); if (!b) return;
+      if (b.dataset.v === 'Diğer') { rd.focus(); }
+      rd.value = '';
+    });
   }
+  var RENKLER = ['Beyaz', 'Siyah', 'Gri', 'Gümüş', 'Kırmızı', 'Mavi', 'Lacivert', 'Kahverengi', 'Diğer'];
 
   function aracSvg() {
     var p = function (id, d) { return '<path class="parca" data-p="' + id + '" d="' + d + '"><title>' + PAD[id] + '</title></path>'; };
