@@ -27,7 +27,7 @@
   (function () {
     var h = location.hash; if (h.indexOf('#otkilan=') !== 0) return;
     var v = decodeURIComponent(h.slice(9)), i = v.indexOf('|'); history.replaceState(null, '', location.pathname);
-    fetch('api.php?a=kopru&islem=ilan_esitle&anahtar=' + encodeURIComponent(v.slice(0, i)), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: v.slice(i + 1) })
+    fetch('/api.php?a=kopru&islem=ilan_esitle&anahtar=' + encodeURIComponent(v.slice(0, i)), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: v.slice(i + 1) })
       .then(function (r) { return r.text(); }).then(function (t) { document.title = 'ilan: ' + t; });
   })();
   // aynı aktarım, adres çubuğuyla: #otkimg=mansetN|anahtar|data:image/jpeg;base64,...

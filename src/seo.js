@@ -66,7 +66,7 @@ function sayfa({ baslik, aciklama, yol, kirinti, govde, ekLd = [] }) {
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1b2d'/%3E%3Ctext x='32' y='43' font-family='Arial' font-weight='900' font-size='30' text-anchor='middle' fill='%23ff5a1f'%3EO%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/site.css?v=1117v"><link rel="stylesheet" href="/assets/anasayfa.css?v=1117v"><link rel="stylesheet" href="/assets/rehber.css?v=1117v">
+<link rel="stylesheet" href="/assets/site.css?v=1117w"><link rel="stylesheet" href="/assets/anasayfa.css?v=1117w"><link rel="stylesheet" href="/assets/rehber.css?v=1117w">
 ${ld.map((x) => `<script type="application/ld+json">${JSON.stringify(x).replace(/</g, '\\u003c')}</script>`).join('\n')}
 </head>
 <body class="ana rehber">
@@ -85,7 +85,7 @@ ${govde}
   <div><h4>İletişim</h4><a href="tel:${ILETISIM.telLink}">☎ ${ILETISIM.tel}</a><a href="https://wa.me/${ILETISIM.wa}" target="_blank" rel="noopener">WhatsApp</a><a href="mailto:${ILETISIM.eposta}">${ILETISIM.eposta}</a><span>${ILETISIM.adres}</span></div>
 </div><div class="kap alt-son"><span>© ${buYil()} <b>OTOKABUL</b>.COM.TR · Tüm hakları saklıdır.</span><span>otokabul.com.tr</span></div></footer>
 <a class="wa-sabit" href="https://wa.me/${ILETISIM.wa}?text=${encodeURIComponent('Merhaba, aracımı satmak istiyorum.')}" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Z"/></svg></a>
-<script src="/assets/iz.js?v=1117v" defer></script>
+<script src="/assets/iz.js?v=1117w" defer></script>
 </body>
 </html>`;
 }
