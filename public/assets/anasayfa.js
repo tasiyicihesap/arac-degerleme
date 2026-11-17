@@ -64,7 +64,7 @@
       var u = g[el.dataset.gorsel]; if (u) { el.innerHTML = '<img src="' + esc(u) + '" alt="" loading="lazy">'; el.classList.add('foto-var'); }
     });
     document.querySelectorAll('[data-gorsel-arka]').forEach(function (el) {
-      var u = g[el.dataset.gorselArka]; if (u) { el.style.backgroundImage = 'url("' + u.replace(/"/g, '%22') + '")'; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center'; el.classList.add('foto-var'); if (!el.querySelector('.foto-logo')) { var fl = document.createElement('span'); fl.className = 'foto-logo'; fl.innerHTML = '<img src="assets/logo-otokabul.png" alt="OTOKABUL.COM.TR">'; el.appendChild(fl); } }
+      var u = g[el.dataset.gorselArka]; if (u) { el.style.backgroundImage = 'url("' + u.replace(/"/g, '%22') + '")'; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center'; el.classList.add('foto-var'); if (!el.querySelector('.kb-arka')) { var kb = document.createElement('div'); kb.className = 'kb-arka'; kb.style.backgroundImage = el.style.backgroundImage; el.insertBefore(kb, el.firstChild); } if (!el.querySelector('.foto-logo')) { var fl = document.createElement('span'); fl.className = 'foto-logo'; fl.innerHTML = '<img src="assets/logo-otokabul.png" alt="OTOKABUL.COM.TR">'; el.appendChild(fl); } }
     });
     var gal = [], i; for (i = 1; i <= 8; i++) if (g['galeri' + i]) gal.push(g['galeri' + i]);
     if (gal.length) {

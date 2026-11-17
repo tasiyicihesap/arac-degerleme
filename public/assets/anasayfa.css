@@ -422,3 +422,20 @@ body.ana{background:#fff;color:var(--murekkep)}
 .promo-serit .foto-logo{display:none}
 .py-gorsel{position:relative}
 @media (max-width:860px){.manset-kart .foto-logo{top:14px;right:14px}.manset-kart .foto-logo img{height:20px}}
+
+/* fotoğraflara video gibi yavaş hareket (Ken Burns) */
+.manset-kart.foto-var,.promo-kart.foto-var,.py-gorsel.foto-var{background-size:0 0 !important}
+.kb-arka{position:absolute;inset:0;background-size:cover;background-position:center;z-index:0;will-change:transform}
+.manset-kart .kb-arka{animation:kbYakin 14s ease-in-out infinite alternate}
+.manset-kart:nth-child(even) .kb-arka{animation-name:kbKay}
+.promo-kart .kb-arka,.py-gorsel .kb-arka{animation:kbYakin 18s ease-in-out infinite alternate}
+.promo-kart:hover .kb-arka{animation-duration:6s}
+.manset-kart::before,.promo-kart::before{z-index:1}
+.manset-kart .mk-ic,.promo-kart .pk-yazi{z-index:2}
+@keyframes kbYakin{from{transform:scale(1)}to{transform:scale(1.09) translate(-1.5%,-1%)}}
+@keyframes kbKay{from{transform:scale(1.08) translate(2%,0)}to{transform:scale(1.08) translate(-2%,-1%)}}
+@media (prefers-reduced-motion:reduce){.kb-arka{animation:none !important}}
+.promo-serit.foto-var{background-size:0 0 !important}
+.promo-serit::before{z-index:1}.promo-serit .ps-yazi,.promo-serit .ps-btn{z-index:2}
+.promo-serit .kb-arka{animation:kbKay 16s ease-in-out infinite alternate}
+.foto-logo{z-index:3}
