@@ -52,6 +52,10 @@ async function siteApiIc(req, env, ctx) {
         donanimlar: donanimlar(A).map((d) => ({ ad: d.ad, kosul: d.kosul })) });
     }
     case 'rehber_son': return json([...YAZILAR].sort((a, b) => (a.tarih < b.tarih ? 1 : -1)).slice(0, 3).map((y) => ({ slug: y.slug, baslik: y.baslik, ozet: y.ozet, tarih: y.tarih })), 200, { 'Cache-Control': 'public, max-age=600' });
+    case 'satistaki': { // sahibinden mağazalarımızdaki satıştaki araçlar
+      const { results } = await D.prepare('SELECT id, url, baslik, marka, seri, model, yil, km, renk, fiyat, kategori, foto, ilan_tarihi FROM ilanlar WHERE aktif = 1 ORDER BY ilk_gorulme DESC, id DESC LIMIT 60').all();
+      return json(results, 200, { 'Cache-Control': 'public, max-age=300' });
+    }
     case 'son_degerlemeler': { // ana sayfadaki "son değerlemeler" şeridi: kişisel bilgi yok
       const { results } = await D.prepare("SELECT tarih, yil, marka, model, il FROM talepler WHERE ad NOT LIKE 'TEST%' ORDER BY id DESC LIMIT 14").all();
       const simdiMs = Date.parse(simdi().replace(' ', 'T') + 'Z');

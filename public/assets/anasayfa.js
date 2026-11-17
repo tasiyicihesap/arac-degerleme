@@ -116,6 +116,30 @@
     git(0); basla();
   })();
 
+  // satıştaki araçlarımız (sahibinden mağazalarımızdan, kendiliğinden güncellenir)
+  fetch('api.php?a=satistaki').then(function (r) { return r.ok ? r.json() : []; }).then(function (l) {
+    if (!l || !l.length) return;
+    var nf = new Intl.NumberFormat('tr-TR'), wa = (window.OTK_FIRMA && window.OTK_FIRMA.whatsapp) || '905418673478';
+    var KAT = { otomobil: 'Otomobil', 'arazi-suv-pickup': 'SUV & Pickup', 'minivan-panelvan': 'Minivan & Panelvan', elektrikli: 'Elektrikli' };
+    var bas = function (s) { return String(s || '').toLocaleLowerCase('tr').replace(/(^|\s)\S/g, function (c) { return c.toLocaleUpperCase('tr'); }); };
+    var kart = function (x) {
+      var ad = [x.marka, x.seri, x.model].filter(Boolean).join(' ') || bas(x.baslik).slice(0, 40);
+      var alt = [x.yil || '', x.km ? nf.format(x.km) + ' km' : '', x.renk || ''].filter(Boolean).join(' · ');
+      var yeni = x.ilan_tarihi && /bugün|dün/i.test(x.ilan_tarihi);
+      var waUrl = 'https://wa.me/' + wa + '?text=' + encodeURIComponent('Merhaba, ' + ad + ' (ilan no: ' + x.id + ') aracınızla ilgileniyorum.');
+      return '<article class="stok-kart"><a class="sk-foto" href="' + esc(x.url) + '" target="_blank" rel="noopener">' + (x.foto ? '<img src="' + esc(x.foto) + '" alt="' + esc(ad) + '" loading="lazy" referrerpolicy="no-referrer">' : '') +
+        (KAT[x.kategori] ? '<span class="sk-rozet">' + KAT[x.kategori] + '</span>' : '') + (yeni ? '<span class="sk-yeni">YENİ</span>' : '') + '</a>' +
+        '<div class="sk-ic"><h3>' + esc(ad) + '</h3>' + (alt ? '<div class="sk-alt">' + esc(alt) + '</div>' : '') + '<div class="sk-baslik">' + esc(bas(x.baslik)) + '</div>' +
+        '<div class="sk-fiyat">' + (x.fiyat ? nf.format(x.fiyat) + ' TL' : '') + '</div>' +
+        '<div class="sk-dug"><a class="sk-ilan" href="' + esc(x.url) + '" target="_blank" rel="noopener">İlanı gör</a><a class="sk-wa" href="' + esc(waUrl) + '" target="_blank" rel="noopener">WhatsApp\'tan sor</a></div></div></article>';
+    };
+    var iz = $('#stokIzgara'), ilk = 8;
+    iz.innerHTML = l.slice(0, ilk).map(kart).join('');
+    if (l.length > ilk) { $('#stokTum').hidden = false; $('#stokDaha').onclick = function () { iz.innerHTML = l.map(kart).join(''); $('#stokTum').hidden = true; }; }
+    $('#satistaki').hidden = false;
+    document.querySelectorAll('.menu-stok').forEach(function (a) { a.hidden = false; });
+  }).catch(function () {});
+
   // son değerlemeler şeridi (kişisel bilgi yok: araç, il, ne kadar önce)
   fetch('api.php?a=son_degerlemeler').then(function (r) { return r.ok ? r.json() : []; }).then(function (l) {
     if (!l || l.length < 3) return;

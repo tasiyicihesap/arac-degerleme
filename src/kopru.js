@@ -105,6 +105,23 @@ export async function kopru(req, D) {
     await D.batch(st);
     return json({ ok: 1 });
   }
+  // sahibinden mağaza ilanları (eklenti mağaza sayfasını okuyup gönderir): o mağazada artık olmayanlar pasife alınır
+  if (islem === 'ilan_esitle' && req.method === 'POST') {
+    let g = {}; try { g = await req.json(); } catch (e) { return json({ hata: 'json' }, 400); }
+    const magaza = str(g.magaza).toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40);
+    const l = (Array.isArray(g.ilanlar) ? g.ilanlar : []).filter((x) => /^\d{6,12}$/.test(str(x.id))).slice(0, 300);
+    if (!magaza) return json({ hata: 'mağaza' }, 400);
+    if (!l.length && !g.bos) return json({ hata: 'ilan yok' }, 400); // sayfa okunamadıysa mevcut ilanları silme
+    const sim = simdi();
+    const ops = l.map((x) => D.prepare(`INSERT INTO ilanlar(id, magaza, url, baslik, marka, seri, model, yil, km, renk, fiyat, kategori, foto, ilan_tarihi, ilk_gorulme, son_gorulme, aktif)
+      VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?15,1)
+      ON CONFLICT(id) DO UPDATE SET magaza=?2, url=?3, baslik=?4, marka=?5, seri=?6, model=?7, yil=CASE WHEN ?8>0 THEN ?8 ELSE yil END, km=CASE WHEN ?9>0 THEN ?9 ELSE km END,
+      renk=?10, fiyat=?11, kategori=?12, foto=?13, ilan_tarihi=?14, son_gorulme=?15, aktif=1`).bind(str(x.id), magaza, kes(str(x.url), 300), kes(str(x.baslik), 200),
+      kes(str(x.marka), 40), kes(str(x.seri), 60), kes(str(x.model), 80), int(x.yil), int(x.km), kes(str(x.renk), 30), int(x.fiyat), kes(str(x.kategori), 30), kes(str(x.foto), 300), kes(str(x.tarih), 30), sim));
+    ops.push(D.prepare(`UPDATE ilanlar SET aktif = 0 WHERE magaza = ? AND aktif = 1 AND id NOT IN (SELECT value FROM json_each(?))`).bind(magaza, JSON.stringify(l.map((x) => str(x.id)))));
+    await D.batch(ops);
+    return json({ ok: 1, adet: l.length });
+  }
   // müşteriye WhatsApp mesajları
   if (islem === 'mesaj_al') return json(await mesajAl(D, await ayarlar(D)));
   if (islem === 'mesaj_sonuc' && id) { await mesajSonuc(D, id, q('s'), q('not')); return json({ ok: 1 }); }

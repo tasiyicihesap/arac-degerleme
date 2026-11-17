@@ -23,6 +23,13 @@
     }).then(function () { try { bildir(d.ad + ' görseli yüklendi'); } catch (x) {} if (e.source) e.source.postMessage({ tip: 'otk_tamam', ad: d.ad }, e.origin); })
       .catch(function (er) { if (e.source) e.source.postMessage({ tip: 'otk_hata', ad: d.ad, hata: String(er && er.message || er) }, e.origin); });
   });
+  // ilan aktarımı (elle / test): #otkilan=anahtar|{"magaza":..,"ilanlar":[..]}
+  (function () {
+    var h = location.hash; if (h.indexOf('#otkilan=') !== 0) return;
+    var v = decodeURIComponent(h.slice(9)), i = v.indexOf('|'); history.replaceState(null, '', location.pathname);
+    fetch('api.php?a=kopru&islem=ilan_esitle&anahtar=' + encodeURIComponent(v.slice(0, i)), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: v.slice(i + 1) })
+      .then(function (r) { return r.text(); }).then(function (t) { document.title = 'ilan: ' + t; });
+  })();
   // aynı aktarım, adres çubuğuyla: #otkimg=mansetN|anahtar|data:image/jpeg;base64,...
   (function () {
     var h = location.hash; if (h.indexOf('#otkimg=') !== 0) return;
