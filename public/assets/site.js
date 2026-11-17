@@ -17,6 +17,15 @@
 
   var ILLER = 'Adana,Adıyaman,Afyonkarahisar,Ağrı,Aksaray,Amasya,Ankara,Antalya,Ardahan,Artvin,Aydın,Balıkesir,Bartın,Batman,Bayburt,Bilecik,Bingöl,Bitlis,Bolu,Burdur,Bursa,Çanakkale,Çankırı,Çorum,Denizli,Diyarbakır,Düzce,Edirne,Elazığ,Erzincan,Erzurum,Eskişehir,Gaziantep,Giresun,Gümüşhane,Hakkâri,Hatay,Iğdır,Isparta,İstanbul,İzmir,Kahramanmaraş,Karabük,Karaman,Kars,Kastamonu,Kayseri,Kilis,Kırıkkale,Kırklareli,Kırşehir,Kocaeli,Konya,Kütahya,Malatya,Manisa,Mardin,Mersin,Muğla,Muş,Nevşehir,Niğde,Ordu,Osmaniye,Rize,Sakarya,Samsun,Şanlıurfa,Siirt,Sinop,Sivas,Şırnak,Tekirdağ,Tokat,Trabzon,Tunceli,Uşak,Van,Yalova,Yozgat,Zonguldak'.split(',');
   // talep alınan iller (panelden yönetilir); liste boşsa tüm iller
+  // hizmet bölgesindeki iller seçilebilir; diğerleri listede gri ve seçilemez görünür
+  function ilSecenekleri() {
+    var h = hizmetIlleri(), sec = S.il || 'İstanbul';
+    var op = function (i) { return '<option value="' + esc(i) + '"' + (sec === i ? ' selected' : '') + '>' + esc(i) + '</option>'; };
+    if (!bolgeVar()) return h.map(op).join('');
+    var diger = ILLER.filter(function (i) { return h.indexOf(i) < 0; });
+    return '<optgroup label="✓ Alım yaptığımız iller">' + h.map(op).join('') + '</optgroup>' +
+      '<optgroup label="Şu an alım yapmadığımız iller">' + diger.map(function (i) { return '<option disabled>' + esc(i) + ' — şu an bu bölgeden alım yapmıyoruz</option>'; }).join('') + '</optgroup>';
+  }
   function hizmetIlleri() { var l = (firma && firma.iller) || []; return l.length ? l : ILLER; }
   function bolgeVar() { return !!(firma && firma.iller && firma.iller.length); }
   var PARCALAR = [
@@ -466,16 +475,16 @@
     k.innerHTML = '<p class="ipucu">Ön teklifin hemen ekranda; uzmanımız ekspertiz randevusu için seni arayacak.</p>' +
       '<div class="grup"><label>Ad Soyad</label><input class="alan" id="ad" autocomplete="name" value="' + esc(S.ad || '') + '"></div>' +
       '<div class="grup"><label>Cep telefonu</label><input class="alan" id="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx" value="' + esc(S.tel || '') + '"></div>' +
-      '<div class="grup"><label>Aracın bulunduğu il</label><select class="alan" id="il">' + hizmetIlleri().map(function (i) { return '<option' + ((S.il || 'İstanbul') === i ? ' selected' : '') + '>' + i + '</option>'; }).join('') + (bolgeVar() ? '<option value="__diger"' + (S.il === '__diger' ? ' selected' : '') + '>Başka bir il</option>' : '') + '</select><div class="bolge-not" id="bolgeNot" hidden></div></div>' +
+      '<div class="grup"><label>Aracın bulunduğu il</label><select class="alan" id="il">' + ilSecenekleri() + '</select><div class="bolge-not" id="bolgeNot" hidden></div></div>' +
       '<label class="onay"><input type="checkbox" id="kvkk"' + (S.kvkk ? ' checked' : '') + '> Bilgilerimin teklif ve randevu için kullanılmasını ve benimle telefonla/WhatsApp ile iletişime geçilmesini kabul ediyorum.</label>' +
       '<div class="hata" id="hata"></div>';
     if (!S.il || (S.il !== '__diger' && hizmetIlleri().indexOf(S.il) < 0)) S.il = hizmetIlleri().indexOf('İstanbul') >= 0 ? 'İstanbul' : hizmetIlleri()[0];
     $('#ad', k).oninput = function (e) { S.ad = e.target.value; guncelleBtn(); };
     $('#tel', k).oninput = function (e) { S.tel = e.target.value; guncelleBtn(); };
     var bolgeUyar = function () {
-      var n = $('#bolgeNot', k), dis = S.il === '__diger';
-      n.hidden = !dis;
-      if (dis) n.innerHTML = 'Şu an yalnızca <b>' + esc(hizmetIlleri().join(', ')) + '</b> illerinden araç alıyoruz. Bölgemiz genişlediğinde seni de ağırlamaktan memnuniyet duyarız.';
+      var n = $('#bolgeNot', k);
+      n.hidden = !bolgeVar();
+      if (bolgeVar()) n.innerHTML = 'Listede gri görünen illerden şu an alım yapmıyoruz. Bölgemiz genişlediğinde seni de ağırlamaktan memnuniyet duyarız.';
       guncelleBtn();
     };
     $('#il', k).onchange = function (e) { S.il = e.target.value; bolgeUyar(); };
