@@ -159,7 +159,7 @@ export async function kopru(req, D) {
     return json({ ok: 1 });
   }
   // doğrulama kodlarını okuyabilen eklenti sürümü (dg=1) her turda yaşadığını bildirir
-  if (q('dg') === '1') await kopruNabiz(D).catch(() => {});
+  if (q('dg') === '2') await kopruNabiz(D).catch(() => {});
   // al: fotoğraflar yüklensin diye en az 90 sn eski talepler; 10 dk içinde onaylanmayan sahiplenme tekrar alınabilir
   const simd = simdi(), esik = simdi(Date.now() - 90e3), zaman = simdi(Date.now() - 600e3);
   // randevu istendiyse ya da acil ise detaylı bildirim (grup_tam 2 = detaylı gönderiliyor, 1 = detaylı gönderildi);
