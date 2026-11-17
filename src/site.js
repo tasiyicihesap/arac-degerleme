@@ -57,8 +57,20 @@ async function siteApiIc(req, env, ctx) {
       const { results } = await D.prepare('SELECT id, url, baslik, marka, seri, model, yil, km, renk, fiyat, kategori, foto, ilan_tarihi FROM ilanlar WHERE aktif = 1 ORDER BY ilk_gorulme DESC, id DESC LIMIT 60').all();
       return json(results, 200, { 'Cache-Control': 'public, max-age=300' });
     }
-    case 'son_degerlemeler': { // ana sayfadaki "son değerlemeler" şeridi: kişisel bilgi yok
-      const { results } = await D.prepare("SELECT tarih, yil, marka, model, il FROM talepler WHERE ad NOT LIKE 'TEST%' ORDER BY id DESC LIMIT 14").all();
+    case 'piyasa_nabzi': { // ana sayfa şeridi: en çok ilanı olan modellerin güncel piyasa ortalaması (12 saat önbellek)
+      const ck = new Request('https://otokabul.com.tr/__piyasa_nabzi_v1');
+      const cache = typeof caches !== 'undefined' ? caches.default : null;
+      if (cache) { try { const c = await cache.match(ck); if (c) return c; } catch (e) {} }
+      const y = buYil();
+      const { results } = await D.prepare('SELECT marka, model, yil, piyasa, adet FROM fiyatlar WHERE aktif = 1 AND piyasa > 0 AND adet >= 20 AND yil BETWEEN ? AND ? ORDER BY adet DESC LIMIT 150').bind(y - 12, y - 1).all();
+      const gor = new Set(), l = [];
+      for (const r of results) { const k = r.marka + '|' + r.model; if (gor.has(k)) continue; gor.add(k); l.push({ arac: `${int(r.yil)} ${str(r.marka)} ${str(r.model)}`, fiyat: Math.round(int(r.piyasa) / 5000) * 5000 }); if (l.length >= 16) break; }
+      const yan = json(l, 200, { 'Cache-Control': 'public, max-age=3600' });
+      if (cache) { try { const k2 = new Response(JSON.stringify(l), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=43200' } }); arkada(cache.put(ck, k2)); } catch (e) {} }
+      return yan;
+    }
+    case 'son_degerlemeler': { // ana sayfadaki "son değerlemeler" şeridi: kişisel bilgi yok; yalnızca son 24 saat
+      const { results } = await D.prepare("SELECT tarih, yil, marka, model, il FROM talepler WHERE ad NOT LIKE 'TEST%' AND tarih >= ? ORDER BY id DESC LIMIT 14").bind(simdi(Date.now() - 864e5)).all();
       const simdiMs = Date.parse(simdi().replace(' ', 'T') + 'Z');
       return json(results.map((r) => ({ arac: `${int(r.yil)} ${str(r.marka)} ${str(r.model)}`, il: str(r.il), dk: Math.max(0, Math.round((simdiMs - Date.parse(str(r.tarih).replace(' ', 'T') + 'Z')) / 60000)) })), 200, { 'Cache-Control': 'public, max-age=120' });
     }

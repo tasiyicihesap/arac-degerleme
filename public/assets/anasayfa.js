@@ -141,12 +141,19 @@
   }).catch(function () {});
 
   // son değerlemeler şeridi (kişisel bilgi yok: araç, il, ne kadar önce)
-  fetch('api.php?a=son_degerlemeler').then(function (r) { return r.ok ? r.json() : []; }).then(function (l) {
-    if (!l || l.length < 3) return;
-    var once = function (dk) { return dk < 1 ? 'az önce' : dk < 60 ? dk + ' dk önce' : dk < 1440 ? Math.floor(dk / 60) + ' saat önce' : Math.floor(dk / 1440) + ' gün önce'; };
-    var h = l.map(function (x) { return '<span><small>' + once(x.dk) + '</small><b>' + esc(x.arac) + '</b>' + (x.il ? ' · ' + esc(x.il) : '') + '</span>'; }).join('');
-    $('#canliIc').innerHTML = h + h; $('#canliSerit').hidden = false;
-  }).catch(function () {});
+  // şerit: son 24 saatteki gerçek değerlemeler (varsa) + en çok ilanı olan modellerin güncel piyasa ortalaması
+  Promise.all([
+    fetch('api.php?a=son_degerlemeler').then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; }),
+    fetch('api.php?a=piyasa_nabzi').then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; }),
+  ]).then(function (v) {
+    var son = v[0] || [], pz = v[1] || [], tl = new Intl.NumberFormat('tr-TR');
+    if (son.length + pz.length < 3) return;
+    var once = function (dk) { return dk < 1 ? 'az önce' : dk < 60 ? dk + ' dk önce' : Math.floor(dk / 60) + ' saat önce'; };
+    var h = son.map(function (x) { return '<span><small>' + once(x.dk) + '</small><b>' + esc(x.arac) + '</b>' + (x.il ? ' · ' + esc(x.il) : '') + '</span>'; }).join('') +
+      pz.map(function (x) { return '<span><small>piyasa ort.</small><b>' + esc(x.arac) + '</b> · ' + tl.format(x.fiyat) + ' TL</span>'; }).join('');
+    var bas = $('#canliSerit .cs-baslik'); if (bas) bas.innerHTML = '<i></i>' + (son.length ? 'Son değerlemeler · Piyasa nabzı' : 'Piyasa nabzı');
+    $('#canliIc').innerHTML = h + h; $('#canliIc').style.animationDuration = Math.max(45, (son.length + pz.length) * 4.5) + 's'; $('#canliSerit').hidden = false;
+  });
 
   // rehberden son yazılar
   fetch('api.php?a=rehber_son').then(function (r) { return r.ok ? r.json() : []; }).then(function (l) {
