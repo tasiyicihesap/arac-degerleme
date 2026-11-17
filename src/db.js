@@ -94,6 +94,7 @@ CREATE INDEX IF NOT EXISTS ix_mm_tel ON musteri_mesaj(tel);
 CREATE TABLE IF NOT EXISTS tel_ret (tel TEXT PRIMARY KEY, tarih TEXT, neden TEXT);
 CREATE TABLE IF NOT EXISTS ilanlar (id TEXT PRIMARY KEY, magaza TEXT, url TEXT, baslik TEXT, marka TEXT, seri TEXT, model TEXT, yil INTEGER, km INTEGER, renk TEXT, fiyat INTEGER, kategori TEXT, foto TEXT, ilan_tarihi TEXT, ilk_gorulme TEXT, son_gorulme TEXT, aktif INTEGER DEFAULT 1);
 CREATE INDEX IF NOT EXISTS ix_ilan_aktif ON ilanlar(aktif);
+CREATE TABLE IF NOT EXISTS musteri_rehber (anahtar TEXT PRIMARY KEY, ad TEXT, tel TEXT, eposta TEXT, ilk TEXT, son TEXT, talep INTEGER DEFAULT 0, mesaj INTEGER DEFAULT 0, son_arac TEXT DEFAULT '');
 CREATE INDEX IF NOT EXISTS ix_talep_durum ON talepler(durum);
 CREATE TABLE IF NOT EXISTS gorsel_parca (tur TEXT, ad TEXT, sira INTEGER, veri BLOB, PRIMARY KEY(tur, ad, sira));
 `;
@@ -165,6 +166,26 @@ async function kur(D) {
   }
   if (!varS.has('acil')) ek.push(D.prepare('ALTER TABLE talepler ADD COLUMN acil INTEGER DEFAULT 0')); // 1: gruba yeniden acil uyarı, 3: ilk gönderim acil, 2: iletildi
   if (ek.length) await D.batch(ek);
+  // müşteri rehberi: her talep ve mesajda telefon/e-posta ayrı tabloya da yazılır (talep silinse bile kalır)
+  const tr = await D.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type = 'trigger' AND name IN ('tr_rehber_talep','tr_rehber_mesaj')").first();
+  if (!tr || +tr.n < 2) {
+    await D.batch([
+      D.prepare(`CREATE TRIGGER IF NOT EXISTS tr_rehber_talep AFTER INSERT ON talepler WHEN COALESCE(NEW.tel_n,'') <> '' BEGIN
+        INSERT INTO musteri_rehber(anahtar, ad, tel, eposta, ilk, son, talep, mesaj, son_arac) VALUES(NEW.tel_n, NEW.ad, NEW.tel, '', NEW.tarih, NEW.tarih, 1, 0, NEW.yil || ' ' || NEW.marka || ' ' || NEW.model)
+        ON CONFLICT(anahtar) DO UPDATE SET ad = NEW.ad, tel = NEW.tel, son = NEW.tarih, talep = talep + 1, son_arac = NEW.yil || ' ' || NEW.marka || ' ' || NEW.model; END`),
+      D.prepare(`CREATE TRIGGER IF NOT EXISTS tr_rehber_mesaj AFTER INSERT ON mesajlar WHEN COALESCE(NEW.tel,'') <> '' OR COALESCE(NEW.eposta,'') <> '' BEGIN
+        INSERT INTO musteri_rehber(anahtar, ad, tel, eposta, ilk, son, talep, mesaj) VALUES(CASE WHEN length(%TEL%) = 10 THEN %TEL% ELSE lower(NEW.eposta) END, NEW.ad, COALESCE(NEW.tel,''), COALESCE(NEW.eposta,''), NEW.tarih, NEW.tarih, 0, 1)
+        ON CONFLICT(anahtar) DO UPDATE SET ad = COALESCE(NULLIF(NEW.ad,''), ad), eposta = COALESCE(NULLIF(NEW.eposta,''), eposta), son = NEW.tarih, mesaj = mesaj + 1; END`.replaceAll('%TEL%', "substr(replace(replace(replace(replace(replace(COALESCE(NEW.tel,''),' ',''),'-',''),'(',''),')',''),'+',''), -10)")),
+    ]);
+    // eski kayıtlar bir kez aktarılır
+    await D.batch([
+      D.prepare(`INSERT OR IGNORE INTO musteri_rehber(anahtar, ad, tel, eposta, ilk, son, talep, mesaj, son_arac)
+        SELECT tel_n, MAX(ad), MAX(tel), '', MIN(tarih), MAX(tarih), COUNT(*), 0, '' FROM talepler WHERE COALESCE(tel_n,'') <> '' GROUP BY tel_n`),
+      D.prepare(`INSERT OR IGNORE INTO musteri_rehber(anahtar, ad, tel, eposta, ilk, son, talep, mesaj)
+        SELECT k, MAX(ad), MAX(tel), MAX(COALESCE(eposta,'')), MIN(tarih), MAX(tarih), 0, COUNT(*) FROM (SELECT substr(replace(replace(replace(replace(replace(tel,' ',''),'-',''),'(',''),')',''),'+',''), -10) k, ad, tel, eposta, tarih FROM mesajlar WHERE COALESCE(tel,'') <> '') WHERE length(k) = 10 GROUP BY k`),
+      D.prepare(`INSERT OR IGNORE INTO musteri_rehber(anahtar, ad, tel, eposta, ilk, son, talep, mesaj) SELECT lower(eposta), MAX(ad), MAX(COALESCE(tel,'')), lower(eposta), MIN(tarih), MAX(tarih), 0, COUNT(*) FROM mesajlar WHERE COALESCE(eposta,'') <> '' GROUP BY lower(eposta)`),
+    ]);
+  }
   const r = await D.prepare("SELECT v FROM ayarlar WHERE k = '_kurulum'").first();
   if (r) return;
   // ilk açılış: AraçRadar'dan hazırlanmış başlangıç piyasa verisi

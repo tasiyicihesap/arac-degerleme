@@ -422,6 +422,10 @@ export async function yonetimApi(req, env) {
     }
     case 'talep_mesajlar': { const g = await girdi(); return json(await talepMesajlari(D, int(g.id))); }
     case 'mm_ozet': return json(await mesajOzet(D));
+    case 'rehber': { // müşteri telefon / e-posta yedeği
+      const { results } = await D.prepare('SELECT anahtar, ad, tel, eposta, ilk, son, talep, mesaj, son_arac FROM musteri_rehber ORDER BY son DESC LIMIT 5000').all();
+      return json(results);
+    }
     case 'mm_deneme': {
       const g = await girdi();
       try { await denemePlanla(D, await ayarlar(D), str(g.tel), str(g.tur)); } catch (e) { return json({ hata: e.message }, 400); }

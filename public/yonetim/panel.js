@@ -79,7 +79,7 @@
   });
 
   // ---------- gezinme ----------
-  var SAYFALAR = { ozet: cizOzet, talepler: cizTalepler, mesajlar: cizMesajlar, istatistik: cizIstatistik, fiyatlar: cizFiyatlar, toplu: cizToplu, robot: cizRobot, katalog: cizKatalog, icerik: cizIcerik, ayarlar: cizAyarlar };
+  var SAYFALAR = { ozet: cizOzet, talepler: cizTalepler, mesajlar: cizMesajlar, istatistik: cizIstatistik, rehber: cizRehber, fiyatlar: cizFiyatlar, toplu: cizToplu, robot: cizRobot, katalog: cizKatalog, icerik: cizIcerik, ayarlar: cizAyarlar };
   var markaListesi = [];
   function sayfa(ad, veri) {
     $$('#menu a').forEach(function (a) { a.classList.toggle('aktif', a.dataset.s === ad); });
@@ -114,6 +114,29 @@
 
   // ---------- ÖZET ----------
   // ---------- SİTE İSTATİSTİKLERİ ----------
+  // müşteri rehberi: talep ve mesaj bırakan herkesin telefon/e-postası (talep silinse de kalır), Excel'e aktarılabilir
+  function cizRehber(k) {
+    k.innerHTML = '<h1 class="bas">Müşteri Rehberi</h1><p class="bas-alt">Siteden teklif talebi ya da mesaj bırakan herkesin telefonu ve e-postası. Talep silinse bile burada saklanır.</p>' +
+      '<div class="satirlar"><input class="girdi" id="rAra" placeholder="Ad, telefon, e-posta veya araç ara" style="flex:1;min-width:220px"><button class="btn koyu" id="rCsv">⬇ Excel\'e aktar</button><span class="soluk" id="rSay"></span></div><div id="rTablo">Yükleniyor…</div>';
+    api('rehber').then(function (l) {
+      var ciz = function (q) {
+        q = (q || '').toLocaleLowerCase('tr');
+        var f = l.filter(function (r) { return !q || [r.ad, r.tel, r.eposta, r.son_arac].join(' ').toLocaleLowerCase('tr').indexOf(q) >= 0; });
+        $('#rSay', k).textContent = f.length + ' kişi';
+        $('#rTablo', k).innerHTML = '<table class="xl"><tr><th>Ad</th><th>Telefon</th><th>E-posta</th><th>Son araç</th><th>Talep</th><th>Mesaj</th><th>İlk</th><th>Son</th></tr>' + f.slice(0, 500).map(function (r) {
+          var t = String(r.tel || '').replace(/\D/g, '');
+          return '<tr><td>' + esc(r.ad) + '</td><td>' + (t ? '<a href="tel:' + esc(r.tel) + '">' + esc(r.tel) + '</a>' : '') + '</td><td>' + (r.eposta ? '<a href="mailto:' + esc(r.eposta) + '">' + esc(r.eposta) + '</a>' : '') + '</td><td>' + esc(r.son_arac || '') + '</td><td>' + (r.talep || 0) + '</td><td>' + (r.mesaj || 0) + '</td><td>' + esc(String(r.ilk || '').slice(0, 10)) + '</td><td>' + esc(String(r.son || '').slice(0, 10)) + '</td></tr>';
+        }).join('') + '</table>' + (f.length > 500 ? '<p class="soluk">İlk 500 kişi gösteriliyor; hepsi için aramayı daralt ya da Excel\'e aktar.</p>' : '');
+      };
+      $('#rAra', k).oninput = function () { ciz(this.value); };
+      $('#rCsv', k).onclick = function () {
+        var s = ';', q = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+        var csv = '\ufeff' + ['Ad', 'Telefon', 'E-posta', 'Son araç', 'Talep sayısı', 'Mesaj sayısı', 'İlk kayıt', 'Son kayıt'].join(s) + '\r\n' + l.map(function (r) { return [r.ad, r.tel, r.eposta, r.son_arac, r.talep, r.mesaj, r.ilk, r.son].map(q).join(s); }).join('\r\n');
+        var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = 'otokabul-musteri-rehberi-' + new Date().toISOString().slice(0, 10) + '.csv'; a.click();
+      };
+      ciz('');
+    });
+  }
   var istGun = 7;
   function cizIstatistik(k) {
     k.innerHTML = '<h1 class="bas">Site İstatistikleri</h1><p class="bas-alt">Ziyaretçilerin nereden geldiği, hangi cihaz ve tarayıcıyı kullandığı, kaçının teklif aldığı. Kendi sayacımızdır; çerez ve kişisel bilgi tutulmaz.</p>' +
