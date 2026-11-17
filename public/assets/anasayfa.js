@@ -99,6 +99,17 @@
     $('#canliIc').innerHTML = h + h; $('#canliSerit').hidden = false;
   }).catch(function () {});
 
+  // rehberden son yazılar
+  fetch('api.php?a=rehber_son').then(function (r) { return r.ok ? r.json() : []; }).then(function (l) {
+    if (!l || !l.length) return;
+    var ay = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    $('#rehberIzgara').innerHTML = l.map(function (y) {
+      var t = y.tarih.split('-');
+      return '<a class="rb-kart" href="/rehber/' + esc(y.slug) + '/"><small>' + (+t[2]) + ' ' + ay[+t[1] - 1] + ' ' + t[0] + '</small><h3>' + esc(y.baslik) + '</h3><p>' + esc(y.ozet) + '</p><span>Devamını oku →</span></a>';
+    }).join('');
+    $('#rehberBant').hidden = false;
+  }).catch(function () {});
+
   // "Aracımı değerle" kartı: sihirbaza kaydır
   document.querySelectorAll('[data-odak="sihirbaz"], a[href="#degerle"]').forEach(function (a) {
     a.addEventListener('click', function (ev) { ev.preventDefault(); if (window.OTK) window.OTK.basla(); });

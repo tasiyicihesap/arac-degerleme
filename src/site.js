@@ -3,6 +3,7 @@ import { kasaBul, modelKasasi } from './kasa.js';
 import { izKaydet } from './istatistik.js';
 import { kopru } from './kopru.js';
 import { takipPlanla, kabulPlanla } from './musteri.js';
+import { YAZILAR } from './rehber.js';
 import { db, ayarlar, VARSAYILAN_AYARLAR, simdi, int, str, kes, dolu, buYil, gorselHaritasi, logoUrl, modelGorselUrl, donanimlar } from './db.js';
 import { teklifHesapla, PARCALAR, DURUMLAR } from './fiyat.js';
 import { json, rastgeleHex } from './yardim.js';
@@ -50,6 +51,7 @@ async function siteApiIc(req, env, ctx) {
       return json({ ad: A.firma_adi, alt: A.firma_alt, telefon: A.telefon, whatsapp: A.whatsapp, eposta: A.eposta, adres: A.adres, teklif_goster: A.teklif_goster === '1', iller: hizmetIlleri(A),
         donanimlar: donanimlar(A).map((d) => ({ ad: d.ad, kosul: d.kosul })) });
     }
+    case 'rehber_son': return json([...YAZILAR].sort((a, b) => (a.tarih < b.tarih ? 1 : -1)).slice(0, 3).map((y) => ({ slug: y.slug, baslik: y.baslik, ozet: y.ozet, tarih: y.tarih })), 200, { 'Cache-Control': 'public, max-age=600' });
     case 'son_degerlemeler': { // ana sayfadaki "son değerlemeler" şeridi: kişisel bilgi yok
       const { results } = await D.prepare("SELECT tarih, yil, marka, model, il FROM talepler WHERE ad NOT LIKE 'TEST%' ORDER BY id DESC LIMIT 14").all();
       const simdiMs = Date.parse(simdi().replace(' ', 'T') + 'Z');
