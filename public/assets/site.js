@@ -4,7 +4,16 @@
   var $ = function (s, k) { return (k || document).querySelector(s); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var tl = function (n) { return new Intl.NumberFormat('tr-TR').format(Math.round(n)) + ' TL'; };
-  var api = function (a, q, govde) {
+  // anlık kesintide (ağ / 5xx) okuma istekleri 2 kez daha denenir; müşteri hemen "bakım" mesajı görmez
+  var api = function (a, q, govde, deneme) {
+    deneme = deneme || 0;
+    var tekrar = function (e) {
+      if (e && e.sistem && !govde && deneme < 2) return new Promise(function (ok) { setTimeout(ok, 700 * (deneme + 1)); }).then(function () { return api(a, q, govde, deneme + 1); });
+      throw e;
+    };
+    return api0(a, q, govde).catch(tekrar);
+  };
+  var api0 = function (a, q, govde) {
     var url = 'api.php?a=' + a + (q ? '&' + Object.keys(q).map(function (k) { return k + '=' + encodeURIComponent(q[k]); }).join('&') : '');
     return fetch(url, govde ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(govde) } : {})
       .then(function (r) {
