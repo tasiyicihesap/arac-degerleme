@@ -58,7 +58,7 @@
   }).catch(function () {});
 
   // panelden yüklenen gerçek fotoğraflar: adım kartları ve galeri
-  fetch('api.php?a=site_gorselleri').then(function (r) { return r.ok ? r.json() : {}; }).then(function (g) {
+  fetch('api.php?a=site_gorselleri&t=' + Math.floor(Date.now() / 60000)).then(function (r) { return r.ok ? r.json() : {}; }).then(function (g) {
     g = g || {};
     document.querySelectorAll('[data-gorsel]').forEach(function (el) {
       var u = g[el.dataset.gorsel]; if (u) { el.innerHTML = '<img src="' + esc(u) + '" alt="" loading="lazy">'; el.classList.add('foto-var'); }
