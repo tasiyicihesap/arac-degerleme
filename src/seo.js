@@ -13,7 +13,7 @@ const h = (s) => str(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;',
 async function liste(D) {
   if (listeOnbellek && listeOnbellek.son > Date.now()) return listeOnbellek.v;
   // soğuk başlayan her Worker örneği fiyatlar tablosunu baştan taramasın: ham liste 6 saat Cloudflare önbelleğinde
-  const ck = SITE + '/__seo_liste_v1', cache = typeof caches !== 'undefined' ? caches.default : null;
+  const ck = SITE + '/__seo_liste_v2', cache = typeof caches !== 'undefined' ? caches.default : null;
   let results = null;
   if (cache) { try { const c = await cache.match(ck); if (c) results = await c.json(); } catch (e) { results = null; } }
   if (!results) {
@@ -208,7 +208,7 @@ export async function seoSayfa(req, env, ctx, dbAl, yol) {
   const url = new URL(req.url);
   // sonda / olmayan adresleri tek biçime getir
   if ((yol.startsWith('/arac-degerleme') || yol.startsWith('/rehber')) && !yol.endsWith('/')) return Response.redirect(url.origin + yol + '/' + url.search, 301);
-  const anahtar = SITE + yol + '?s=5'; // sürüm: içerik değişince artır
+  const anahtar = SITE + yol + '?s=6'; // sürüm: içerik değişince artır
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { try { const c = await cache.match(anahtar); if (c) return c; } catch (e) {} }
   let govde, tur = 'text/html; charset=utf-8';
