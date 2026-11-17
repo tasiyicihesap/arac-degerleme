@@ -168,6 +168,7 @@ async function kur(D) {
     ek.push(D.prepare("UPDATE talepler SET grup_durum = 'eski'"));
   }
   if (!varS.has('acil')) ek.push(D.prepare('ALTER TABLE talepler ADD COLUMN acil INTEGER DEFAULT 0')); // 1: gruba yeniden acil uyarı, 3: ilk gönderim acil, 2: iletildi
+  if (!varS.has('grup_tam')) { ek.push(D.prepare('ALTER TABLE talepler ADD COLUMN grup_tam INTEGER DEFAULT 0')); ek.push(D.prepare("UPDATE talepler SET grup_tam = 1 WHERE grup_durum LIKE 'gönderildi%'")); } // detaylı grup bildirimi gitti mi
   if (!varS.has('tel_dogru')) ek.push(D.prepare('ALTER TABLE talepler ADD COLUMN tel_dogru INTEGER DEFAULT 0')); // 1: WhatsApp ile doğrulandı
   // telefon doğrulama: kod artık müşteriye WhatsApp'tan biz gönderiyoruz
   const { results: dk } = await D.prepare('PRAGMA table_info(tel_dogrula)').all();

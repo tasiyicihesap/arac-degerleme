@@ -257,7 +257,8 @@ async function siteApiIc(req, env, ctx) {
       const t = await D.prepare('SELECT id, kabul_tarih, tel_n FROM talepler WHERE id = ? AND anahtar = ?').bind(int(g.no), str(g.anahtar ?? '-') || '-').first();
       if (!t) return json({ hata: 'Talep bulunamadı. Lütfen bizi telefonla arayın.' }, 404);
       if (!t.kabul_tarih) {
-        await D.prepare("UPDATE talepler SET durum = 'Randevu İstedi', kabul_tarih = ? WHERE id = ?").bind(simdi(), t.id).run();
+        // randevu: gruplara detaylı bildirim gitsin (kısa özet daha önce gittiyse yeniden sıraya alınır)
+        await D.prepare("UPDATE talepler SET durum = 'Randevu İstedi', kabul_tarih = ?, grup_durum = CASE WHEN grup_durum LIKE 'gönderildi%' AND grup_tam <> 1 THEN '' ELSE grup_durum END WHERE id = ?").bind(simdi(), t.id).run();
         await kabulPlanla(D, await ayarlar(D), t.id, str(t.tel_n)).catch(() => {});
       }
       return json({ ok: 1 });

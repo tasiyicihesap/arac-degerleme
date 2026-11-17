@@ -27,7 +27,7 @@ export function tamMesaj(t) {
   const acil = int(t.acil) > 0;
   const l = [
     acil ? '🚨🚨🚨 *ACİL SATIŞ!* 🚨🚨🚨\n🔴 *Müşteri aracını ACİL satmak istiyor — HEMEN ARAYIN!* 🔴\n' : '',
-    `🚗 *${acil ? 'ACİL SAT · TALEP' : 'YENİ TEKLİF TALEBİ'} #${int(t.id)}*`,
+    `🚗 *${acil ? 'ACİL SAT · TALEP' : '📅 RANDEVU TALEBİ'} #${int(t.id)}*`,
     '━━━━━━━━━━━━━━━━━━',
     `👤 *Müşteri:* ${str(t.ad)}`,
     `📞 *Telefon:* ${str(t.tel)}` + (int(t.tel_dogru) ? ' ✅ _doğrulandı_' : '') + (wa ? `\n💬 *WhatsApp:* ${wa}` : ''),
@@ -65,13 +65,28 @@ export function kisaMesaj(t) {
     '_OTOKABUL.COM.TR · otomatik bildirim_ ⚙️',
   ].join('\n');
   return [
-    '🔔 *YENİ BİR TALEP VAR!* 🔔',
+    '📅 *RANDEVU TALEBİ VAR!* 🔔',
     '━━━━━━━━━━━━━━━━',
     `🚗 ${arac} · Talep #${int(t.id)}`,
-    '👉 Siteyi kontrol edin: otokabul.com.tr/yonetim',
+    '👉 Müşteri randevu istedi, aranmayı bekliyor: otokabul.com.tr/yonetim',
     '━━━━━━━━━━━━━━━━',
     '_OTOKABUL.COM.TR · otomatik bildirim_ ⚙️',
   ].join('\n');
+}
+
+// randevu istemeyen değerleme: kişisel bilgi yok, kısa haber (iki gruba da)
+export function ozetMesaj(t) {
+  const arac = [int(t.yil), str(t.marka), str(t.model)].filter(Boolean).join(' ');
+  let h = {}; try { h = JSON.parse(t.hasar || '{}') || {}; if (Array.isArray(h)) h = {}; } catch (e) { h = {}; }
+  const hs = Object.keys(h).length;
+  return [
+    `📊 *Değerleme yapıldı* · #${int(t.id)}`,
+    `🚗 ${arac}${t.versiyon ? ' ' + str(t.versiyon) : ''}`,
+    `🛣️ ${tf(t.km)} km · ${hs ? hs + ' parça boya/değişen' : 'hatasız'}${int(t.tramer) ? ' · tramer ' + tf(t.tramer) + ' TL' : ''}`,
+    int(t.teklif_min) ? `💰 Ön teklif: ${tf(t.teklif_min)} – ${tf(t.teklif_max)} TL` : '💰 Otomatik ön teklif verilmedi',
+    str(t.il) ? `📍 ${str(t.il)}` : '',
+    '_Müşteri randevu isterse detaylı bildirim gelecek._',
+  ].filter(Boolean).join('\n');
 }
 
 export async function kopruAnahtari(D, yenile) {
@@ -131,7 +146,7 @@ export async function kopru(req, D) {
   if (islem === 'mesaj_al') return json(await mesajAl(D, await ayarlar(D)));
   if (islem === 'mesaj_sonuc' && id) { await mesajSonuc(D, id, q('s'), q('not')); return json({ ok: 1 }); }
   if (islem === 'onay' && id) {
-    await D.prepare("UPDATE talepler SET grup_durum = ?, acil = CASE WHEN acil IN (1, 3) THEN 2 ELSE acil END WHERE id = ?").bind('gönderildi ' + simdi(), id).run();
+    await D.prepare("UPDATE talepler SET grup_durum = ?, acil = CASE WHEN acil IN (1, 3) THEN 2 ELSE acil END, grup_tam = CASE WHEN grup_tam = 2 THEN 1 ELSE grup_tam END WHERE id = ?").bind('gönderildi ' + simdi(), id).run();
     return json({ ok: 1 });
   }
   if (islem === 'foto' && id) { // talep fotoğrafı (gruba iletmek için)
@@ -140,16 +155,19 @@ export async function kopru(req, D) {
     return new Response(new Uint8Array(f.veri), { headers: { 'Content-Type': f.mime, 'Cache-Control': 'no-store' } });
   }
   if (islem === 'iade' && id) {
-    await D.prepare("UPDATE talepler SET grup_durum = '' WHERE id = ? AND grup_durum LIKE 'alındı%'").bind(id).run();
+    await D.prepare("UPDATE talepler SET grup_durum = '', grup_tam = CASE WHEN grup_tam = 2 THEN 0 ELSE grup_tam END WHERE id = ? AND grup_durum LIKE 'alındı%'").bind(id).run();
     return json({ ok: 1 });
   }
   // doğrulama kodlarını okuyabilen eklenti sürümü (dg=1) her turda yaşadığını bildirir
   if (q('dg') === '1') await kopruNabiz(D).catch(() => {});
   // al: fotoğraflar yüklensin diye en az 90 sn eski talepler; 10 dk içinde onaylanmayan sahiplenme tekrar alınabilir
   const simd = simdi(), esik = simdi(Date.now() - 90e3), zaman = simdi(Date.now() - 600e3);
-  const { results } = await D.prepare(`UPDATE talepler SET grup_durum = 'alındı ' || ?1
+  // randevu istendiyse ya da acil ise detaylı bildirim (grup_tam 2 = detaylı gönderiliyor, 1 = detaylı gönderildi);
+  // aksi halde sadece kısa "değerleme yapıldı" mesajı
+  const { results } = await D.prepare(`UPDATE talepler SET grup_durum = 'alındı ' || ?1,
+      grup_tam = CASE WHEN (kabul_tarih IS NOT NULL AND kabul_tarih <> '') OR acil > 0 THEN CASE WHEN grup_tam = 1 THEN 1 ELSE 2 END ELSE grup_tam END
     WHERE id IN (SELECT id FROM talepler WHERE tarih <= ?2 AND (grup_durum = '' OR grup_durum IS NULL OR (grup_durum LIKE 'alındı %' AND substr(grup_durum, 8) < ?3)) ORDER BY id LIMIT 5)
-    RETURNING id, tarih, ad, tel, il, marka, model, yil, versiyon, yakit, vites, kasa, km, renk, hasar, tramer, agir, teklif_min, teklif_max, donanim, aciklama, foto_sayi, kabul_tarih, acil, tel_dogru`)
+    RETURNING id, tarih, ad, tel, il, marka, model, yil, versiyon, yakit, vites, kasa, km, renk, hasar, tramer, agir, teklif_min, teklif_max, donanim, aciklama, foto_sayi, kabul_tarih, acil, tel_dogru, grup_tam`)
     .bind(simd, esik, zaman).all();
   results.sort((x, y) => x.id - y.id);
   const fotolar = {};
@@ -157,5 +175,10 @@ export async function kopru(req, D) {
     const { results: fl } = await D.prepare(`SELECT id, talep_id FROM talep_foto WHERE talep_id IN (${results.map(() => '?').join(',')}) ORDER BY id`).bind(...results.map((t) => t.id)).all();
     for (const f of fl) (fotolar[f.talep_id] = fotolar[f.talep_id] || []).push(int(f.id));
   }
-  return json({ talepler: results.map((t) => ({ id: int(t.id), tam: tamMesaj(t), kisa: kisaMesaj(t), fotolar: int(t.acil) === 1 ? [] : fotolar[t.id] || [] })) });
+  return json({ talepler: results.map((t) => {
+    const detay = (str(t.kabul_tarih) !== '' || int(t.acil) > 0);
+    if (!detay) { const o = ozetMesaj(t); return { id: int(t.id), tam: o, kisa: o, fotolar: [] }; }
+    // acil uyarısı, detaylı bildirim daha önce gittiyse fotoğrafsız tekrar gönderilir
+    return { id: int(t.id), tam: tamMesaj(t), kisa: kisaMesaj(t), fotolar: int(t.acil) === 1 && int(t.grup_tam) === 1 ? [] : fotolar[t.id] || [] };
+  }) });
 }
