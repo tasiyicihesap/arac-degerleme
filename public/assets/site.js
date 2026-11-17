@@ -174,7 +174,7 @@
         q = (q || '').toLocaleLowerCase('tr');
         var f = l.filter(function (o) { return !q || o.ad.toLocaleLowerCase('tr').indexOf(q) >= 0; });
         kut.innerHTML = f.length ? f.map(function (o) {
-          return '<button class="secenek ad-kart' + (S.model === o.ad ? ' secili' : '') + '" data-v="' + esc(o.ad) + '">' + esc(o.ad.toLocaleUpperCase('tr')) + '</button>';
+          return '<button class="secenek ad-kart' + (S.model === o.ad ? ' secili' : '') + '" data-v="' + esc(o.ad) + '">' + esc(o.ad.toUpperCase()) + '</button>';
         }).join('') : '<div class="bos">Bu yıl için model bulunamadı. Bizi arayın, değerlendirelim.</div>';
       };
       // marka/model sayfasından gelindiyse modeli kendiliğinden seç
@@ -213,7 +213,7 @@
       // tek seçenek varsa otomatik geç
       if (liste.length === 1) { if (S[alan] !== liste[0]) { S[alan] = liste[0]; temizleSonra(alan); } git(adim + yon); return; }
       k.innerHTML = '<div class="izgara' + (alan === 'kasa' ? '' : '') + '" id="ogeler">' + liste.map(function (s) {
-        return '<button class="secenek' + (alan === 'kasa' ? ' ad-kart' : '') + (S[alan] === s ? ' secili' : '') + '" data-v="' + esc(s) + '">' + (alan === 'kasa' ? esc(s.toLocaleUpperCase('tr')) : '<span>' + esc(s) + '</span>') + '</button>';
+        return '<button class="secenek' + (alan === 'kasa' ? ' ad-kart' : '') + (S[alan] === s ? ' secili' : '') + '" data-v="' + esc(s) + '">' + (alan === 'kasa' ? esc(s.toUpperCase()) : '<span>' + esc(s) + '</span>') + '</button>';
       }).join('') + '</div>';
       $('#ogeler', k).onclick = function (e) { var b = e.target.closest('.secenek'); if (b) sec(alan, b.dataset.v, true); };
     }).catch(hataGoster(k));
