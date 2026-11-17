@@ -425,7 +425,7 @@
       else if (sv.left - m - pw >= m) { x = sv.left - m - pw; y = cy; }
       else if (sv.bottom + m + ph <= H - m && sv.bottom + m >= 60) { x = r.left + r.width / 2 - pw / 2; y = sv.bottom + m; }
       else if (sv.top - m - ph >= 60) { x = r.left + r.width / 2 - pw / 2; y = sv.top - m - ph; }
-      else { x = r.left + r.width / 2 - pw / 2; y = r.bottom + m; if (y + ph > H - m) y = r.top - ph - m; if (y < m) y = Math.max(m, (H - ph) / 2); }
+      else { x = (W - pw) / 2; y = H - ph - m; if (r.bottom > y - 4) y = Math.min(70, Math.max(m, r.top - ph - m)); } // telefonda: ekranın altına (parçayı kapatırsa üste) sabit şerit
       pen.style.left = Math.max(m, Math.min(W - pw - m, x)) + 'px'; pen.style.top = y + 'px';
     }
     function penKaydir() { penYerlestir(); }
