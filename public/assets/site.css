@@ -315,3 +315,4 @@ button.dg-btn:disabled{opacity:.5;cursor:default;box-shadow:none}
 .dogrula-kutu .hata{margin-top:6px}
 .dg-ok-buyuk{font-size:18px;padding:28px 10px}
 .dg-ok-buyuk p{font:500 14px Inter,sans-serif;color:#374151;margin:8px 0 0}
+.dg-sayac{font-variant-numeric:tabular-nums;color:#14532d}

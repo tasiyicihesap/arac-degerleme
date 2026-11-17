@@ -8,7 +8,7 @@ import { rastgeleHex } from './yardim.js';
 
 const KOD_GECERLI_DK = 15;     // kod bu kadar dakika geçerli
 const KOPRU_CANLI_SN = 150;    // köprü son bu kadar saniyede haber verdiyse "çalışıyor" sayılır
-const GONDERIM_BEKLE_SN = 75;  // kod bu sürede gönderilemezse doğrulama atlanır
+const GONDERIM_BEKLE_SN = 90;  // kod bu sürede gönderilemezse doğrulama atlanır
 
 const telN = (t) => str(t).replace(/\D/g, '').slice(-10);
 export const telGoster = (t) => { const d = telN(t); return d.length === 10 ? `0${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6, 8)} ${d.slice(8)}` : str(t); };
@@ -87,7 +87,7 @@ export async function dogrulaKod(D, token, kod) {
 export async function dogrulaAl(D) {
   const { results } = await D.prepare(`UPDATE tel_dogrula SET gonderim = 'gonderiliyor', gonderim_zaman = ?1
     WHERE token IN (SELECT token FROM tel_dogrula WHERE durum = 'bekliyor' AND olusma > ?2 AND (gonderim = 'sira' OR (gonderim = 'gonderiliyor' AND gonderim_zaman < ?3)) ORDER BY olusma LIMIT 3)
-    RETURNING token, kod, tel`).bind(simdi(), simdi(Date.now() - GONDERIM_BEKLE_SN * 1000), simdi(Date.now() - 60e3)).all();
+    RETURNING token, kod, tel`).bind(simdi(), simdi(Date.now() - GONDERIM_BEKLE_SN * 1000), simdi(Date.now() - 85e3)).all();
   return { kodlar: results.map((r) => ({ token: r.token, tel: '90' + r.tel, metin: mesajMetni(r.token, r.kod) })) };
 }
 export async function dogrulaSonuc(D, token, s) {

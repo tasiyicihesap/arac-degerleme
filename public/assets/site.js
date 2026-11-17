@@ -576,7 +576,7 @@
   // ---- telefon doğrulama: yazılan numaraya WhatsApp'tan 6 haneli kod gönderilir, müşteri kodu buraya yazar ----
   // Mesajdaki bağlantıya dokunursa da (#dg=…) doğrulanır ve ön teklif açılır. Kod gönderilemezse (bilgisayar /
   // WhatsApp Web kapalı) sunucu "atla" der ve teklif doğrudan hesaplanır; müşteri hiçbir zaman takılı kalmaz.
-  var dgZaman = null, dgToken = '', dgBas = 0;
+  var dgZaman = null, dgToken = '', dgBas = 0, dgSayacZ = null;
   function dogrulaKapat() { if (dgZaman) { clearTimeout(dgZaman); dgZaman = null; } dgToken = ''; var b = $('#dogrulaKutu'); if (b) { b.hidden = true; b.innerHTML = ''; } }
   function bekleyenKaydet() {
     try { var k = {}; Object.keys(S).forEach(function (x) { if (x !== 'fotolar') k[x] = S[x]; }); localStorage.setItem('otk_bekleyen', JSON.stringify({ S: k, t: Date.now() })); } catch (e) {}
@@ -596,12 +596,21 @@
     b.hidden = false;
     b.innerHTML = '<div class="dg-bas">📱 Son adım: numaranı doğrula</div>' +
       '<p><b>' + esc(tel) + '</b> numaralı WhatsApp\'ına 6 haneli bir kod gönderiyoruz. Kodu aşağıya yaz; ya da mesajdaki bağlantıya dokun, ön teklifin açılsın.</p>' +
-      '<div class="dg-durum" id="dgDurum"><span class="dg-nokta"></span>Kod gönderiliyor…</div>' +
+      '<div class="dg-durum" id="dgDurum"><span class="dg-nokta"></span><span>Kod gönderiliyor… en geç <b class="dg-sayac" id="dgSayac">0:45</b> içinde WhatsApp\'ına gelir</span></div>' +
       '<input class="alan dg-kod-giris" id="dgKod" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="• • • • • •" aria-label="Doğrulama kodu">' +
       '<button type="button" class="dg-btn" id="dgOnay" disabled>Kodu doğrula ve teklifimi göster</button>' +
       '<div class="dg-alt"><a href="#" id="dgNo">Numarayı değiştir</a><a href="#" id="dgTekrar" hidden>Kodu tekrar gönder</a></div>' +
       '<div class="hata" id="dgHata"></div>';
     btnI.textContent = 'Kod bekleniyor…'; btnI.disabled = true;
+    // geri sayım: kod gelene kadar
+    if (dgSayacZ) clearInterval(dgSayacZ);
+    var bitis = Date.now() + 45000;
+    dgSayacZ = setInterval(function () {
+      var e = $('#dgSayac'); if (!e) { clearInterval(dgSayacZ); dgSayacZ = null; return; }
+      var kal = Math.max(0, Math.ceil((bitis - Date.now()) / 1000));
+      e.textContent = '0:' + (kal < 10 ? '0' : '') + kal;
+      if (!kal) { clearInterval(dgSayacZ); dgSayacZ = null; var d = $('#dgDurum'); if (d) d.innerHTML = '<span class="dg-nokta"></span><span>Kod biraz gecikti, birkaç saniye içinde gelecek…</span>'; }
+    }, 250);
     if (b.scrollIntoView) b.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     var g = $('#dgKod', b), o = $('#dgOnay', b);
     g.oninput = function () { g.value = g.value.replace(/\D/g, '').slice(0, 6); o.disabled = g.value.length !== 6; $('#dgHata').textContent = ''; if (g.value.length === 6) kodGonder(); };
@@ -633,11 +642,11 @@
         if (r.durum === 'onay') return dogrulandi();
         if (r.durum === 'atla') { dogrulaKapat(); return teklifIste(); }
         if (r.durum === 'sure' || r.durum === 'yok') { if (d) d.innerHTML = 'Kodun süresi doldu.'; var t = $('#dgTekrar'); if (t) t.hidden = false; return; }
-        if (r.gonderim === 'gonderildi' && d) d.innerHTML = '<span class="dg-tamam">✓</span> Kod WhatsApp\'ına gönderildi. Mesajdaki kodu yaz.';
-        if (r.gonderim === 'yok' && d) { d.innerHTML = '<span class="dg-hata-i">!</span> Bu numara WhatsApp kullanmıyor görünüyor. Numaranı kontrol et ya da bizi ara: ' + esc(firma.telefon || YEDEK_FIRMA.telefon); return; }
+        if (r.gonderim === 'gonderildi' && d && !d.dataset.gitti) { d.dataset.gitti = 1; if (dgSayacZ) { clearInterval(dgSayacZ); dgSayacZ = null; } d.innerHTML = '<span class="dg-tamam">✓</span> Kod WhatsApp\'ına gönderildi. Mesajdaki kodu yaz.'; var kg = $('#dgKod'); if (kg && window.innerWidth > 980) kg.focus(); }
+        if (r.gonderim === 'yok' && d) { if (dgSayacZ) { clearInterval(dgSayacZ); dgSayacZ = null; } d.innerHTML = '<span class="dg-hata-i">!</span> Bu numara WhatsApp kullanmıyor görünüyor. Numaranı kontrol et ya da bizi ara: ' + esc(firma.telefon || YEDEK_FIRMA.telefon); return; }
         dogrulaSor(n + 1);
       }, function () { dogrulaSor(n + 1); });
-    }, n < 0 ? 200 : 2000);
+    }, n < 0 ? 200 : 1500);
   }
   // müşteri WhatsApp'tan sayfaya dönünce beklemeden sor
   document.addEventListener('visibilitychange', function () { if (!document.hidden && dgToken && $('#dogrulaKutu') && !$('#dogrulaKutu').hidden) dogrulaSor(-1); });
