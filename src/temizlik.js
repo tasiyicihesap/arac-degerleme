@@ -14,7 +14,7 @@ export const MARKA_IZIN_VARSAYILAN = [
 
 // ticari ağır vasıta, otobüs, özel amaçlı araç ve kasko listesindeki kısaltma/bozuk adlar
 const AGIR = /(kamyon|cekici|çekici|otob[uü]s|minib[uü]s|okul|personel|cenaze|frigo|sasi|şasi|kabin|traktor|traktör|tadano|^canter|^fuso|^npr$|^nlr$|^nnr$|^fsr$|n-wide|^novo|visigo|^hd\d*$|f-max|f-line|^cargo|atego|actros|axor|tourismo|travego|conecto|citaro|intouro|^h-?100$|^h350$|^l300$|^(t|tr|tra|tran|trans)\.)/i;
-const BOZUK = new Set(['the', 'cross', 'touraeg', 'highlinder', 'abart', 'latitute', 'spinter', 'mercedes', 'amg', 'mercedesamg', 'mercedes-amg', 'mercedes-maybach', 'mclaren', 'lexus', 'alpine', 'my', 'mc', 'np', 'gr', 'm', 'r', 'v', 't.']);
+const BOZUK = new Set(['the', 'cross', 'touraeg', 'highlinder', 'abart', 'latitute', 'spinter', 'mercedes', 'amg', 'mercedesamg', 'mercedes-amg', 'mercedes-maybach', 'mclaren', 'lexus', 'alpine', 'stevio', 'byd', 'jeep', 'wrangler', 'grandcherokee', 'omoda', 'grand c4picasso', 'grandc4picasso', 'ttr', 'my', 'mc', 'np', 'gr', 'm', 'r', 'v', 't.']);
 const anahtar = (s) => str(s).toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/[^a-z0-9ğüşöç]/g, '');
 
 export async function araclariTemizle(D, izinMetni, deneme) {
