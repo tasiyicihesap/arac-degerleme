@@ -119,3 +119,16 @@ export async function dogrulaKarar(D, token, imza) {
 export async function dogrulaTalepYaz(D, token, imza, sonuc) {
   if (token) await D.prepare('UPDATE tel_dogrula SET talep_sonuc = ? WHERE token = ?').bind(JSON.stringify({ imza, t: Date.now(), yanit: sonuc }), str(token)).run();
 }
+
+// WhatsApp'taki bağlantı: kod doğrulanır, bu doğrulamayla oluşan ön teklif (varsa) aracın bilgileriyle döner
+export async function dogrulaTeklif(D, token, kod) {
+  const k = await dogrulaKod(D, token, kod);
+  if (k.hata) return k;
+  const r = await D.prepare('SELECT talep_sonuc FROM tel_dogrula WHERE token = ?').bind(str(token)).first();
+  let o = null; try { o = JSON.parse(str(r && r.talep_sonuc) || 'null'); } catch (e) {}
+  const y = o && o.yanit;
+  if (!y || !y.no) return { hazir: 0 };
+  const t = await D.prepare('SELECT ad, tel, il, marka, model, yil, versiyon, km, kabul_tarih FROM talepler WHERE id = ? AND anahtar = ?').bind(int(y.no), str(y.anahtar)).first();
+  if (!t) return { hazir: 0 };
+  return { hazir: 1, sonuc: y, arac: { ad: t.ad, tel: t.tel, il: t.il, marka: t.marka, model: t.model, yil: int(t.yil), versiyon: t.versiyon || '', km: int(t.km) }, randevu: t.kabul_tarih ? 1 : 0 };
+}

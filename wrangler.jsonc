@@ -6,7 +6,7 @@
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
-    "run_worker_first": ["/api.php", "/yonetim/api.php", "/yuklemeler/*", "/sitemap.xml", "/arac-degerleme", "/arac-degerleme/*", "/rehber", "/rehber/*", "/mtv-hesaplama", "/mtv-hesaplama/", "/noter-masrafi-hesaplama", "/noter-masrafi-hesaplama/"]
+    "run_worker_first": ["/api.php", "/yonetim/api.php", "/yuklemeler/*", "/sitemap.xml", "/arac-degerleme", "/arac-degerleme/*", "/rehber", "/rehber/*", "/mtv-hesaplama", "/mtv-hesaplama/", "/noter-masrafi-hesaplama", "/noter-masrafi-hesaplama/", "/otv-hesaplama", "/otv-hesaplama/", "/arac-muayene-ucreti-hesaplama", "/arac-muayene-ucreti-hesaplama/", "/yakit-hesaplama", "/yakit-hesaplama/", "/elektrikli-arac-sarj-hesaplama", "/elektrikli-arac-sarj-hesaplama/", "/kw-hp-donusturme", "/kw-hp-donusturme/", "/lastik-ebadi-hesaplama", "/lastik-ebadi-hesaplama/", "/yillik-km-hesaplama", "/yillik-km-hesaplama/", "/plaka-il-kodlari", "/plaka-il-kodlari/", "/hesaplamalar", "/hesaplamalar/"]
   },
   // Veritabanı ilk yayında Cloudflare tarafından otomatik oluşturulur
   // otokabul.com.tr ve www alan adları bu siteye bağlı

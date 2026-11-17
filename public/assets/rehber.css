@@ -59,3 +59,40 @@
 @media (max-width:640px){.hs-alanlar{grid-template-columns:1fr}.hs-buyuk b{font-size:24px}}
 .hs-alanlar input:not([type=checkbox]){font:inherit;font-weight:500;padding:11px 12px;border:1.5px solid #e4e0d6;border-radius:10px}
 .hs-tek{grid-column:1/-1}.hs-tek span{display:flex;gap:8px;align-items:center;font-weight:600}
+
+/* hesaplama araçları: sekmeler, tablolar, reklamlar */
+.hs-sekme{display:flex;gap:6px;background:#f6f4ee;border-radius:12px;padding:5px;margin-bottom:16px}
+.hs-sekme button{flex:1;border:0;background:transparent;font:700 14px Inter,sans-serif;padding:10px 8px;border-radius:9px;cursor:pointer;color:#475569}
+.hs-sekme button.secili{background:#fff;color:#0f1b2d;box-shadow:0 2px 6px rgba(15,27,45,.12)}
+.hs-alanlar input[type=date]{font:inherit;font-weight:500;padding:10px 12px;border:1.5px solid #e4e0d6;border-radius:10px}
+.hs-uyari{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:10px 12px;font-size:13.5px;margin:10px 0 0}
+.hs-ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:10px;padding:10px 12px;font-size:13.5px;margin:10px 0 0}
+.hs-tablo-kap{overflow-x:auto;margin:12px 0 18px}
+.hs-tablo{width:100%;border-collapse:collapse;font-size:14px;background:#fff;border-radius:12px;overflow:hidden}
+.hs-tablo th,.hs-tablo td{padding:9px 12px;border-bottom:1px solid #f1efe8;text-align:left;vertical-align:top}
+.hs-tablo th{background:#0f1b2d;color:#fff;font-weight:700;font-size:13px}
+.hs-tablo td:last-child{font-weight:700;white-space:nowrap}
+.hs-kars{margin:12px 0}
+.hs-plaka-iz{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:14px;max-height:520px;overflow:auto}
+.hs-plaka{display:flex;align-items:center;gap:10px;border:1.5px solid #e4e0d6;border-radius:10px;padding:6px 10px;background:#fff}
+.hs-plaka b{background:#1d4ed8;color:#fff;border-radius:6px;padding:3px 7px;font:800 15px Manrope,sans-serif;min-width:34px;text-align:center}
+.hs-reklam-ust{display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,#0f1b2d,#1e3a5f);color:#fff;border-radius:14px;padding:12px 16px;margin:4px 0 16px;text-decoration:none;font-size:14px;line-height:1.45}
+.hs-reklam-ust b{color:#ffd400}
+.hs-reklam-ust .hr-ikon{font-size:26px}
+.hs-reklam-ust .hr-btn{margin-left:auto;background:#ff6a1a;color:#fff;border-radius:10px;padding:9px 14px;font-weight:800;white-space:nowrap}
+.hs-reklam-ust:hover .hr-btn{background:#ff5500}
+.hs-reklam-kart{display:flex;align-items:center;gap:24px;background:radial-gradient(circle at 85% 20%,#ffd400 0,#ffd400 70px,transparent 71px),linear-gradient(135deg,#ff6a1a,#ff3d00);color:#fff;border-radius:22px;padding:28px;margin:28px 0}
+.hs-reklam-kart h2{font:800 26px Manrope,sans-serif;margin:8px 0 8px;color:#fff}
+.hs-reklam-kart p{margin:0 0 10px;font-size:15px;line-height:1.55;max-width:620px}
+.hs-reklam-kart ul{display:flex;flex-wrap:wrap;gap:8px 16px;list-style:none;padding:0;margin:0;font-weight:700;font-size:14px}
+.hk-rozet{display:inline-block;background:rgba(15,27,45,.85);border-radius:999px;padding:4px 10px;font:800 11px Inter,sans-serif;letter-spacing:.06em}
+.hk-btn{flex:none;background:#0f1b2d;color:#fff;text-decoration:none;font:800 16px Inter,sans-serif;padding:15px 20px;border-radius:14px;box-shadow:0 10px 24px -10px rgba(0,0,0,.5)}
+.hk-btn:hover{background:#000}
+.hs-diger{margin:26px 0}
+.hs-diger h2{font:800 22px Manrope,sans-serif;margin:0 0 12px}
+.hs-diger-iz{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.hs-diger-iz a{display:flex;flex-direction:column;gap:3px;background:#fff;border:1.5px solid #ece8df;border-radius:14px;padding:14px;text-decoration:none;color:inherit;transition:transform .12s,border-color .12s}
+.hs-diger-iz a:hover{transform:translateY(-2px);border-color:#ffd400}
+.hs-diger-iz a span{font-size:22px}.hs-diger-iz a b{font:800 15px Manrope,sans-serif;color:#0f1b2d}.hs-diger-iz a small{color:#64748b;font-size:12.5px}
+.hs-diger-iz a.hs-diger-robot{background:#0f1b2d;border-color:#0f1b2d}.hs-diger-robot b{color:#ffd400!important}.hs-diger-robot small{color:#cbd5e1!important}
+@media (max-width:640px){.hs-reklam-ust{flex-wrap:wrap}.hs-reklam-ust .hr-btn{margin-left:0;width:100%;text-align:center}.hs-reklam-kart{flex-direction:column;align-items:stretch;padding:22px}.hk-btn{text-align:center}}

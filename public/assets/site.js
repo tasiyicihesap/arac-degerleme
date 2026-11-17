@@ -668,18 +668,30 @@
   function dgBaglanti() {
     var m = /^#dg=([0-9a-f]{16,64})\.(\d{6})$/.exec(location.hash || ''); if (!m) return false;
     try { history.replaceState(null, '', location.pathname + location.search + '#degerle'); } catch (e) {}
-    var kap = document.getElementById('degerle'); if (kap && kap.scrollIntoView) setTimeout(function () { kap.scrollIntoView({ behavior: 'smooth' }); }, 300);
-    api('dogrula_kod', null, { token: m[1], kod: m[2] }).then(function () {
-      var bek = null; try { bek = JSON.parse(localStorage.getItem('otk_bekleyen') || 'null'); } catch (e) {}
-      if (bek && bek.S && Date.now() - bek.t < 30 * 60e3) {
-        // bu tarayıcıda yarım kalan değerleme: bilgiler geri yüklenir, ön teklif doğrudan gösterilir
-        Object.keys(bek.S).forEach(function (x) { S[x] = bek.S[x]; });
-        S.dogrula = m[1]; S.dogrulaTel = (S.tel || '').replace(/\D/g, '').slice(-10);
-        git(ADIMLAR.length - 2); setTimeout(teklifIste, 300);
-      } else {
+    setTimeout(function () { var kap = document.getElementById('sihirbaz') || document.getElementById('degerle'); if (kap && kap.scrollIntoView) kap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 400);
+    var deneme = 0;
+    govde.innerHTML = '<div class="dg-ok dg-ok-buyuk">⏳ Ön teklifin açılıyor…</div>';
+    (function sor() {
+      api('dogrula_teklif', null, { token: m[1], kod: m[2] }).then(function (r) {
+        if (r.hazir) {
+          // bu doğrulamayla oluşan ön teklif: aracın bilgileriyle doğrudan sonuç ekranı
+          Object.keys(r.arac).forEach(function (x) { S[x] = r.arac[x]; });
+          S.dogrula = m[1]; S.dogrulaTel = String(S.tel || '').replace(/\D/g, '').slice(-10); S.kvkk = true;
+          sonuc = r.sonuc; try { localStorage.removeItem('otk_bekleyen'); } catch (e) {}
+          return git(ADIMLAR.length - 1);
+        }
+        var bek = null; try { bek = JSON.parse(localStorage.getItem('otk_bekleyen') || 'null'); } catch (e) {}
+        if (bek && bek.S && Date.now() - bek.t < 30 * 60e3) {
+          // bu tarayıcıda yarım kalan değerleme: bilgiler geri yüklenir, ön teklif hesaplanır
+          Object.keys(bek.S).forEach(function (x) { S[x] = bek.S[x]; });
+          S.dogrula = m[1]; S.dogrulaTel = (S.tel || '').replace(/\D/g, '').slice(-10);
+          git(ADIMLAR.length - 2); return setTimeout(teklifIste, 300);
+        }
+        // değerleme başka cihazda yapıldıysa ön teklif birkaç saniye içinde oluşur
+        if (++deneme < 20) return setTimeout(sor, 2000);
         govde.innerHTML = '<div class="dg-ok dg-ok-buyuk">✓ Numaran doğrulandı.<p>Ön teklifin, değerlemeyi yaptığın sayfada açıldı; o sayfaya geri dönebilirsin.</p></div>';
-      }
-    }, function (e) { govde.insertAdjacentHTML('afterbegin', '<div class="hata">' + esc(hataMetni(e)) + '</div>'); });
+      }, function (e) { govde.innerHTML = '<div class="hata">' + esc(hataMetni(e)) + '</div>'; });
+    })();
     return true;
   }
 

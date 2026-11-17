@@ -1,5 +1,5 @@
 // OTOKABUL — müşteri sitesi API'si (eski api.php)
-import { dogrulaBaslat, dogrulaDurum, dogrulaKod, dogrulaKarar, dogrulaTalepYaz, dogrulamaGerekli, talepImza } from './dogrula.js';
+import { dogrulaBaslat, dogrulaDurum, dogrulaKod, dogrulaTeklif, dogrulaKarar, dogrulaTalepYaz, dogrulamaGerekli, talepImza } from './dogrula.js';
 import { kasaBul, modelKasasi } from './kasa.js';
 import { izKaydet } from './istatistik.js';
 import { kopru } from './kopru.js';
@@ -128,6 +128,12 @@ async function siteApiIc(req, env, ctx) {
       return json(r, r.hata ? 400 : 200);
     }
     case 'dogrula_durum': return json(await dogrulaDurum(D, q('t')));
+    case 'dogrula_teklif': {
+      if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);
+      let g = {}; try { g = (await req.json()) || {}; } catch (e) {}
+      const r = await dogrulaTeklif(D, g && g.token, g && g.kod);
+      return json(r, r.hata ? 400 : 200);
+    }
     case 'dogrula_kod': {
       if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);
       let g = {}; try { g = (await req.json()) || {}; } catch (e) {}
