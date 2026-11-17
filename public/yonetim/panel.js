@@ -103,7 +103,7 @@
       var sm = Math.max.apply(null, r.saat.map(function (x) { return +x.n; }).concat([1])), saat = {}; r.saat.forEach(function (x) { saat[x.ad] = +x.n; });
       $('#iIc', k).innerHTML =
         '<div class="ist-kartlar">' + kart('Tekil ziyaretçi', NF0(o.ziyaretci), NF0(o.geri_donen) + ' geri dönen') + kart('Oturum', NF0(o.oturum)) + kart('Sayfa görüntüleme', NF0(o.goruntuleme), o.oturum ? (Math.round(o.goruntuleme / o.oturum * 10) / 10).toString().replace('.', ',') + ' sayfa / oturum' : '') +
-        kart('Değerlemeye başlayan', NF0(ol.sihirbaz), oran(ol.sihirbaz, o.oturum) + ' oturum') + kart('Teklif alan', NF0(ol.teklif), oran(ol.teklif, o.oturum) + ' dönüşüm') + kart('Randevu isteyen', NF0(ol.randevu)) +
+        kart('Değerlemeye başlayan', NF0(ol.sihirbaz), oran(ol.sihirbaz, o.oturum) + ' oturum') + kart('Teklif alan', NF0(ol.teklif), oran(ol.teklif, o.oturum) + ' dönüşüm') + kart('Randevu isteyen', NF0(ol.randevu)) + kart('Acil sat', NF0(ol.acil)) +
         kart('WhatsApp tıklaması', NF0(ol.whatsapp)) + kart('Telefon tıklaması', NF0(ol.telefon)) + kart('İletişim formu', NF0(ol.mesaj)) + '</div>' +
         '<div class="kutu"><h2>Günlük ziyaretçi</h2><div class="ist-grafik">' + (r.gunluk.length ? r.gunluk.map(function (x) {
           return '<div title="' + esc(x.ad) + ': ' + x.ziy + ' ziyaretçi, ' + x.gor + ' görüntüleme"><em style="height:' + Math.max(3, x.ziy / gm * 100) + '%"></em><span>' + x.ad.slice(8, 10) + '.' + x.ad.slice(5, 7) + '</span></div>';
@@ -141,7 +141,7 @@
   }
 
   // ---------- TALEPLER ----------
-  var DURUMLAR = ['Yeni', 'Randevu İstedi', 'Arandı', 'Ekspertiz', 'Alındı', 'Vazgeçti', 'Uygun değil'];
+  var DURUMLAR = ['Yeni', 'ACİL SAT', 'Randevu İstedi', 'Arandı', 'Ekspertiz', 'Alındı', 'Vazgeçti', 'Uygun değil'];
   var talepCache = [];
   function hasarOzet(h) {
     try { h = typeof h === 'string' ? JSON.parse(h) : h; } catch (e) { h = {}; }
@@ -922,7 +922,7 @@
 
     // --- katalog tablosu ---
     var KASALAR = ['', 'Sedan', 'Hatchback', 'SUV', 'Station Wagon', 'Coupe', 'Cabrio', 'MPV / Ticari', 'Pick-up'];
-    var YAKITLAR = ['Benzin', 'Dizel', 'LPG', 'Hibrit', 'Elektrik'], VITESLER = ['Manuel', 'Otomatik', 'Yarı Otomatik'];
+    var YAKITLAR = ['Benzin', 'Dizel', 'LPG', 'Hibrit', 'Elektrik'], VITESLER = ['Manuel', 'Otomatik'];
     var sec = function (alan, l, v) { return '<select class="girdi" data-ka="' + alan + '" style="padding:2px 4px;font-size:12.5px">' + l.map(function (x) { return '<option' + (x === v ? ' selected' : '') + ' value="' + esc(x) + '">' + (x || '—') + '</option>'; }).join('') + '</select>'; };
     var tkZaman, tkCiz = function () {
       var m = $('#tkMarka', k).value; if (!m) return;
@@ -952,7 +952,7 @@
     ['Kilometre', [['yillik_km', 'Beklenen yıllık km', 'Piyasa km ortalaması yoksa'], ['km_ceza', 'Fazla her 10.000 km için −%'], ['km_bonus', 'Eksik her 10.000 km için +%'], ['km_sinir', 'Km etkisi en fazla ±%']]],
     ['Hasar', [['lokal_boya', 'Lokal boyalı parça başına −%'], ['boyali', 'Boyalı parça başına −%'], ['degisen', 'Değişen parça başına −%'], ['tavan_kat', 'Tavan / kaput çarpanı', 'Kritik parçalarda kesinti × bu sayı'],
       ['tramer_kat', 'Tramer katsayısı', 'Tramer/piyasa × 100 × katsayı = −%'], ['tramer_sinir', 'Tramer kesintisi en fazla %']]],
-    ['Yakıt ve vites farkı (%)', [['yakit_Benzin', 'Benzin'], ['yakit_Dizel', 'Dizel'], ['yakit_LPG', 'LPG'], ['yakit_Hibrit', 'Hibrit'], ['yakit_Elektrik', 'Elektrik'], ['vites_Manuel', 'Manuel'], ['vites_Otomatik', 'Otomatik'], ['vites_Yarı Otomatik', 'Yarı Otomatik']]],
+    ['Yakıt ve vites farkı (%)', [['yakit_Benzin', 'Benzin'], ['yakit_Dizel', 'Dizel'], ['yakit_LPG', 'LPG'], ['yakit_Hibrit', 'Hibrit'], ['yakit_Elektrik', 'Elektrik'], ['vites_Manuel', 'Manuel'], ['vites_Otomatik', 'Otomatik']]],
     ['Bildirimler', [['bildirim_eposta', 'Bildirim e-postası', 'Mesajlar ve talepler buraya gelir; Cloudflare\'de doğrulanmış adres olmalı'], ['tg_token', 'Telegram bot anahtarı', 'Sağdaki "Telegram bildirimleri" kutusundaki adımlarla alınır'], ['wa_bildirim_tel', 'WhatsApp bildirim numarası', '90 ile, ör. 905418673478'],
       ['wa_bildirim_anahtar', 'WhatsApp bildirim anahtarı (CallMeBot)', 'Aşağıdaki kutudaki adımlarla alınır'], ['bildirim_talep', 'Yeni teklif talebinde de bildir', '1 = evet, 0 = hayır']]],
     ['Değerleme sınırı', [['sorgu_gunluk', 'Bir numara günde en fazla kaç değerleme yapabilir'], ['sorgu_muaf', 'Sınırsız numaralar', 'Virgülle ayır, ör. 05011763994. 3 gün peş peşe değerleme yapan numara sırayla 3 gün, 1 hafta, 10 gün bekletilir']]],
@@ -1050,7 +1050,7 @@
         '<label>Marka<input class="girdi" id="sMarka" list="sMarkalar" value="Fiat"></label><datalist id="sMarkalar">' + markaListesi.map(function (m) { return '<option value="' + esc(m) + '">'; }).join('') + '</datalist>' +
         '<label>Model<input class="girdi" id="sModel" value="Egea"></label><label>Yıl<input class="girdi" id="sYil" value="2021"></label><label>Km<input class="girdi" id="sKm" value="90000"></label>' +
         '<label>Yakıt<select class="girdi" id="sYakit"><option>Benzin</option><option selected>Dizel</option><option>LPG</option><option>Hibrit</option><option>Elektrik</option></select></label>' +
-        '<label>Vites<select class="girdi" id="sVites"><option>Manuel</option><option>Otomatik</option><option>Yarı Otomatik</option></select></label>' +
+        '<label>Vites<select class="girdi" id="sVites"><option>Manuel</option><option>Otomatik</option></select></label>' +
         '<label>Boyalı parça<input class="girdi" id="sBoya" value="0"></label><label>Değişen parça<input class="girdi" id="sDeg" value="0"></label><label>Tramer TL<input class="girdi" id="sTramer" value="0"></label></div>' +
         '<div class="satirlar" style="margin-top:10px"><button class="btn koyu" id="sHesap">Hesapla</button></div><div id="sSonuc"></div></div>' +
         '<div class="kutu"><h2>Parça bazlı boya-değişen kesintileri</h2><p class="soluk" style="margin-top:0">Her parça için ayrı % kesinti yazabilirsin. Boş bıraktığın kutularda yukarıdaki genel oranlar geçerli olur (gri yazı = şu an uygulanan oran).</p>' +

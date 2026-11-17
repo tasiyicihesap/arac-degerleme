@@ -23,8 +23,10 @@ export function tamMesaj(t) {
   const hs = Object.keys(h).map((p) => `   ▫️ ${PARCALAR[p] || p}: ${DURUMLAR[h[p]] || h[p]}`);
   const arac = [int(t.yil), str(t.marka), str(t.model)].filter(Boolean).join(' ');
   const wa = telLink(t.tel);
+  const acil = int(t.acil) > 0;
   const l = [
-    `🚗 *YENİ TEKLİF TALEBİ #${int(t.id)}*`,
+    acil ? '🚨🚨🚨 *ACİL SATIŞ!* 🚨🚨🚨\n🔴 *Müşteri aracını ACİL satmak istiyor — HEMEN ARAYIN!* 🔴\n' : '',
+    `🚗 *${acil ? 'ACİL SAT · TALEP' : 'YENİ TEKLİF TALEBİ'} #${int(t.id)}*`,
     '━━━━━━━━━━━━━━━━━━',
     `👤 *Müşteri:* ${str(t.ad)}`,
     `📞 *Telefon:* ${str(t.tel)}` + (wa ? `\n💬 *WhatsApp:* ${wa}` : ''),
@@ -52,6 +54,15 @@ export function tamMesaj(t) {
 // genel ekip grubu: kişisel bilgi yok, sadece haber
 export function kisaMesaj(t) {
   const arac = [int(t.yil), str(t.marka), str(t.model)].filter(Boolean).join(' ');
+  if (int(t.acil) > 0) return [
+    '🚨🚨🚨 *ACİL SATIŞ TALEBİ!* 🚨🚨🚨',
+    '🔴━━━━━━━━━━━━━━━━🔴',
+    `🚗 ${arac} · Talep #${int(t.id)}`,
+    '⚡ Müşteri aracını *ACİL* satmak istiyor!',
+    '📞 *Hemen arayın* — otokabul.com.tr/yonetim',
+    '🔴━━━━━━━━━━━━━━━━🔴',
+    '_OTOKABUL.COM.TR · otomatik bildirim_ ⚙️',
+  ].join('\n');
   return [
     '🔔 *YENİ BİR TALEP VAR!* 🔔',
     '━━━━━━━━━━━━━━━━',
@@ -83,7 +94,7 @@ export async function kopru(req, D) {
   if (islem === 'mesaj_al') return json(await mesajAl(D, await ayarlar(D)));
   if (islem === 'mesaj_sonuc' && id) { await mesajSonuc(D, id, q('s'), q('not')); return json({ ok: 1 }); }
   if (islem === 'onay' && id) {
-    await D.prepare("UPDATE talepler SET grup_durum = ? WHERE id = ?").bind('gönderildi ' + simdi(), id).run();
+    await D.prepare("UPDATE talepler SET grup_durum = ?, acil = CASE WHEN acil IN (1, 3) THEN 2 ELSE acil END WHERE id = ?").bind('gönderildi ' + simdi(), id).run();
     return json({ ok: 1 });
   }
   if (islem === 'foto' && id) { // talep fotoğrafı (gruba iletmek için)
@@ -99,7 +110,7 @@ export async function kopru(req, D) {
   const simd = simdi(), esik = simdi(Date.now() - 90e3), zaman = simdi(Date.now() - 600e3);
   const { results } = await D.prepare(`UPDATE talepler SET grup_durum = 'alındı ' || ?1
     WHERE id IN (SELECT id FROM talepler WHERE tarih <= ?2 AND (grup_durum = '' OR grup_durum IS NULL OR (grup_durum LIKE 'alındı %' AND substr(grup_durum, 8) < ?3)) ORDER BY id LIMIT 5)
-    RETURNING id, tarih, ad, tel, il, marka, model, yil, versiyon, yakit, vites, kasa, km, renk, hasar, tramer, agir, teklif_min, teklif_max, donanim, aciklama, foto_sayi, kabul_tarih`)
+    RETURNING id, tarih, ad, tel, il, marka, model, yil, versiyon, yakit, vites, kasa, km, renk, hasar, tramer, agir, teklif_min, teklif_max, donanim, aciklama, foto_sayi, kabul_tarih, acil`)
     .bind(simd, esik, zaman).all();
   results.sort((x, y) => x.id - y.id);
   const fotolar = {};
@@ -107,5 +118,5 @@ export async function kopru(req, D) {
     const { results: fl } = await D.prepare(`SELECT id, talep_id FROM talep_foto WHERE talep_id IN (${results.map(() => '?').join(',')}) ORDER BY id`).bind(...results.map((t) => t.id)).all();
     for (const f of fl) (fotolar[f.talep_id] = fotolar[f.talep_id] || []).push(int(f.id));
   }
-  return json({ talepler: results.map((t) => ({ id: int(t.id), tam: tamMesaj(t), kisa: kisaMesaj(t), fotolar: fotolar[t.id] || [] })) });
+  return json({ talepler: results.map((t) => ({ id: int(t.id), tam: tamMesaj(t), kisa: kisaMesaj(t), fotolar: int(t.acil) === 1 ? [] : fotolar[t.id] || [] })) });
 }

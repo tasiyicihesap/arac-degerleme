@@ -62,7 +62,17 @@
   var govde = $('#sbGovde'), btnI = $('#btnIleri'), btnG = $('#btnGeri');
 
   var yon = 1;
-  function git(n) {
+  // telefonun / tarayıcının geri tuşu sihirbazda bir önceki adıma döner: her adım geçmişe bir kayıt ekler
+  var gecmisVar = !!(window.history && history.pushState);
+  function git(n, pop) {
+    n = Math.max(0, Math.min(ADIMLAR.length - 1, n));
+    if (gecmisVar && !pop && ilkCizildi) {
+      var st = history.state;
+      if (n < adim && st && st.sb === adim && adim - n <= st.d) { history.go(n - adim); return; } // geri: tarayıcı geçmişinden
+      if (n > adim) history.pushState({ sb: n, d: ((st && st.sb === adim && st.d) || 0) + 1 }, '');
+      else history.replaceState({ sb: n, d: (st && st.d) || 0 }, '');
+    }
+    ilkCizildi = true;
     yon = n < adim ? -1 : 1;
     adim = Math.max(0, Math.min(ADIMLAR.length - 1, n));
     var A = ADIMLAR[adim], son = adim === ADIMLAR.length - 1;
@@ -83,6 +93,11 @@
   function sonraki() { var A = ADIMLAR[adim]; if (A.gecerli && !A.gecerli()) return; if (adim === ADIMLAR.length - 2) return gonder(); git(adim + 1); }
   btnI.onclick = sonraki;
   btnG.onclick = function () { git(adim - 1); };
+  var ilkCizildi = false;
+  if (gecmisVar) window.addEventListener('popstate', function (e) {
+    var st = e.state;
+    if (st && typeof st.sb === 'number' && st.sb !== adim) git(st.sb, true);
+  });
 
   function secimleriCiz() {
     var ets = [];
@@ -159,7 +174,7 @@
         q = (q || '').toLocaleLowerCase('tr');
         var f = l.filter(function (o) { return !q || o.ad.toLocaleLowerCase('tr').indexOf(q) >= 0; });
         kut.innerHTML = f.length ? f.map(function (o) {
-          return '<button class="secenek model-kart' + (S.model === o.ad ? ' secili' : '') + '" data-v="' + esc(o.ad) + '">' + (o.gorsel ? '<img src="' + esc(o.gorsel) + '" alt="" loading="lazy">' : silus(o.kasa)) + '<span>' + esc(o.ad) + '</span></button>';
+          return '<button class="secenek ad-kart' + (S.model === o.ad ? ' secili' : '') + '" data-v="' + esc(o.ad) + '">' + esc(o.ad.toLocaleUpperCase('tr')) + '</button>';
         }).join('') : '<div class="bos">Bu yıl için model bulunamadı. Bizi arayın, değerlendirelim.</div>';
       };
       // marka/model sayfasından gelindiyse modeli kendiliğinden seç
@@ -174,7 +189,7 @@
     if (cache.sec && cache.sec.a === a) return Promise.resolve(cache.sec.l);
     return api('secenekler', { marka: S.marka, model: S.model, yil: S.yil }).then(function (l) { cache.sec = { a: a, l: l }; return l; });
   }
-  var VARSAYILAN = { kasa: ['Sedan', 'Hatchback', 'SUV', 'Station Wagon', 'Coupe', 'Cabrio', 'MPV / Ticari', 'Pick-up'], yakit: ['Benzin', 'Dizel', 'LPG', 'Hibrit', 'Elektrik'], vites: ['Manuel', 'Otomatik', 'Yarı Otomatik'] };
+  var VARSAYILAN = { kasa: ['Sedan', 'Hatchback', 'SUV', 'Station Wagon', 'Coupe', 'Cabrio', 'MPV / Ticari', 'Pick-up'], yakit: ['Benzin', 'Dizel', 'LPG', 'Hibrit', 'Elektrik'], vites: ['Manuel', 'Otomatik'] };
   function uygunlar(l, alan) {
     return l.filter(function (v) {
       return (alan === 'kasa' || !S.kasa || v.kasa === S.kasa) && (alan === 'kasa' || alan === 'yakit' || !S.yakit || v.yakit === S.yakit);
@@ -198,7 +213,7 @@
       // tek seçenek varsa otomatik geç
       if (liste.length === 1) { if (S[alan] !== liste[0]) { S[alan] = liste[0]; temizleSonra(alan); } git(adim + yon); return; }
       k.innerHTML = '<div class="izgara' + (alan === 'kasa' ? '' : '') + '" id="ogeler">' + liste.map(function (s) {
-        return '<button class="secenek' + (alan === 'kasa' ? ' model-kart' : '') + (S[alan] === s ? ' secili' : '') + '" data-v="' + esc(s) + '">' + (alan === 'kasa' ? silus(s) : '') + '<span>' + esc(s) + '</span></button>';
+        return '<button class="secenek' + (alan === 'kasa' ? ' ad-kart' : '') + (S[alan] === s ? ' secili' : '') + '" data-v="' + esc(s) + '">' + (alan === 'kasa' ? esc(s.toLocaleUpperCase('tr')) : '<span>' + esc(s) + '</span>') + '</button>';
       }).join('') + '</div>';
       $('#ogeler', k).onclick = function (e) { var b = e.target.closest('.secenek'); if (b) sec(alan, b.dataset.v, true); };
     }).catch(hataGoster(k));
@@ -338,7 +353,7 @@
       '</svg>';
   }
   function cizHasar(k) {
-    k.innerHTML = '<p class="ipucu">Parçayı şemadan seçebilir ya da yandaki listeden işaretleyebilirsin; ikisi birlikte güncellenir.</p>' +
+    k.innerHTML = '<p class="ipucu">Şemada parçaya dokun, açılan pencereden durumunu seç. İstersen listeden de işaretleyebilirsin; ikisi birlikte güncellenir.</p>' +
       '<div class="hasar-kap"><div>' + aracSvg() + '<div class="lejant"><span><i class="l-orijinal"></i>Orijinal</span><span><i class="l-lokal"></i>Lokal</span><span><i class="l-boyali"></i>Boyalı</span><span><i class="l-degisen"></i>Değişen</span></div></div><div>' +
       '<div class="parca-tablo" id="parcaListe"><div class="pt-bas"><span>Parça</span><span>Orijinal</span><span>Lokal</span><span>Boyalı</span><span>Değişen</span></div>' +
       PARCALAR.map(function (p) { return '<div class="pt-satir" data-p="' + p[0] + '"><span>' + p[1] + '</span>' + DURUM_SIRA.map(function (d) { return '<label class="pt-k k-' + d + '" title="' + DURUM_AD[d] + '"><input type="radio" name="pt_' + p[0] + '" value="' + d + '"><i></i></label>'; }).join('') + '</div>'; }).join('') +
@@ -378,12 +393,32 @@
       boya();
     };
     $('#ptTemizle', k).onclick = function () { S.hasar = {}; boya(); };
+    // parçaya dokununca küçük seçim penceresi: orijinal / lokal boyalı / boyalı / değişen
+    var PARCA_AD_S = {}; PARCALAR.forEach(function (x) { PARCA_AD_S[x[0]] = x[1]; });
+    var pen = null;
+    function penKapat() { if (pen) { pen.remove(); pen = null; } document.removeEventListener('pointerdown', disTik, true); }
+    function disTik(e) { if (pen && !pen.contains(e.target) && !e.target.closest('.arac-svg .parca')) penKapat(); }
     svg.onclick = function (e) {
       var el = e.target.closest('.parca'); if (!el) return;
-      var p = el.dataset.p, d = S.hasar[p] || 'orijinal', y = DURUM_SIRA[(DURUM_SIRA.indexOf(d) + 1) % 4];
-      if (y === 'orijinal') delete S.hasar[p]; else S.hasar[p] = y;
-      boya();
+      var p = el.dataset.p, d = S.hasar[p] || 'orijinal';
+      penKapat();
+      pen = document.createElement('div'); pen.className = 'parca-pen';
+      pen.innerHTML = '<div class="pp-bas"><b>' + esc(PARCA_AD_S[p] || p) + '</b><button type="button" class="pp-kapat" aria-label="Kapat">✕</button></div>' +
+        DURUM_SIRA.map(function (x) { return '<label class="pp-sec k-' + x + (x === d ? ' secili' : '') + '"><input type="radio" name="pp" value="' + x + '"' + (x === d ? ' checked' : '') + '><i></i>' + DURUM_AD[x] + '</label>'; }).join('');
+      document.body.appendChild(pen);
+      var r = el.getBoundingClientRect(), pw = pen.offsetWidth, ph = pen.offsetHeight;
+      var x = r.left + r.width / 2 - pw / 2, y = r.bottom + 8;
+      if (y + ph > window.innerHeight - 8) y = r.top - ph - 8;
+      if (y < 8) y = Math.max(8, (window.innerHeight - ph) / 2);
+      pen.style.left = Math.max(8, Math.min(window.innerWidth - pw - 8, x)) + 'px'; pen.style.top = y + 'px';
+      pen.onchange = function (ev) {
+        var v = ev.target.value; if (v === 'orijinal') delete S.hasar[p]; else S.hasar[p] = v;
+        boya(); setTimeout(penKapat, 160);
+      };
+      $('.pp-kapat', pen).onclick = penKapat;
+      setTimeout(function () { document.addEventListener('pointerdown', disTik, true); document.addEventListener('scroll', penKapat, { capture: true, passive: true, once: true }); }, 0);
     };
+
     k.querySelectorAll('[data-ev]').forEach(function (g) {
       var alan = g.dataset.ev;
       var isaretle = function () { g.querySelectorAll('.secenek').forEach(function (b) { b.classList.toggle('secili', S[alan] !== null && +b.dataset.v === (S[alan] ? 1 : 0)); }); };
@@ -531,7 +566,15 @@
       api('randevu', null, { no: s.no, anahtar: s.anahtar }).then(function () {
         $('#randevuKutu', k).innerHTML = '<div class="randevu-ok"><div class="randevu-ikon">✓</div><b>Randevu talebin bize ulaştı</b>' +
           '<p>Teklifimize güvendiğin için teşekkür ederiz. Uzmanımız <b>en kısa sürede</b> seni arayarak ekspertiz ve ödeme için sana en uygun saati planlayacak.</p>' +
-          (firma.telefon ? '<p class="kucuk-not">Beklemek istemezsen: <a href="tel:' + firma.telefon.replace(/[^\d+]/g, '') + '">' + esc(firma.telefon) + '</a></p>' : '') + '</div>';
+          (firma.telefon ? '<p class="kucuk-not">Beklemek istemezsen: <a href="tel:' + firma.telefon.replace(/[^\d+]/g, '') + '">' + esc(firma.telefon) + '</a></p>' : '') + '</div>' +
+          '<div class="acil-kutu" id="acilKutu"><b>Aracını çok acil mi satman gerekiyor?</b><p>Acil satışları öncelikli değerlendiriyoruz; ekibimiz seni hemen arar.</p><button class="btn-acil" id="acilSat">🚨 ACİL SAT</button></div>';
+        $('#acilSat', k).onclick = function () {
+          if (window.OKIZ) window.OKIZ('acil');
+          var a = this; a.disabled = true; a.textContent = 'Gönderiliyor…';
+          api('acil', null, { no: s.no, anahtar: s.anahtar }).then(function () {
+            $('#acilKutu', k).innerHTML = '<div class="acil-ok">🚨 <b>Acil satış talebin alındı!</b><p>Talebin ekibimize <b>öncelikli</b> olarak iletildi. Seni en kısa sürede arayacağız.</p></div>';
+          }).catch(function (e) { a.disabled = false; a.textContent = '🚨 ACİL SAT'; alert(hataMetni(e)); });
+        };
         var kutu = $('#randevuKutu', k); if (kutu && kutu.scrollIntoView) kutu.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }).catch(function (e) { b.disabled = false; b.textContent = '📅 RANDEVU AL'; alert(hataMetni(e)); });
     };
@@ -586,10 +629,11 @@
       setTimeout(function () { window.OTK.basla(); }, 300);
     },
     marka: function (m) {
-      if (adim !== 0) { S = { hasar: {}, tramerVar: null, agir: null, ad: S.ad, tel: S.tel, il: S.il, kvkk: S.kvkk }; sonuc = null; git(0); }
+      if (adim !== 0) { S = { hasar: {}, tramerVar: null, agir: null, ad: S.ad, tel: S.tel, il: S.il, kvkk: S.kvkk }; sonuc = null; git(0, true); }
       sec('marka', m, true);
       $('#sihirbaz').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
+  if (gecmisVar) { try { history.replaceState({ sb: 0, d: 0 }, ''); } catch (e) {} }
   git(0);
 })();

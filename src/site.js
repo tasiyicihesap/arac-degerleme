@@ -7,6 +7,8 @@ import { db, ayarlar, VARSAYILAN_AYARLAR, simdi, int, str, kes, dolu, buYil, gor
 import { teklifHesapla, PARCALAR, DURUMLAR } from './fiyat.js';
 import { json, rastgeleHex } from './yardim.js';
 
+// sitede yalnızca Manuel / Otomatik: yarı otomatik (robotize) şanzımanlar Otomatik sayılır
+const vitesN = (v) => (str(v) === 'Yarı Otomatik' ? 'Otomatik' : str(v));
 const hizmetIlleri = (A) => str(A.hizmet_illeri).split(',').map((x) => x.trim()).filter(Boolean);
 import { epostaGonder, anlikBildir } from './bildirim.js';
 
@@ -82,7 +84,7 @@ async function siteApiIc(req, env, ctx) {
       const yol = `$."${int(q('yil'))}"`;
       const { results } = await D.prepare(`SELECT id, versiyon, tip, kasa, yakit, vites, motor, beygir FROM katalog
         WHERE aktif = 1 AND marka = ? AND model = ? AND json_extract(degerler, ?) IS NOT NULL ORDER BY versiyon COLLATE NOCASE`).bind(q('marka'), q('model'), yol).all();
-      return json(results.map((x) => ({ id: int(x.id), ad: x.versiyon, kasa: kasaBul(q('marka'), q('model'), x.tip + ' ' + x.versiyon, x.kasa), yakit: x.yakit, vites: x.vites, motor: x.motor, beygir: int(x.beygir) })));
+      return json(results.map((x) => ({ id: int(x.id), ad: x.versiyon, kasa: kasaBul(q('marka'), q('model'), x.tip + ' ' + x.versiyon, x.kasa), yakit: x.yakit, vites: vitesN(x.vites), motor: x.motor, beygir: int(x.beygir) })));
     }
     // o yıla ait katalog yoksa sihirbazın kasa / yakıt / vites listeleri modelin tüm yıllarından gelir
     case 'ozellik': {
@@ -91,7 +93,7 @@ async function siteApiIc(req, env, ctx) {
       const say = (f) => { const m = {}; for (const x of results) { const v = f(x); if (v) m[v] = (m[v] || 0) + 1; } return Object.keys(m).sort((a, b) => m[b] - m[a]); };
       let kasa = say((x) => kasaBul(marka, model, x.tip + ' ' + x.versiyon, x.kasa)).filter((k) => k !== 'Diğer');
       if (!kasa.length && modelKasasi(marka, model)) kasa = [modelKasasi(marka, model)];
-      return json({ kasa, yakit: say((x) => x.yakit), vites: say((x) => x.vites) });
+      return json({ kasa, yakit: say((x) => x.yakit), vites: say((x) => vitesN(x.vites)) });
     }
     case 'modeller': {
       const { results } = await D.prepare('SELECT model, SUM(adet) n, MIN(yil) y1, MAX(yil) y2 FROM fiyatlar WHERE aktif = 1 AND marka = ? GROUP BY model ORDER BY model COLLATE NOCASE').bind(q('marka')).all();
@@ -222,6 +224,21 @@ async function siteApiIc(req, env, ctx) {
       if (!t.kabul_tarih) {
         await D.prepare("UPDATE talepler SET durum = 'Randevu İstedi', kabul_tarih = ? WHERE id = ?").bind(simdi(), t.id).run();
         await kabulPlanla(D, await ayarlar(D), t.id, str(t.tel_n)).catch(() => {});
+      }
+      return json({ ok: 1 });
+    }
+    case 'acil': { // müşteri "ACİL SAT" dedi: gruplara kırmızı uyarı (eklenti), sahibine anlık bildirim
+      if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);
+      let g = {}; try { g = (await req.json()) || {}; } catch (e) {}
+      const t = await D.prepare('SELECT id, ad, tel, marka, model, yil, acil, grup_durum, kabul_tarih, tel_n FROM talepler WHERE id = ? AND anahtar = ?').bind(int(g.no), str(g.anahtar ?? '-') || '-').first();
+      if (!t) return json({ hata: 'Talep bulunamadı. Lütfen bizi telefonla arayın.' }, 404);
+      if (!int(t.acil)) {
+        const gonderildi = str(t.grup_durum).startsWith('gönderildi');
+        await D.prepare("UPDATE talepler SET acil = ?, durum = 'ACİL SAT', kabul_tarih = COALESCE(kabul_tarih, ?), grup_durum = CASE WHEN grup_durum LIKE 'gönderildi%' THEN '' ELSE grup_durum END WHERE id = ?")
+          .bind(gonderildi ? 1 : 3, simdi(), t.id).run();
+        const A = await ayarlar(D);
+        if (!t.kabul_tarih) await kabulPlanla(D, A, t.id, str(t.tel_n)).catch(() => {});
+        arkada(anlikBildir(A, `🚨 ACİL SAT! Talep #${t.id}\n${str(t.ad)} — ${str(t.tel)}\n${int(t.yil)} ${str(t.marka)} ${str(t.model)}\nMüşteri aracını acil satmak istiyor, hemen arayın.`));
       }
       return json({ ok: 1 });
     }

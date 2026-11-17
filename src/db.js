@@ -159,6 +159,7 @@ async function kur(D) {
     ek.push(D.prepare("ALTER TABLE talepler ADD COLUMN grup_durum TEXT DEFAULT ''"));
     ek.push(D.prepare("UPDATE talepler SET grup_durum = 'eski'"));
   }
+  if (!varS.has('acil')) ek.push(D.prepare('ALTER TABLE talepler ADD COLUMN acil INTEGER DEFAULT 0')); // 1: gruba yeniden acil uyarı, 3: ilk gönderim acil, 2: iletildi
   if (ek.length) await D.batch(ek);
   const r = await D.prepare("SELECT v FROM ayarlar WHERE k = '_kurulum'").first();
   if (r) return;
