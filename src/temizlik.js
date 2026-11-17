@@ -30,6 +30,8 @@ export async function araclariTemizle(D, izinMetni, deneme) {
   // aynı markada ilan verisi olan modellerin sade adları (kasko'daki "Tourneoconnect" = "Tourneo Connect" tekrarlarını yakalamak için)
   const ilanAd = new Map(), kaskoAd = new Map();
   for (const g of gr.values()) if (g.ilan) ilanAd.set(g.marka + '|' + anahtar(g.model), g.model);
+  const markaAnahtar = new Map(); // marka → modellerin sade adları
+  for (const g of gr.values()) { if (!markaAnahtar.has(g.marka)) markaAnahtar.set(g.marka, []); markaAnahtar.get(g.marka).push(anahtar(g.model)); }
   const karar = new Map();
   for (const g of gr.values()) {
     const m = g.model, a = anahtar(m);
@@ -43,6 +45,9 @@ export async function araclariTemizle(D, izinMetni, deneme) {
       else if (g.marka === 'BMW' && /^(İ|i)\d|^(İ|i)x|^m\d$/i.test(m)) ok = false; // ilan verisinde "i Serisi" / "M Serisi" var
       else if (g.marka === 'Ford' && /^transit\s/i.test(m) && !/^transit (connect|courier|custom|van|kombi)$/i.test(m)) ok = false; // Transit tonaj/şasi varyantları
       else if (g.marka === 'Ford' && /^tourneo \w+journey$/i.test(m)) ok = false
+      else if (/\./.test(m) && !/^id\.\s?\d|^id\. buzz/i.test(m)) ok = false; // "Transitk.net", "T.connect"
+      else if (/^[a-zçğıöşü]{4,}\d{3}|^\d{3,4}[a-z]{4,}/i.test(m)) ok = false; // "Transit350e", "3008ACTIVELIFE"
+      else if (!/\s/.test(m) && markaAnahtar.get(g.marka).some((k) => k.length >= 4 && k !== a && a.startsWith(k))) ok = false; // "Traficpanelvan" → Trafic
       else if (m.length <= 2 && !/^[a-z]\d$/i.test(m) && m.toUpperCase() !== 'CC') ok = false;
       else {
         const kk = g.marka + '|' + a; // kasko içi tekrar: boşluklu / düzgün yazılmış olan kalır
