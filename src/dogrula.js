@@ -44,7 +44,9 @@ export async function dogrulaBaslat(D, A, ip, tel, yeniden) {
   // aynı numaranın son 15 dk'daki kodu varsa yenisi gönderilmez (müşteri geri dönüp tekrar basarsa)
   const eski = await D.prepare('SELECT token, durum, olusma FROM tel_dogrula WHERE tel = ? AND ip = ? AND olusma > ? ORDER BY olusma DESC LIMIT 1')
     .bind(n, ip, gecerliSinir()).first();
-  if (eski && !(yeniden && eski.durum !== 'onay' && str(eski.olusma) < simdi(Date.now() - 50e3))) return { token: eski.token, tel: telGoster(n) };
+  // numara son 15 dk içinde bu tarayıcıdan zaten doğrulandıysa yeniden kod gönderilmez
+  if (eski && eski.durum === 'onay') return { token: eski.token, tel: telGoster(n), zaten: 1 };
+  if (eski && !(yeniden && str(eski.olusma) < simdi(Date.now() - 50e3))) return { token: eski.token, tel: telGoster(n) };
   const c = await D.prepare('SELECT COUNT(*) n FROM tel_dogrula WHERE (ip = ? OR tel = ?) AND olusma > ?').bind(ip, n, simdi(Date.now() - 3600e3)).first();
   if (int(c.n) >= 6) return { hata: 'Çok fazla doğrulama kodu istendi. Lütfen biraz sonra tekrar dene ya da bizi telefonla ara.' };
   const token = rastgeleHex(16);
@@ -100,14 +102,20 @@ export async function dogrulaSonuc(D, token, s) {
 
 // teklif kaydında: { tel, dogru: 1 } doğrulandı · { atla: 1 } kod gönderilemedi, doğrulamasız devam · null: doğrulanmadı
 // onceki: bu doğrulamayla zaten bir talep oluştuysa (iki sekme / bağlantı) aynı sonuç döner, ikinci talep açılmaz
-export async function dogrulaKarar(D, token) {
+// aynı talebin iki kez açılmaması için imza: aynı kişi + aynı araç bilgileri + 15 dk içinde
+export const talepImza = (g) => [g.ad, g.marka, g.model, g.yil, g.versiyon, g.km, g.renk, JSON.stringify(g.hasar || {}), g.tramer, g.agir ? 1 : 0].map((x) => str(x)).join('|');
+function onceki(r, imza) {
+  try { const o = JSON.parse(str(r.talep_sonuc) || 'null'); if (o && o.imza === imza && Date.now() - o.t < 15 * 60e3) return o.yanit; } catch (e) {}
+  return null;
+}
+export async function dogrulaKarar(D, token, imza) {
   if (!token) return null;
   const r = await D.prepare('SELECT durum, onay_tel, gonderim, olusma, talep_sonuc FROM tel_dogrula WHERE token = ? AND olusma > ?').bind(str(token), simdi(Date.now() - 6 * 3600e3)).first();
   if (!r) return null;
-  if (r.durum === 'onay') return { tel: r.onay_tel, dogru: 1, onceki: str(r.talep_sonuc) };
-  if (r.gonderim === 'hata' || gecikti(r)) return { atla: 1, onceki: str(r.talep_sonuc) };
+  if (r.durum === 'onay') return { tel: r.onay_tel, dogru: 1, onceki: onceki(r, imza) };
+  if (r.gonderim === 'hata' || gecikti(r)) return { atla: 1, onceki: onceki(r, imza) };
   return null;
 }
-export async function dogrulaTalepYaz(D, token, sonuc) {
-  if (token) await D.prepare('UPDATE tel_dogrula SET talep_sonuc = ? WHERE token = ?').bind(JSON.stringify(sonuc), str(token)).run();
+export async function dogrulaTalepYaz(D, token, imza, sonuc) {
+  if (token) await D.prepare('UPDATE tel_dogrula SET talep_sonuc = ? WHERE token = ?').bind(JSON.stringify({ imza, t: Date.now(), yanit: sonuc }), str(token)).run();
 }

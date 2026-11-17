@@ -586,7 +586,9 @@
     var h = $('#hata'); if (h) h.textContent = '';
     return api('dogrula_baslat', null, { tel: S.tel, yeniden: !!yeniden }).then(function (r) {
       if (r.gerekmez) { dogrulaKapat(); return teklifIste(); }
-      dgToken = r.token; dgBas = Date.now(); bekleyenKaydet();
+      dgToken = r.token; dgBas = Date.now();
+      if (r.zaten) return dogrulandi(true); // bu numara az önce doğrulanmıştı: kod yeniden gönderilmez
+      bekleyenKaydet();
       dogrulaGoster(r.tel);
       dogrulaSor(0);
     }).catch(function (e) { if (h) h.textContent = hataMetni(e); btnI.textContent = 'Teklifimi göster →'; guncelleBtn(); });
@@ -650,12 +652,13 @@
   }
   // müşteri WhatsApp'tan sayfaya dönünce beklemeden sor
   document.addEventListener('visibilitychange', function () { if (!document.hidden && dgToken && $('#dogrulaKutu') && !$('#dogrulaKutu').hidden) dogrulaSor(-1); });
-  function dogrulandi() {
+  function dogrulandi(zaten) {
     if (dgZaman) { clearTimeout(dgZaman); dgZaman = null; }
+    if (dgSayacZ) { clearInterval(dgSayacZ); dgSayacZ = null; }
     S.dogrula = dgToken; S.dogrulaTel = (S.tel || '').replace(/\D/g, '').slice(-10);
-    var b = $('#dogrulaKutu'); if (b) { b.hidden = false; b.innerHTML = '<div class="dg-ok">✓ Numaran doğrulandı: <b>' + esc(S.tel) + '</b></div>'; }
+    var b = $('#dogrulaKutu'); if (b) { b.hidden = false; b.innerHTML = '<div class="dg-ok">✓ ' + (zaten ? 'Bu numara az önce doğrulanmıştı' : 'Numaran doğrulandı') + ': <b>' + esc(S.tel) + '</b></div>'; }
     if (window.OKIZ) window.OKIZ('dogrulandi');
-    setTimeout(teklifIste, 600);
+    setTimeout(teklifIste, zaten ? 1200 : 600);
   }
   function gonder() {
     if (S.dogrula && S.dogrulaTel === (S.tel || '').replace(/\D/g, '').slice(-10)) return teklifIste();

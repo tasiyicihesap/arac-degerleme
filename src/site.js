@@ -1,5 +1,5 @@
 // OTOKABUL — müşteri sitesi API'si (eski api.php)
-import { dogrulaBaslat, dogrulaDurum, dogrulaKod, dogrulaKarar, dogrulaTalepYaz, dogrulamaGerekli } from './dogrula.js';
+import { dogrulaBaslat, dogrulaDurum, dogrulaKod, dogrulaKarar, dogrulaTalepYaz, dogrulamaGerekli, talepImza } from './dogrula.js';
 import { kasaBul, modelKasasi } from './kasa.js';
 import { izKaydet } from './istatistik.js';
 import { kopru } from './kopru.js';
@@ -144,8 +144,8 @@ async function siteApiIc(req, env, ctx) {
       // telefon doğrulama: WhatsApp'tan kod gönderilerek doğrulanan numara esas alınır
       let telDogru = 0;
       {
-        const dk = await dogrulaKarar(D, g.dogrula);
-        if (dk && dk.onceki) { try { return json(JSON.parse(dk.onceki)); } catch (e) {} } // aynı doğrulamayla ikinci talep açılmaz
+        const dk = await dogrulaKarar(D, g.dogrula, talepImza(g));
+        if (dk && dk.onceki) return json(dk.onceki); // aynı talep (iki sekme / bağlantı) ikinci kez açılmaz
         if (dk && dk.dogru) { tel = '0' + dk.tel; telDogru = 1; }
         else if (!dk && await dogrulamaGerekli(D, await ayarlar(D))) return json({ hata: 'Devam etmek için telefon numaranı doğrulaman gerekiyor.', dogrula: 1 }, 400);
       }
@@ -215,7 +215,7 @@ async function siteApiIc(req, env, ctx) {
         onc = { arac: `${int(onceki.yil)} ${str(onceki.marka)} ${str(onceki.model)}`, tarih: str(onceki.tarih).slice(0, 10), ayni, min: ayni && A.teklif_goster === '1' ? int(onceki.teklif_min) : 0, max: ayni && A.teklif_goster === '1' ? int(onceki.teklif_max) : 0 };
       }
       const yanit = { no, anahtar, durum: s.durum, min: s.min, max: s.max, mesaj: s.mesaj, onceki: onc };
-      await dogrulaTalepYaz(D, g.dogrula, yanit).catch(() => {});
+      await dogrulaTalepYaz(D, g.dogrula, talepImza(g), yanit).catch(() => {});
       return json(yanit);
     }
     case 'mesaj': { // ana sayfadaki iletişim formu
