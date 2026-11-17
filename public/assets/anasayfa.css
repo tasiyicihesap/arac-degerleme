@@ -371,3 +371,39 @@ body.ana{background:#fff;color:var(--murekkep)}
 .rb-kart span{color:var(--vurgu);font-weight:700;font-size:14px}
 .rb-tum{text-align:center;margin:18px 0 0}.rb-tum a{color:var(--vurgu);font-weight:700;text-decoration:none}
 @media (max-width:860px){.rb-izgara{grid-template-columns:1fr}}
+
+/* ---- ara reklamlar (farklı tarzlarda küçük manşetler) ---- */
+.promo-bolum{padding:26px 0}
+.promo-etiket{display:inline-block;font:800 11.5px Manrope,Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--vurgu);background:#fff1ea;border-radius:999px;padding:5px 11px;margin-bottom:10px}
+/* 1: yarım görsel + beyaz panel */
+.promo-yarim{display:grid;grid-template-columns:1.15fr 1fr;border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 24px 50px -30px rgba(15,27,45,.45);border:1px solid #eef0f3}
+.py-gorsel{min-height:300px;background:linear-gradient(135deg,#ffb08f,#ff5a1f) center/cover no-repeat}
+.py-yazi{padding:36px 38px;display:flex;flex-direction:column;justify-content:center}
+.py-yazi h2{font:800 30px/1.15 Manrope,Inter,sans-serif;margin:0 0 10px;letter-spacing:-.4px}
+.py-yazi p{margin:0 0 20px;color:#4b5563;font-size:16px;line-height:1.6}
+.promo-btn{align-self:flex-start;background:var(--murekkep);color:#fff;text-decoration:none;font:800 15px Manrope,Inter,sans-serif;padding:13px 20px;border-radius:12px;transition:transform .15s,background .15s}
+.promo-btn:hover{transform:translateY(-2px);background:var(--vurgu)}
+/* 2: iki fotoğraflı kart */
+.promo-ikili{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.promo-kart{position:relative;min-height:260px;border-radius:20px;overflow:hidden;display:flex;align-items:flex-end;color:#fff;text-decoration:none;background:linear-gradient(135deg,#1d2c44,#0f1b2d) center/cover no-repeat;transition:transform .2s}
+.promo-kart::before{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(8,13,24,.88) 0,rgba(8,13,24,.35) 55%,rgba(8,13,24,.05) 100%);transition:opacity .2s}
+.promo-kart:hover{transform:translateY(-3px)}
+.pk-yazi{position:relative;padding:24px 26px}
+.pk-yazi .promo-etiket{background:rgba(255,255,255,.16);color:#fff;backdrop-filter:blur(4px)}
+.pk-yazi h3{font:800 24px/1.2 Manrope,Inter,sans-serif;margin:0 0 6px}
+.pk-yazi p{margin:0 0 12px;opacity:.92;font-size:15px;line-height:1.5;max-width:420px}
+.pk-ok{font:800 14.5px Manrope,Inter,sans-serif;color:#ffb08f}
+/* 3: ince kırmızı şerit */
+.promo-serit{position:relative;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 30px;border-radius:18px;overflow:hidden;color:#fff;text-decoration:none;background:#7f1d1d center/cover no-repeat}
+.promo-serit::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(127,29,29,.95) 0,rgba(185,28,28,.85) 50%,rgba(127,29,29,.55) 100%)}
+.ps-yazi{position:relative;display:flex;align-items:center;gap:16px}
+.ps-isaret{font-size:32px;animation:acilNabiz2 1.6s ease-in-out infinite}
+@keyframes acilNabiz2{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.ps-yazi h3{font:800 22px Manrope,Inter,sans-serif;margin:0 0 2px}
+.ps-yazi p{margin:0;opacity:.92;font-size:15px}
+.ps-btn{position:relative;background:#fff;color:#b91c1c;font:800 15px Manrope,Inter,sans-serif;padding:12px 20px;border-radius:12px;white-space:nowrap}
+@media (max-width:860px){
+  .promo-yarim{grid-template-columns:1fr}.py-gorsel{min-height:200px}.py-yazi{padding:24px 22px}.py-yazi h2{font-size:24px}
+  .promo-ikili{grid-template-columns:1fr}
+  .promo-serit{flex-direction:column;align-items:flex-start;padding:20px}
+}
