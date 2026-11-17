@@ -98,7 +98,7 @@ CREATE INDEX IF NOT EXISTS ix_ilan_aktif ON ilanlar(aktif);
 CREATE TABLE IF NOT EXISTS musteri_rehber (anahtar TEXT PRIMARY KEY, ad TEXT, tel TEXT, eposta TEXT, ilk TEXT, son TEXT, talep INTEGER DEFAULT 0, mesaj INTEGER DEFAULT 0, son_arac TEXT DEFAULT '');
 CREATE INDEX IF NOT EXISTS ix_talep_durum ON talepler(durum);
 CREATE TABLE IF NOT EXISTS gorsel_parca (tur TEXT, ad TEXT, sira INTEGER, veri BLOB, PRIMARY KEY(tur, ad, sira));
-CREATE TABLE IF NOT EXISTS tel_dogrula (token TEXT PRIMARY KEY, kod TEXT, tel TEXT, ip TEXT, olusma TEXT, durum TEXT DEFAULT 'bekliyor', onay_tel TEXT DEFAULT '', onay_ad TEXT DEFAULT '', onay_zaman TEXT DEFAULT '');
+CREATE TABLE IF NOT EXISTS tel_dogrula (token TEXT PRIMARY KEY, kod TEXT, tel TEXT, ip TEXT, olusma TEXT, durum TEXT DEFAULT 'bekliyor', onay_tel TEXT DEFAULT '', onay_ad TEXT DEFAULT '', onay_zaman TEXT DEFAULT '', gonderim TEXT DEFAULT 'sira', gonderim_zaman TEXT DEFAULT '', deneme INTEGER DEFAULT 0, talep_sonuc TEXT DEFAULT '');
 CREATE INDEX IF NOT EXISTS ix_dogrula_kod ON tel_dogrula(kod);
 `;
 
@@ -169,6 +169,13 @@ async function kur(D) {
   }
   if (!varS.has('acil')) ek.push(D.prepare('ALTER TABLE talepler ADD COLUMN acil INTEGER DEFAULT 0')); // 1: gruba yeniden acil uyarı, 3: ilk gönderim acil, 2: iletildi
   if (!varS.has('tel_dogru')) ek.push(D.prepare('ALTER TABLE talepler ADD COLUMN tel_dogru INTEGER DEFAULT 0')); // 1: WhatsApp ile doğrulandı
+  // telefon doğrulama: kod artık müşteriye WhatsApp'tan biz gönderiyoruz
+  const { results: dk } = await D.prepare('PRAGMA table_info(tel_dogrula)').all();
+  const dS = new Set(dk.map((c) => c.name));
+  if (!dS.has('gonderim')) ek.push(D.prepare("ALTER TABLE tel_dogrula ADD COLUMN gonderim TEXT DEFAULT 'sira'"));
+  if (!dS.has('gonderim_zaman')) ek.push(D.prepare("ALTER TABLE tel_dogrula ADD COLUMN gonderim_zaman TEXT DEFAULT ''"));
+  if (!dS.has('deneme')) ek.push(D.prepare('ALTER TABLE tel_dogrula ADD COLUMN deneme INTEGER DEFAULT 0'));
+  if (!dS.has('talep_sonuc')) ek.push(D.prepare("ALTER TABLE tel_dogrula ADD COLUMN talep_sonuc TEXT DEFAULT ''"));
   if (ek.length) await D.batch(ek);
   // müşteri rehberi: her talep ve mesajda telefon/e-posta ayrı tabloya da yazılır (talep silinse bile kalır)
   const tr = await D.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type = 'trigger' AND name IN ('tr_rehber_talep','tr_rehber_mesaj')").first();

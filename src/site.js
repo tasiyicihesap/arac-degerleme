@@ -1,5 +1,5 @@
 // OTOKABUL — müşteri sitesi API'si (eski api.php)
-import { dogrulaBaslat, dogrulaDurum, dogrulanmisTel, dogrulamaGerekli } from './dogrula.js';
+import { dogrulaBaslat, dogrulaDurum, dogrulaKod, dogrulaKarar, dogrulaTalepYaz, dogrulamaGerekli } from './dogrula.js';
 import { kasaBul, modelKasasi } from './kasa.js';
 import { izKaydet } from './istatistik.js';
 import { kopru } from './kopru.js';
@@ -124,10 +124,16 @@ async function siteApiIc(req, env, ctx) {
     case 'dogrula_baslat': {
       if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);
       let g = {}; try { g = (await req.json()) || {}; } catch (e) {}
-      const r = await dogrulaBaslat(D, await ayarlar(D), req.headers.get('CF-Connecting-IP') || '', g && g.tel);
+      const r = await dogrulaBaslat(D, await ayarlar(D), req.headers.get('CF-Connecting-IP') || '', g && g.tel, !!(g && g.yeniden));
       return json(r, r.hata ? 400 : 200);
     }
     case 'dogrula_durum': return json(await dogrulaDurum(D, q('t')));
+    case 'dogrula_kod': {
+      if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);
+      let g = {}; try { g = (await req.json()) || {}; } catch (e) {}
+      const r = await dogrulaKod(D, g && g.token, g && g.kod);
+      return json(r, r.hata ? 400 : 200);
+    }
     case 'teklif': {
       if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);
       let g = {}; try { g = (await req.json()) || {}; } catch (e) {}
@@ -138,9 +144,10 @@ async function siteApiIc(req, env, ctx) {
       // telefon doğrulama: WhatsApp'tan kod gönderilerek doğrulanan numara esas alınır
       let telDogru = 0;
       {
-        const dt = await dogrulanmisTel(D, g.dogrula);
-        if (dt) { tel = '0' + dt; telDogru = 1; }
-        else if (await dogrulamaGerekli(D, await ayarlar(D))) return json({ hata: 'Devam etmek için telefon numaranı WhatsApp ile doğrulaman gerekiyor.', dogrula: 1 }, 400);
+        const dk = await dogrulaKarar(D, g.dogrula);
+        if (dk && dk.onceki) { try { return json(JSON.parse(dk.onceki)); } catch (e) {} } // aynı doğrulamayla ikinci talep açılmaz
+        if (dk && dk.dogru) { tel = '0' + dk.tel; telDogru = 1; }
+        else if (!dk && await dogrulamaGerekli(D, await ayarlar(D))) return json({ hata: 'Devam etmek için telefon numaranı doğrulaman gerekiyor.', dogrula: 1 }, 400);
       }
       {
         const iller = hizmetIlleri(await ayarlar(D));
@@ -207,7 +214,9 @@ async function siteApiIc(req, env, ctx) {
         const ayni = str(onceki.marka) === str(g.marka) && str(onceki.model) === str(g.model) && int(onceki.yil) === int(g.yil);
         onc = { arac: `${int(onceki.yil)} ${str(onceki.marka)} ${str(onceki.model)}`, tarih: str(onceki.tarih).slice(0, 10), ayni, min: ayni && A.teklif_goster === '1' ? int(onceki.teklif_min) : 0, max: ayni && A.teklif_goster === '1' ? int(onceki.teklif_max) : 0 };
       }
-      return json({ no, anahtar, durum: s.durum, min: s.min, max: s.max, mesaj: s.mesaj, onceki: onc });
+      const yanit = { no, anahtar, durum: s.durum, min: s.min, max: s.max, mesaj: s.mesaj, onceki: onc };
+      await dogrulaTalepYaz(D, g.dogrula, yanit).catch(() => {});
+      return json(yanit);
     }
     case 'mesaj': { // ana sayfadaki iletişim formu
       if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);

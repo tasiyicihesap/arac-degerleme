@@ -305,3 +305,13 @@ textarea.alan{resize:vertical;min-height:84px;font-size:15px;line-height:1.45}
 /* listede olmayan renk */
 .renk-diger{margin-top:10px}
 .renk-diger label{display:block;font-size:12.5px;color:var(--gri,#64748b);margin-bottom:5px;font-weight:600}
+.dg-kod-giris{display:block;width:100%;text-align:center;font:800 26px Inter,sans-serif;letter-spacing:10px;margin:10px 0 8px;padding:10px}
+button.dg-btn{width:100%;border:0;cursor:pointer}
+button.dg-btn:disabled{opacity:.5;cursor:default;box-shadow:none}
+.dg-alt{display:flex;justify-content:space-between;margin-top:8px;font-size:12.5px}
+.dg-alt a{color:#166534}
+.dg-tamam{display:inline-flex;width:16px;height:16px;border-radius:50%;background:#16a34a;color:#fff;font-size:11px;align-items:center;justify-content:center;flex:none}
+.dg-hata-i{display:inline-flex;width:16px;height:16px;border-radius:50%;background:#dc2626;color:#fff;font-size:11px;font-weight:800;align-items:center;justify-content:center;flex:none}
+.dogrula-kutu .hata{margin-top:6px}
+.dg-ok-buyuk{font-size:18px;padding:28px 10px}
+.dg-ok-buyuk p{font:500 14px Inter,sans-serif;color:#374151;margin:8px 0 0}

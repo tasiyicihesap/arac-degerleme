@@ -1,17 +1,19 @@
 // OTOKABUL — müşteri telefon doğrulama (WhatsApp ile, SMS firması olmadan)
-// Müşteri sitede "WhatsApp ile doğrula"ya basar → WhatsApp, içinde tek kullanımlık kod yazan hazır mesajla açılır →
-// müşteri mesajı firmanın WhatsApp numarasına gönderir → WhatsApp Web açık bilgisayardaki köprü eklentisi kodu görür
-// ve buraya bildirir → site birkaç saniye içinde "numaran doğrulandı" der.
-// Köprü çalışmıyorsa (bilgisayar / WhatsApp Web kapalı) doğrulama istenmez; müşteri hiçbir zaman takılı kalmaz.
+// Müşteri sihirbazın son adımında "Teklifimi göster"e basar → yazdığı numaraya WhatsApp'tan 6 haneli kod ve
+// bir bağlantı gönderilir (gönderimi WhatsApp Web açık bilgisayardaki Bildirim Köprüsü eklentisi yapar) →
+// müşteri kodu siteye yazar ya da mesajdaki bağlantıya dokunur → ön teklif görünür.
+// Köprü çalışmıyorsa ya da kod 75 sn içinde gönderilemezse doğrulama atlanır; müşteri hiçbir zaman takılı kalmaz.
 import { simdi, int, str, gizliAyar } from './db.js';
 import { rastgeleHex } from './yardim.js';
 
 const KOD_GECERLI_DK = 15;     // kod bu kadar dakika geçerli
 const KOPRU_CANLI_SN = 150;    // köprü son bu kadar saniyede haber verdiyse "çalışıyor" sayılır
-export const KOD_DESEN = /OTK[-\s]?(\d{6})/i;
+const GONDERIM_BEKLE_SN = 75;  // kod bu sürede gönderilemezse doğrulama atlanır
 
 const telN = (t) => str(t).replace(/\D/g, '').slice(-10);
 export const telGoster = (t) => { const d = telN(t); return d.length === 10 ? `0${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6, 8)} ${d.slice(8)}` : str(t); };
+const gecerliSinir = () => simdi(Date.now() - KOD_GECERLI_DK * 60e3);
+const gecikti = (r) => { const g = str(r.gonderim); return (g === 'sira' || g === 'gonderiliyor') && str(r.olusma) < simdi(Date.now() - GONDERIM_BEKLE_SN * 1000); };
 
 // köprü her "al" çağrısında (yaklaşık 30 sn'de bir) yaşadığını bildirir; en fazla dakikada bir yazılır
 export async function kopruNabiz(D) {
@@ -22,63 +24,87 @@ export async function kopruCanli(D) {
   return Math.floor(Date.now() / 1000) - int(await gizliAyar(D, '_kopru_son')) <= KOPRU_CANLI_SN;
 }
 export async function dogrulamaGerekli(D, A) {
-  return A.tel_dogrulama === '1' && str(A.whatsapp).replace(/\D/g, '').length >= 11 && await kopruCanli(D);
+  return A.tel_dogrulama === '1' && await kopruCanli(D);
 }
 
-// site: kod üret
-export async function dogrulaBaslat(D, A, ip, tel) {
+function mesajMetni(token, kod) {
+  return `*OTOKABUL* doğrulama kodunuz: *${kod}*\n\n` +
+    `Bu kodu sitedeki kutuya yazın ya da ön teklifinizi görmek için bu bağlantıya dokunun:\nhttps://otokabul.com.tr/#dg=${token}.${kod}\n\n` +
+    `_Kod 15 dakika geçerlidir. Bu talebi siz yapmadıysanız bu mesajı dikkate almayın._`;
+}
+
+// site: kod üret ve WhatsApp gönderim sırasına koy
+export async function dogrulaBaslat(D, A, ip, tel, yeniden) {
   const n = telN(tel);
   if (n.length !== 10 || n[0] !== '5') return { hata: 'Lütfen geçerli bir cep telefonu numarası gir (05xx xxx xx xx).' };
   if (!(await dogrulamaGerekli(D, A))) return { gerekmez: 1 };
-  const c = await D.prepare('SELECT COUNT(*) n FROM tel_dogrula WHERE ip = ? AND olusma > ?').bind(ip, simdi(Date.now() - 3600e3)).first();
-  if (int(c.n) >= 12) return { hata: 'Çok fazla doğrulama denemesi yapıldı. Lütfen bizi telefonla ara.' };
-  // aynı numaranın son 15 dk'daki bekleyen kodu varsa onu ver (müşteri geri dönüp tekrar basarsa kod değişmesin)
-  const eski = await D.prepare("SELECT token, kod, durum, onay_tel FROM tel_dogrula WHERE tel = ? AND ip = ? AND olusma > ? ORDER BY olusma DESC LIMIT 1")
-    .bind(n, ip, simdi(Date.now() - KOD_GECERLI_DK * 60e3)).first();
-  let token, kod, durum = 'bekliyor', onayTel = '';
-  if (eski) { token = eski.token; kod = eski.kod; durum = eski.durum; onayTel = eski.onay_tel; }
-  else {
-    token = rastgeleHex(16);
-    for (let i = 0; i < 5; i++) {
-      kod = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
-      const v = await D.prepare("SELECT 1 FROM tel_dogrula WHERE kod = ? AND durum = 'bekliyor' AND olusma > ?").bind(kod, simdi(Date.now() - KOD_GECERLI_DK * 60e3)).first();
-      if (!v) break;
-    }
-    await D.prepare('INSERT INTO tel_dogrula(token, kod, tel, ip, olusma) VALUES(?,?,?,?,?)').bind(token, kod, n, ip, simdi()).run();
-    // eski kayıtları temizle
-    await D.prepare('DELETE FROM tel_dogrula WHERE olusma < ?').bind(simdi(Date.now() - 7 * 864e5)).run();
+  // aynı numaranın son 15 dk'daki kodu varsa yenisi gönderilmez (müşteri geri dönüp tekrar basarsa)
+  const eski = await D.prepare('SELECT token, durum, olusma FROM tel_dogrula WHERE tel = ? AND ip = ? AND olusma > ? ORDER BY olusma DESC LIMIT 1')
+    .bind(n, ip, gecerliSinir()).first();
+  if (eski && !(yeniden && eski.durum !== 'onay' && str(eski.olusma) < simdi(Date.now() - 50e3))) return { token: eski.token, tel: telGoster(n) };
+  const c = await D.prepare('SELECT COUNT(*) n FROM tel_dogrula WHERE (ip = ? OR tel = ?) AND olusma > ?').bind(ip, n, simdi(Date.now() - 3600e3)).first();
+  if (int(c.n) >= 6) return { hata: 'Çok fazla doğrulama kodu istendi. Lütfen biraz sonra tekrar dene ya da bizi telefonla ara.' };
+  const token = rastgeleHex(16);
+  let kod = '';
+  for (let i = 0; i < 5; i++) {
+    kod = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
+    if (!(await D.prepare('SELECT 1 FROM tel_dogrula WHERE kod = ? AND olusma > ?').bind(kod, gecerliSinir()).first())) break;
   }
-  // kod en başta: WhatsApp Web sohbet listesindeki önizlemede (ilk satır) görünsün diye
-  const metin = `Doğrulama kodum: OTK-${kod}\n(OTOKABUL telefon doğrulama)`;
-  return { token, kod, durum, tel: onayTel ? telGoster(onayTel) : '', wa: str(A.whatsapp).replace(/\D/g, ''), metin };
+  await D.batch([
+    D.prepare("INSERT INTO tel_dogrula(token, kod, tel, ip, olusma, gonderim) VALUES(?,?,?,?,?,'sira')").bind(token, kod, n, ip, simdi()),
+    D.prepare('DELETE FROM tel_dogrula WHERE olusma < ?').bind(simdi(Date.now() - 7 * 864e5)),
+  ]);
+  return { token, tel: telGoster(n) };
 }
 
-// site: durum sorgusu (sayfa 2 sn'de bir sorar)
+// site: durum (sayfa 2 sn'de bir sorar)
 export async function dogrulaDurum(D, token) {
-  const r = await D.prepare('SELECT durum, onay_tel, olusma FROM tel_dogrula WHERE token = ?').bind(str(token)).first();
+  const r = await D.prepare('SELECT durum, gonderim, olusma FROM tel_dogrula WHERE token = ?').bind(str(token)).first();
   if (!r) return { durum: 'yok' };
-  if (r.durum !== 'onay' && str(r.olusma) < simdi(Date.now() - KOD_GECERLI_DK * 60e3)) return { durum: 'sure' };
-  return { durum: r.durum, tel: r.durum === 'onay' ? telGoster(r.onay_tel) : '' };
+  if (r.durum === 'onay') return { durum: 'onay' };
+  if (str(r.olusma) < gecerliSinir()) return { durum: 'sure' };
+  // kod zamanında gönderilemediyse (bilgisayar kapandı vb.) müşteri bekletilmez
+  if (r.gonderim === 'hata' || gecikti(r) || (r.gonderim === 'sira' && !(await kopruCanli(D)))) return { durum: 'atla' };
+  return { durum: 'bekliyor', gonderim: str(r.gonderim) };
 }
 
-// köprü: WhatsApp'a gelen mesajda kod görüldü
-export async function dogrulaKopru(D, g) {
-  const m = KOD_DESEN.exec(str(g.metin)) || KOD_DESEN.exec('OTK-' + str(g.kod));
-  if (!m) return { ok: 0, neden: 'kod yok' };
-  const r = await D.prepare("SELECT token, tel, durum FROM tel_dogrula WHERE kod = ? AND olusma > ? ORDER BY olusma DESC LIMIT 1")
-    .bind(m[1], simdi(Date.now() - KOD_GECERLI_DK * 60e3)).first();
-  if (!r) return { ok: 0, neden: 'kod bulunamadı / süresi geçmiş' };
-  if (r.durum === 'onay') return { ok: 1, zaten: 1 };
-  // gönderen numara okunabildiyse doğrulanan numara odur (müşterinin gerçekten ulaşılabilen WhatsApp numarası)
-  const gonderen = telN(g.tel);
-  const onay = gonderen.length === 10 && gonderen[0] === '5' ? gonderen : r.tel;
-  await D.prepare("UPDATE tel_dogrula SET durum = 'onay', onay_tel = ?, onay_ad = ?, onay_zaman = ? WHERE token = ?").bind(onay, str(g.ad).slice(0, 80), simdi(), r.token).run();
-  return { ok: 1, tel: telGoster(onay), farkli: onay !== r.tel ? 1 : 0 };
+// site: müşteri kodu yazdı (ya da mesajdaki bağlantıya dokundu)
+export async function dogrulaKod(D, token, kod) {
+  const r = await D.prepare('SELECT durum, kod, olusma, deneme FROM tel_dogrula WHERE token = ?').bind(str(token)).first();
+  if (!r) return { hata: 'Doğrulama bulunamadı, lütfen yeni kod iste.', sure: 1 };
+  if (r.durum === 'onay') return { ok: 1 };
+  if (str(r.olusma) < gecerliSinir()) return { hata: 'Kodun süresi doldu, lütfen yeni kod iste.', sure: 1 };
+  if (int(r.deneme) >= 6) return { hata: 'Çok fazla hatalı deneme yapıldı, lütfen yeni kod iste.', sure: 1 };
+  if (str(kod).replace(/\D/g, '') !== str(r.kod)) {
+    await D.prepare('UPDATE tel_dogrula SET deneme = deneme + 1 WHERE token = ?').bind(str(token)).run();
+    return { hata: 'Kod hatalı. WhatsApp\'a gelen 6 haneli kodu kontrol et.' };
+  }
+  await D.prepare("UPDATE tel_dogrula SET durum = 'onay', onay_tel = tel, onay_zaman = ? WHERE token = ?").bind(simdi(), str(token)).run();
+  return { ok: 1 };
 }
 
-// teklif kaydında: doğrulanmış numara
-export async function dogrulanmisTel(D, token) {
+// köprü: gönderilecek kodlar (en fazla 3); alınanlar "gonderiliyor" olur, 60 sn'de sonuç gelmezse yeniden verilir
+export async function dogrulaAl(D) {
+  const { results } = await D.prepare(`UPDATE tel_dogrula SET gonderim = 'gonderiliyor', gonderim_zaman = ?1
+    WHERE token IN (SELECT token FROM tel_dogrula WHERE durum = 'bekliyor' AND olusma > ?2 AND (gonderim = 'sira' OR (gonderim = 'gonderiliyor' AND gonderim_zaman < ?3)) ORDER BY olusma LIMIT 3)
+    RETURNING token, kod, tel`).bind(simdi(), simdi(Date.now() - GONDERIM_BEKLE_SN * 1000), simdi(Date.now() - 60e3)).all();
+  return { kodlar: results.map((r) => ({ token: r.token, tel: '90' + r.tel, metin: mesajMetni(r.token, r.kod) })) };
+}
+export async function dogrulaSonuc(D, token, s) {
+  const g = { gonderildi: 'gonderildi', yok: 'yok' }[str(s)] || 'hata';
+  await D.prepare('UPDATE tel_dogrula SET gonderim = ?, gonderim_zaman = ? WHERE token = ?').bind(g, simdi(), str(token)).run();
+}
+
+// teklif kaydında: { tel, dogru: 1 } doğrulandı · { atla: 1 } kod gönderilemedi, doğrulamasız devam · null: doğrulanmadı
+// onceki: bu doğrulamayla zaten bir talep oluştuysa (iki sekme / bağlantı) aynı sonuç döner, ikinci talep açılmaz
+export async function dogrulaKarar(D, token) {
   if (!token) return null;
-  const r = await D.prepare("SELECT onay_tel FROM tel_dogrula WHERE token = ? AND durum = 'onay' AND olusma > ?").bind(str(token), simdi(Date.now() - 6 * 3600e3)).first();
-  return r ? r.onay_tel : null;
+  const r = await D.prepare('SELECT durum, onay_tel, gonderim, olusma, talep_sonuc FROM tel_dogrula WHERE token = ? AND olusma > ?').bind(str(token), simdi(Date.now() - 6 * 3600e3)).first();
+  if (!r) return null;
+  if (r.durum === 'onay') return { tel: r.onay_tel, dogru: 1, onceki: str(r.talep_sonuc) };
+  if (r.gonderim === 'hata' || gecikti(r)) return { atla: 1, onceki: str(r.talep_sonuc) };
+  return null;
+}
+export async function dogrulaTalepYaz(D, token, sonuc) {
+  if (token) await D.prepare('UPDATE tel_dogrula SET talep_sonuc = ? WHERE token = ?').bind(JSON.stringify(sonuc), str(token)).run();
 }
