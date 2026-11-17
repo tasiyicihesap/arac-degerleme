@@ -1079,6 +1079,9 @@
           '<div class="satirlar" style="margin-bottom:8px"><button class="btn kucuk" id="ilMarmara">Marmara + 300 km (önerilen)</button><button class="btn kucuk" id="ilTum">Tümünü aç</button><button class="btn kucuk" id="ilHic">Temizle</button><span class="soluk" id="ilSay"></span></div>' +
           '<div class="il-izgara" id="ilListe">' + ILLER_TUM.map(function (i) { return '<label><input type="checkbox" value="' + esc(i) + '"' + ((',' + (A.hizmet_illeri || '') + ',').indexOf(',' + i + ',') >= 0 ? ' checked' : '') + '>' + esc(i) + '</label>'; }).join('') + '</div>' +
           '<div class="satirlar" style="margin-top:10px"><button class="btn ana" id="ilKaydet">Bölgeyi kaydet</button></div></div>' +
+        '<div class="kutu"><h2>🚗 Sitede görünen markalar</h2><p class="soluk" style="margin-top:0">Sihirbazda yalnızca bu markalar çıkar (otomobil, arazi-SUV-pickup, elektrikli, minivan-panelvan). Kamyon, otobüs, traktör, motosiklet ve kasko listesindeki bozuk/tekrar eden model adları pasiftir. Boş bırakırsan varsayılan liste kullanılır. Değiştirince "Kaydet ve uygula"ya bas; işlem "Toplu Fiyat Değişimi → son işlemler"den geri alınabilir.</p>' +
+          '<textarea class="girdi" id="mIzin" rows="4" style="width:100%" placeholder="Varsayılan liste">' + esc(A.marka_izin || '') + '</textarea>' +
+          '<div class="satirlar" style="margin-top:8px"><button class="btn kucuk" id="mVars">Varsayılan listeyi getir</button><button class="btn ana" id="mUygula">Kaydet ve uygula</button><span class="soluk" id="mSonuc"></span></div></div>' +
         '<div class="kutu" id="mmKutu"><h2>💬 Müşteriye otomatik WhatsApp mesajları</h2><p class="soluk" style="margin-top:0">Randevu isteyen müşteriye hemen teşekkür ve "sizi arayacağız" mesajı gider. Randevu istemeyene 1 gün, 3 gün ve 15 gün sonra birer hatırlatma gider, sonra bir daha yazılmaz. Mesajları Bildirim Köprüsü eklentisi, WhatsApp Web açık bilgisayardan gönderir. Müşteri <b>DUR</b> yazarsa ya da sohbette cevap verirse hatırlatmalar durur; randevu alınca veya talebin durumunu değiştirince bekleyen hatırlatmalar iptal olur.</p>' +
           '<div class="alanlar"><label>Otomatik mesajlar<select class="girdi" id="mmAcik"><option value="1"' + (A.musteri_mesaj === '1' ? ' selected' : '') + '>Açık</option><option value="0"' + (A.musteri_mesaj !== '1' ? ' selected' : '') + '>Kapalı</option></select></label>' +
           '<label>Gönderim saatleri<input class="girdi" id="mmSaat" value="' + esc(A.musteri_saat || '9-20') + '" placeholder="9-20"></label></div>' +
@@ -1132,6 +1135,11 @@
         api('ayar_kaydet', d).then(function () { bildir('Mesaj ayarları kaydedildi'); });
       };
       $('#mmDene', k).onclick = function () { api('mm_deneme', { tel: $('#mmDTel', k).value, tur: $('#mmDTur', k).value }).then(function () { bildir('Deneme mesajı sıraya alındı'); mmOzet(); }); };
+      $('#mVars', k).onclick = function () { api('marka_izin_varsayilan').then(function (r) { $('#mIzin', k).value = r.liste.split(',').join(', '); }); };
+      $('#mUygula', k).onclick = function () {
+        var v = $('#mIzin', k).value.split(',').map(function (x) { return x.trim(); }).filter(Boolean).join(',');
+        api('ayar_kaydet', { marka_izin: v }).then(function () { return api('arac_temizle', {}); }).then(function (r) { $('#mSonuc', k).textContent = r.kapatilan + ' satır pasif, ' + r.acilan + ' satır aktif yapıldı'; bildir('Marka listesi uygulandı'); });
+      };
       $('#ilKaydet', k).onclick = function () {
         var l = $$('#ilListe input:checked', k).map(function (i) { return i.value; });
         if (l.length === ILLER_TUM.length) l = [];
