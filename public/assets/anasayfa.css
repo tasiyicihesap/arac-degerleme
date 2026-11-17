@@ -507,3 +507,13 @@ body.ana{background:#fff;color:var(--murekkep)}
 .oc-logo{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
 .oc-com{font:800 12px/1 Manrope,Inter,sans-serif;color:#010006;letter-spacing:.01em;margin-right:1px}
 @media (max-width:620px){.oc-com{font-size:9.5px}}
+/* İki logo eşit boyda + belirgin ayırıcı çizgi */
+.marka-blok{align-items:center;gap:18px}
+.isbirligi{position:relative;border-left:0;margin-left:0;padding:0 0 0 18px;gap:0}
+.isbirligi::before{content:"";position:absolute;left:0;top:-4px;bottom:-4px;width:2px;border-radius:2px;background:linear-gradient(180deg,rgba(148,163,184,0),#94a3b8 22%,#94a3b8 78%,rgba(148,163,184,0))}
+.isbirligi img{height:31px;box-shadow:0 2px 8px -4px rgba(0,0,0,.45)}
+.oc-com{font-size:13px;margin-top:1px}
+.isbirligi em{position:absolute;left:18px;top:100%;margin-top:3px;font-size:10.5px}
+@media (max-width:900px){.marka-blok{gap:14px}.isbirligi{padding-left:14px}.isbirligi em{left:14px}.isbirligi img{height:27px}.oc-com{font-size:11.5px}}
+@media (max-width:620px){.marka-blok{gap:10px}.isbirligi{padding-left:10px}.isbirligi em{left:10px;font-size:9.5px}.isbirligi img{height:21px}.oc-com{font-size:9.5px}}
+@media (max-width:380px){.isbirligi em{display:none}}
