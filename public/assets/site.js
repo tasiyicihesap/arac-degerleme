@@ -366,16 +366,15 @@
       '</svg>';
   }
   function cizHasar(k) {
-    k.innerHTML = '<p class="ipucu">Şemada parçaya dokun, açılan pencereden durumunu seç. İstersen listeden de işaretleyebilirsin; ikisi birlikte güncellenir.</p>' +
-      '<div class="hasar-kap"><div>' + aracSvg() + '<div class="lejant"><span><i class="l-orijinal"></i>Orijinal</span><span><i class="l-lokal"></i>Lokal</span><span><i class="l-boyali"></i>Boyalı</span><span><i class="l-degisen"></i>Değişen</span></div></div><div>' +
-      '<div class="parca-tablo" id="parcaListe"><div class="pt-bas"><span>Parça</span><span>Orijinal</span><span>Lokal</span><span>Boyalı</span><span>Değişen</span></div>' +
-      PARCALAR.map(function (p) { return '<div class="pt-satir" data-p="' + p[0] + '"><span>' + p[1] + '</span>' + DURUM_SIRA.map(function (d) { return '<label class="pt-k k-' + d + '" title="' + DURUM_AD[d] + '"><input type="radio" name="pt_' + p[0] + '" value="' + d + '"><i></i></label>'; }).join('') + '</div>'; }).join('') +
-      '<button type="button" class="pt-temizle" id="ptTemizle">Tümünü orijinal yap</button></div>' +
+    k.innerHTML = '<p class="ipucu">Şemada boyalı ya da değişen parçaya dokun, açılan pencereden durumunu seç. Dokunmadığın parçalar orijinal sayılır.</p>' +
+      '<div class="hasar-kap"><div class="sema-kap">' + aracSvg() + '<div class="lejant"><span><i class="l-orijinal"></i>Orijinal</span><span><i class="l-lokal"></i>Lokal</span><span><i class="l-boyali"></i>Boyalı</span><span><i class="l-degisen"></i>Değişen</span></div>' +
+      '<div class="hasar-ozet" id="hasarOzet"></div></div><div>' +
       '<div class="grup"><label>Tramer (hasar) kaydı</label><div class="cift" data-ev="tramerVar"><button class="secenek" data-v="0">Yok</button><button class="secenek" data-v="1">Var</button></div>' +
       '<input class="alan" id="tramer" inputmode="numeric" placeholder="Toplam tramer tutarı (TL)" style="margin-top:8px;display:none"></div>' +
       '<div class="grup"><label>Ağır hasar kaydı</label><div class="cift" data-ev="agir"><button class="secenek" data-v="0">Yok</button><button class="secenek" data-v="1">Var</button></div></div>' +
       '</div></div>';
-    var svg = $('.arac-svg', k), liste = $('#parcaListe', k), tr = $('#tramer', k);
+    var svg = $('.arac-svg', k), ozet = $('#hasarOzet', k), tr = $('#tramer', k);
+    var PARCA_AD_S = {}; PARCALAR.forEach(function (x) { PARCA_AD_S[x[0]] = x[1]; });
     // her parçanın ortasına durum yazısı (dar yan parçalarda dikey)
     var KISA = { orijinal: 'ORİJİNAL', lokal: 'LOKAL', boyali: 'BOYALI', degisen: 'DEĞİŞEN' };
     var yazilar = {};
@@ -394,26 +393,22 @@
         var d = S.hasar[el.dataset.p] || 'orijinal'; el.setAttribute('class', 'parca ' + d);
         var t = yazilar[el.dataset.p]; if (t) { t.textContent = KISA[d]; t.setAttribute('class', 'parca-yazi y-' + d); }
       });
-      liste.querySelectorAll('.pt-satir').forEach(function (r) {
-        var d = S.hasar[r.dataset.p] || 'orijinal';
-        r.querySelectorAll('input').forEach(function (i) { i.checked = i.value === d; });
-        r.className = 'pt-satir d-' + d;
-      });
+      // işaretlenen parçaların özeti; dokununca pencere yeniden açılır
+      var l = PARCALAR.filter(function (x) { return S.hasar[x[0]]; });
+      ozet.innerHTML = l.length
+        ? '<div class="ho-bas">İşaretlenen parçalar (' + l.length + ')</div>' + l.map(function (x) { var d = S.hasar[x[0]]; return '<button type="button" class="ho-p k-' + d + '" data-p="' + x[0] + '"><i></i>' + esc(x[1]) + ' <b>' + DURUM_AD[d] + '</b></button>'; }).join('') +
+          '<button type="button" class="pt-temizle" id="ptTemizle">Tümünü orijinal yap</button>'
+        : '<div class="ho-bos">✓ Tüm parçalar orijinal</div>';
+      var tz = $('#ptTemizle', ozet); if (tz) tz.onclick = function () { S.hasar = {}; penKapat(); boya(); };
     }
-    liste.onchange = function (e) {
-      var i = e.target; if (!i.name || i.name.indexOf('pt_') !== 0) return;
-      var p = i.name.slice(3); if (i.value === 'orijinal') delete S.hasar[p]; else S.hasar[p] = i.value;
-      boya();
-    };
-    $('#ptTemizle', k).onclick = function () { S.hasar = {}; boya(); };
+    ozet.onclick = function (e) { var b = e.target.closest('.ho-p'); if (b) penAc(b.dataset.p, b); };
     // parçaya dokununca küçük seçim penceresi: orijinal / lokal boyalı / boyalı / değişen
-    var PARCA_AD_S = {}; PARCALAR.forEach(function (x) { PARCA_AD_S[x[0]] = x[1]; });
     var pen = null;
     function penKapat() { if (pen) { pen.remove(); pen = null; } document.removeEventListener('pointerdown', disTik, true); }
-    function disTik(e) { if (pen && !pen.contains(e.target) && !e.target.closest('.arac-svg .parca')) penKapat(); }
-    svg.onclick = function (e) {
-      var el = e.target.closest('.parca'); if (!el) return;
-      var p = el.dataset.p, d = S.hasar[p] || 'orijinal';
+    function disTik(e) { if (pen && !pen.contains(e.target) && !e.target.closest('.arac-svg .parca') && !e.target.closest('.ho-p')) penKapat(); }
+    svg.onclick = function (e) { var el = e.target.closest('.parca'); if (el) penAc(el.dataset.p, el); };
+    function penAc(p, el) {
+      var d = S.hasar[p] || 'orijinal';
       penKapat();
       pen = document.createElement('div'); pen.className = 'parca-pen';
       pen.innerHTML = '<div class="pp-bas"><b>' + esc(PARCA_AD_S[p] || p) + '</b><button type="button" class="pp-kapat" aria-label="Kapat">✕</button></div>' +
@@ -424,13 +419,17 @@
       if (y + ph > window.innerHeight - 8) y = r.top - ph - 8;
       if (y < 8) y = Math.max(8, (window.innerHeight - ph) / 2);
       pen.style.left = Math.max(8, Math.min(window.innerWidth - pw - 8, x)) + 'px'; pen.style.top = y + 'px';
-      pen.onchange = function (ev) {
-        var v = ev.target.value; if (v === 'orijinal') delete S.hasar[p]; else S.hasar[p] = v;
-        boya(); setTimeout(penKapat, 160);
+      // seçeneğe tıklamak yeter; zaten seçili olana tıklayınca da pencere kapanır
+      pen.onclick = function (ev) {
+        var lb = ev.target.closest('.pp-sec'); if (!lb) return;
+        ev.preventDefault();
+        var v = $('input', lb).value; if (v === 'orijinal') delete S.hasar[p]; else S.hasar[p] = v;
+        pen.querySelectorAll('.pp-sec').forEach(function (x) { var on = x === lb; x.classList.toggle('secili', on); $('input', x).checked = on; });
+        boya(); setTimeout(penKapat, 180);
       };
       $('.pp-kapat', pen).onclick = penKapat;
       setTimeout(function () { document.addEventListener('pointerdown', disTik, true); document.addEventListener('scroll', penKapat, { capture: true, passive: true, once: true }); }, 0);
-    };
+    }
 
     k.querySelectorAll('[data-ev]').forEach(function (g) {
       var alan = g.dataset.ev;
