@@ -9,6 +9,17 @@
   var yuzde = function (n, isaret) { n = +n || 0; var s = (n > 0 && isaret !== false ? '+' : '') + n.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) + '%'; return '<span class="' + (n > 0 ? 'art' : n < 0 ? 'azl' : '') + '">' + s + '</span>'; };
   var csrf = null;
 
+  // Gemini'de üretilen manşet görselleri: Gemini sekmesi açık panele postMessage ile gönderir (yalnızca manşet alanları)
+  window.addEventListener('message', function (e) {
+    if (e.origin !== 'https://gemini.google.com') return;
+    var d = e.data || {};
+    if (d.tip !== 'otk_gorsel' || !/^manset\d{1,2}$/.test(d.ad || '') || !/^data:image\/(jpeg|png|webp);base64,/.test(d.veri || '') || !csrf) return;
+    fetch(d.veri).then(function (r) { return r.blob(); }).then(function (b) {
+      var fd = new FormData(); fd.append('tur', 'site'); fd.append('marka', d.ad); fd.append('dosya', b, d.ad + '.jpg');
+      return fetch('api.php?a=gorsel_yukle', { method: 'POST', headers: { 'X-CSRF': csrf }, body: fd }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.hata); return j; }); });
+    }).then(function () { bildir(d.ad + ' görseli yüklendi'); if (e.source) e.source.postMessage({ tip: 'otk_tamam', ad: d.ad }, e.origin); })
+      .catch(function (er) { if (e.source) e.source.postMessage({ tip: 'otk_hata', ad: d.ad, hata: String(er && er.message || er) }, e.origin); });
+  });
   function api(a, govde, sessiz) {
     return fetch('api.php?a=' + a, govde !== undefined ? { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF': csrf || '' }, body: JSON.stringify(govde) } : { headers: { 'X-CSRF': csrf || '' } })
       .then(function (r) {
