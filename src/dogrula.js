@@ -48,7 +48,8 @@ export async function dogrulaBaslat(D, A, ip, tel) {
     // eski kayıtları temizle
     await D.prepare('DELETE FROM tel_dogrula WHERE olusma < ?').bind(simdi(Date.now() - 7 * 864e5)).run();
   }
-  const metin = `Merhaba OTOKABUL, telefon numaramı doğrulamak istiyorum.\nDoğrulama kodum: OTK-${kod}`;
+  // kod en başta: WhatsApp Web sohbet listesindeki önizlemede (ilk satır) görünsün diye
+  const metin = `Doğrulama kodum: OTK-${kod}\n(OTOKABUL telefon doğrulama)`;
   return { token, kod, durum, tel: onayTel ? telGoster(onayTel) : '', wa: str(A.whatsapp).replace(/\D/g, ''), metin };
 }
 
