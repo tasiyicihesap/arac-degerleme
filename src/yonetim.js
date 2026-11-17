@@ -6,6 +6,7 @@ import {
 import { teklifHesapla, bazFiyat } from './fiyat.js';
 import { istatistikOzet } from './istatistik.js';
 import { kopruAnahtari } from './kopru.js';
+import { durumDegisti, talepMesajlari, denemePlanla, mesajOzet, telN } from './musteri.js';
 import { epostaGonder, anlikBildir, telegramGonder } from './bildirim.js';
 import { json, rastgeleHex, sifreOzet, sifreDogrula, CEREZ, oturumYaz, oturumOku, cerezAl, cerezBaslik } from './yardim.js';
 
@@ -412,8 +413,18 @@ export async function yonetimApi(req, env) {
     case 'talep_kaydet': {
       const g = await girdi();
       await D.prepare('UPDATE talepler SET durum = ?, notlar = ? WHERE id = ?').bind(kes(g.durum ?? 'Yeni', 30), kes(g.notlar ?? '', 2000), int(g.id)).run();
+      await durumDegisti(D, int(g.id), kes(g.durum ?? 'Yeni', 30));
       return json({ ok: 1 });
     }
+    case 'talep_mesajlar': { const g = await girdi(); return json(await talepMesajlari(D, int(g.id))); }
+    case 'mm_ozet': return json(await mesajOzet(D));
+    case 'mm_deneme': {
+      const g = await girdi();
+      try { await denemePlanla(D, await ayarlar(D), str(g.tel), str(g.tur)); } catch (e) { return json({ hata: e.message }, 400); }
+      return json({ ok: 1 });
+    }
+    case 'mm_ret_kaldir': { const g = await girdi(); await D.prepare('DELETE FROM tel_ret WHERE tel = ?').bind(telN(g.tel)).run(); return json({ ok: 1 }); }
+    case 'mm_iptal': { const g = await girdi(); await D.prepare("UPDATE musteri_mesaj SET durum = 'iptal', sonuc = 'panelden iptal', guncel = ? WHERE id = ? AND durum = 'bekliyor'").bind(simdi(), int(g.id)).run(); return json({ ok: 1 }); }
     // --- iletişim formu ve gelen e-postalar ---
     case 'kopru_anahtar': { const g = await girdi(); return json({ anahtar: await kopruAnahtari(D, !!g.yenile) }); }
     case 'istatistik': { const g = await girdi(); return istatistikOzet(D, g.gun); }

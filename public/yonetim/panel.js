@@ -223,6 +223,10 @@
     $('#mOk').onclick = function () { var y = +m.okundu ? 0 : 1; api('mesaj_okundu', { id: m.id, okundu: y }).then(function () { m.okundu = y; kapat(); yenile(); }); };
     $('#mSil').onclick = function () { if (confirm('Bu mesaj silinsin mi?')) api('mesaj_sil', { id: m.id }).then(function () { bildir('Silindi'); kapat(); yenile(); }); };
   }
+  function mmDurum(m) {
+    var r = { 'bekliyor': '<span class="soluk">⏳ Bekliyor</span>', 'alındı': '<span class="soluk">📤 Gönderiliyor</span>', 'gönderildi': '<span class="art">✓ Gönderildi</span>', 'iptal': '<span class="soluk">✕ İptal</span>', 'hata': '<span class="azl">⚠ Gönderilemedi</span>' }[m.durum] || esc(m.durum);
+    return r + (m.sonuc && m.tur !== 'deneme' ? '<br><small class="soluk">' + esc(m.sonuc) + '</small>' : '');
+  }
   function talepDetay(id) {
     var go = function (t) {
       var h = {}, d = {}; try { h = JSON.parse(t.hasar || '{}'); d = JSON.parse(t.detay || '{}'); } catch (e) {}
@@ -254,6 +258,20 @@
           $('.talep-foto', fk).innerHTML = l.map(function (f) { return '<a href="api.php?a=foto&id=' + f.id + '" target="_blank"><img src="api.php?a=foto&id=' + f.id + '" alt="" loading="lazy"></a>'; }).join('') || '<span class="soluk">Fotoğraf yok</span>';
         });
       }
+      // müşteriye giden / planlanan otomatik WhatsApp mesajları
+      (function () {
+        var mk = document.createElement('div'); mk.className = 'kutu'; mk.innerHTML = '<h2>💬 Müşteriye otomatik mesajlar</h2><div class="mm-liste soluk">Yükleniyor…</div>';
+        var dl2 = $('#cekmeceIc dl.bilgi'); dl2.parentNode.insertBefore(mk, dl2.nextSibling);
+        var ciz = function () {
+          api('talep_mesajlar', { id: t.id }).then(function (l) {
+            $('.mm-liste', mk).innerHTML = l.length ? '<table class="mm-tablo">' + l.map(function (m) {
+              return '<tr><td>' + esc(m.ad) + '</td><td>' + esc(String(m.zaman).slice(0, 16)) + '</td><td>' + mmDurum(m) + '</td><td>' + (m.durum === 'bekliyor' ? '<button class="btn kucuk" data-iptal="' + m.id + '">İptal</button>' : '') + '</td></tr>';
+            }).join('') + '</table>' : '<span class="soluk">Bu talep için planlanmış mesaj yok.</span>';
+          });
+        };
+        mk.onclick = function (e) { var b = e.target.closest('[data-iptal]'); if (b) api('mm_iptal', { id: +b.dataset.iptal }).then(function () { bildir('Mesaj iptal edildi'); ciz(); }); };
+        ciz();
+      })();
       $('#dKaydet').onclick = function () { api('talep_kaydet', { id: t.id, durum: $('#dDurum').value, notlar: $('#dNot').value }).then(function () { bildir('Kaydedildi'); kapat(); yenile(); }); };
       $('#dSil').onclick = function () { if (confirm('#' + t.id + ' numaralı talep silinsin mi?')) api('talep_sil', { id: t.id }).then(function () { bildir('Silindi'); kapat(); yenile(); }); };
     };
@@ -1061,6 +1079,17 @@
           '<div class="satirlar" style="margin-bottom:8px"><button class="btn kucuk" id="ilMarmara">Marmara + 300 km (önerilen)</button><button class="btn kucuk" id="ilTum">Tümünü aç</button><button class="btn kucuk" id="ilHic">Temizle</button><span class="soluk" id="ilSay"></span></div>' +
           '<div class="il-izgara" id="ilListe">' + ILLER_TUM.map(function (i) { return '<label><input type="checkbox" value="' + esc(i) + '"' + ((',' + (A.hizmet_illeri || '') + ',').indexOf(',' + i + ',') >= 0 ? ' checked' : '') + '>' + esc(i) + '</label>'; }).join('') + '</div>' +
           '<div class="satirlar" style="margin-top:10px"><button class="btn ana" id="ilKaydet">Bölgeyi kaydet</button></div></div>' +
+        '<div class="kutu" id="mmKutu"><h2>💬 Müşteriye otomatik WhatsApp mesajları</h2><p class="soluk" style="margin-top:0">Randevu isteyen müşteriye hemen teşekkür ve "sizi arayacağız" mesajı gider. Randevu istemeyene 1 gün, 3 gün ve 15 gün sonra birer hatırlatma gider, sonra bir daha yazılmaz. Mesajları Bildirim Köprüsü eklentisi, WhatsApp Web açık bilgisayardan gönderir. Müşteri <b>DUR</b> yazarsa ya da sohbette cevap verirse hatırlatmalar durur; randevu alınca veya talebin durumunu değiştirince bekleyen hatırlatmalar iptal olur.</p>' +
+          '<div class="alanlar"><label>Otomatik mesajlar<select class="girdi" id="mmAcik"><option value="1"' + (A.musteri_mesaj === '1' ? ' selected' : '') + '>Açık</option><option value="0"' + (A.musteri_mesaj !== '1' ? ' selected' : '') + '>Kapalı</option></select></label>' +
+          '<label>Gönderim saatleri<input class="girdi" id="mmSaat" value="' + esc(A.musteri_saat || '9-20') + '" placeholder="9-20"></label></div>' +
+          '<p class="soluk" style="margin:10px 0 6px">Metinlerde kullanılabilecekler: <code>{ad}</code> müşterinin adı · <code>{arac}</code> 2018 Renault Megane · <code>{teklif}</code> " (ön teklifimiz: … TL)" · <code>{firma}</code> · <code>{tel}</code>. *kalın* ve _italik_ WhatsApp\'taki gibi.</p>' +
+          [['kabul1', 'Randevu isteyince — 1. mesaj (teşekkür)'], ['kabul2', 'Randevu isteyince — 2. mesaj (sizi arayacağız)'], ['takip1', 'Randevu istemeyene — 1 gün sonra'], ['takip2', 'Randevu istemeyene — 3 gün sonra'], ['takip3', 'Randevu istemeyene — 15 gün sonra (son)']].map(function (x) {
+            return '<label class="mm-sablon"><span>' + x[1] + '</span><textarea class="girdi" rows="5" data-mm="mm_' + x[0] + '">' + esc(A['mm_' + x[0]] || '') + '</textarea></label>';
+          }).join('') +
+          '<div class="satirlar" style="margin-top:10px"><button class="btn ana" id="mmKaydet">Mesaj ayarlarını kaydet</button></div>' +
+          '<div class="satirlar" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--c)"><b>Deneme gönder:</b><input class="girdi" id="mmDTel" placeholder="05xx xxx xx xx" style="width:160px" value="0501 176 39 94"><select class="girdi" id="mmDTur"><option value="kabul1">Randevu 1. mesaj</option><option value="kabul2">Randevu 2. mesaj</option><option value="takip1">1. gün hatırlatma</option><option value="takip2">3. gün hatırlatma</option><option value="takip3">15. gün hatırlatma</option></select><button class="btn koyu" id="mmDene">Gönder</button></div>' +
+          '<p class="soluk" style="margin:6px 0 0">Deneme mesajı eklenti açıkken ve gönderim saatleri içinde 1 dakika içinde gider.</p>' +
+          '<div id="mmOzet" style="margin-top:14px"></div></div>' +
         '<div class="kutu"><h2>WhatsApp grup köprüsü</h2><p class="soluk" style="margin-top:0">"OTOKABUL Bildirim Köprüsü" Chrome eklentisi, WhatsApp Web açık bir bilgisayarda yeni talepleri gruplara iletir. Eklentiye bu anahtarı yaz. Anahtarı yenilersen eski anahtarlı eklentiler durur.</p>' +
           '<div class="satirlar"><input class="girdi" id="kAnahtar" readonly style="width:320px;font-family:monospace" value="—"><button class="btn kucuk" id="kGoster">Göster</button><button class="btn kucuk" id="kKopya">Kopyala</button><button class="btn kucuk kirmizi" id="kYenile">Yenile</button></div></div>' +
         '<div class="kutu"><h2>Şifre değiştir</h2><div class="alanlar"><label>Mevcut şifre<input type="password" class="girdi" id="pEski"></label><label>Yeni şifre<input type="password" class="girdi" id="pYeni"></label></div><div class="satirlar" style="margin-top:10px"><button class="btn" id="pKaydet">Şifreyi değiştir</button></div></div>' +
@@ -1087,6 +1116,22 @@
       $('#kGoster', k).onclick = function () { kAl(false); };
       $('#kKopya', k).onclick = function () { var v = $('#kAnahtar', k).value; if (v.length > 5) navigator.clipboard.writeText(v).then(function () { bildir('Kopyalandı'); }); else kAl(false); };
       $('#kYenile', k).onclick = function () { if (confirm('Anahtar yenilensin mi? Eski anahtarlı eklentiler çalışmayı bırakır.')) kAl(true); };
+      var mmOzet = function () {
+        api('mm_ozet').then(function (o) {
+          $('#mmOzet', k).innerHTML = '<b>Son mesajlar</b> <span class="soluk">(' + o.bekleyen + ' mesaj gönderilmeyi bekliyor)</span>' +
+            (o.son.length ? '<table class="mm-tablo">' + o.son.map(function (m) { return '<tr><td>' + (m.talep_id ? '#' + m.talep_id + ' ' : '') + esc(m.ad || '') + '</td><td>' + esc(m.ad_tur) + '</td><td>' + esc(String(m.zaman).slice(0, 16)) + '</td><td>' + mmDurum(m) + '</td></tr>'; }).join('') + '</table>' : '<p class="soluk">Henüz mesaj yok.</p>') +
+            '<div style="margin-top:10px"><b>DUR yazan numaralar</b> <span class="soluk">(bunlara hiçbir otomatik mesaj gitmez)</span></div>' +
+            (o.ret.length ? '<div class="kb-iller" style="margin-top:6px">' + o.ret.map(function (r) { return '<span>0' + esc(r.tel) + ' <a href="#" data-ret="' + esc(r.tel) + '" title="Listeden çıkar">✕</a></span>'; }).join('') + '</div>' : '<p class="soluk" style="margin:4px 0">Yok.</p>');
+        });
+      };
+      mmOzet();
+      $('#mmOzet', k).onclick = function (e) { var a = e.target.closest('[data-ret]'); if (!a) return; e.preventDefault(); if (confirm('0' + a.dataset.ret + ' numarasına yeniden otomatik mesaj gidebilsin mi?')) api('mm_ret_kaldir', { tel: a.dataset.ret }).then(mmOzet); };
+      $('#mmKaydet', k).onclick = function () {
+        var d = { musteri_mesaj: $('#mmAcik', k).value, musteri_saat: $('#mmSaat', k).value.replace(/\s/g, '') || '9-20' };
+        $$('[data-mm]', k).forEach(function (t) { d[t.dataset.mm] = t.value; });
+        api('ayar_kaydet', d).then(function () { bildir('Mesaj ayarları kaydedildi'); });
+      };
+      $('#mmDene', k).onclick = function () { api('mm_deneme', { tel: $('#mmDTel', k).value, tur: $('#mmDTur', k).value }).then(function () { bildir('Deneme mesajı sıraya alındı'); mmOzet(); }); };
       $('#ilKaydet', k).onclick = function () {
         var l = $$('#ilListe input:checked', k).map(function (i) { return i.value; });
         if (l.length === ILLER_TUM.length) l = [];

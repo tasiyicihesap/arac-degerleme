@@ -2,6 +2,7 @@
 import { kasaBul, modelKasasi } from './kasa.js';
 import { izKaydet } from './istatistik.js';
 import { kopru } from './kopru.js';
+import { takipPlanla, kabulPlanla } from './musteri.js';
 import { db, ayarlar, VARSAYILAN_AYARLAR, simdi, int, str, kes, dolu, buYil, gorselHaritasi, logoUrl, modelGorselUrl, donanimlar } from './db.js';
 import { teklifHesapla, PARCALAR, DURUMLAR } from './fiyat.js';
 import { json, rastgeleHex } from './yardim.js';
@@ -150,6 +151,7 @@ async function siteApiIc(req, env, ctx) {
         kes(g.versiyon, 80), str(g.yakit), str(g.vites), str(g.kasa), int(g.km), kes(g.renk, 30), Object.keys(hasar).length ? JSON.stringify(hasar) : '[]',
         int(g.tramer), dolu(g.agir) ? 1 : 0, s.baz, s.min, s.max, JSON.stringify(s), ip, anahtar, g.donanim.length ? JSON.stringify(g.donanim) : '', kes(str(g.aciklama).trim(), 1500), telN).run();
       const no = int(r.meta.last_row_id);
+      arkada(takipPlanla(D, A, no, telN).catch(() => {}));
       // 10 gün içinde 3 gün peş peşe değerleme → kısıt: 3 gün, sonra 1 hafta, sonra 10 gün
       if (!muaf) arkada((async () => {
         const gunler = (await D.prepare("SELECT DISTINCT substr(tarih, 1, 10) g FROM talepler WHERE tel_n = ? AND tarih >= ? ORDER BY g DESC").bind(telN, simdi(Date.now() - 10 * 864e5).slice(0, 10)).all()).results.map((x) => x.g);
@@ -215,9 +217,12 @@ async function siteApiIc(req, env, ctx) {
     case 'randevu': {
       if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);
       let g = {}; try { g = (await req.json()) || {}; } catch (e) {}
-      const t = await D.prepare('SELECT id, kabul_tarih FROM talepler WHERE id = ? AND anahtar = ?').bind(int(g.no), str(g.anahtar ?? '-') || '-').first();
+      const t = await D.prepare('SELECT id, kabul_tarih, tel_n FROM talepler WHERE id = ? AND anahtar = ?').bind(int(g.no), str(g.anahtar ?? '-') || '-').first();
       if (!t) return json({ hata: 'Talep bulunamadı. Lütfen bizi telefonla arayın.' }, 404);
-      if (!t.kabul_tarih) await D.prepare("UPDATE talepler SET durum = 'Randevu İstedi', kabul_tarih = ? WHERE id = ?").bind(simdi(), t.id).run();
+      if (!t.kabul_tarih) {
+        await D.prepare("UPDATE talepler SET durum = 'Randevu İstedi', kabul_tarih = ? WHERE id = ?").bind(simdi(), t.id).run();
+        await kabulPlanla(D, await ayarlar(D), t.id, str(t.tel_n)).catch(() => {});
+      }
       return json({ ok: 1 });
     }
     case 'foto': { // talebe fotoğraf (tarayıcıda küçültülmüş), talep başına en fazla 10

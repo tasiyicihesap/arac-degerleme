@@ -54,6 +54,14 @@ export const VARSAYILAN_AYARLAR = {
   sorgu_muaf: '5011763994',
   // talep alınan iller (virgüllü). Boş = tüm Türkiye. Varsayılan: İstanbul'a ~300 km çevre
   hizmet_illeri: 'İstanbul,Kocaeli,Sakarya,Yalova,Bursa,Bilecik,Düzce,Bolu,Tekirdağ,Kırklareli,Edirne',
+  // müşteriye WhatsApp mesajları (Bildirim Köprüsü eklentisi gönderir). {ad} {arac} {teklif} {firma} {tel}
+  musteri_mesaj: '1',
+  musteri_saat: '9-20',
+  mm_kabul1: 'Merhaba {ad} 👋\n\n*{arac}* için randevu talebiniz bize ulaştı, teşekkür ederiz!\n\n_{firma}_',
+  mm_kabul2: '📞 Ekibimiz sizi en kısa sürede bu numaradan arayarak aracınızı görmek için uygun gün ve saati birlikte belirleyecek.\n\nBu arada sorunuz olursa bu mesaja yazabilir ya da *{tel}* numarasından bize ulaşabilirsiniz.',
+  mm_takip1: 'Merhaba {ad} 👋\n\nDün *{arac}* için OTOKABUL\'da değerleme yapmıştınız{teklif}. Teklifimizi düşünme fırsatınız oldu mu?\n\nSorunuz varsa bu mesaja yazmanız yeterli, hemen yardımcı olalım.\n\n_Bu mesajları almak istemiyorsanız *DUR* yazmanız yeterli._',
+  mm_takip2: 'Merhaba {ad},\n\n*{arac}* için ön teklifimiz hâlâ geçerli. Aracınızı yerinde görüp ekspertizini ücretsiz yapabilir, anlaşırsak aynı gün ödemeyle satın alabiliriz.\n\nSize uygun bir gün ayarlayalım mı? 🙂\n\n_Bu mesajları almak istemiyorsanız *DUR* yazmanız yeterli._',
+  mm_takip3: 'Merhaba {ad},\n\n*{arac}* için son kez yazıyoruz. Aracınızı satmayı düşünürseniz güncel teklifimiz için bu mesaja yazmanız ya da *{tel}* numarasını aramanız yeterli.\n\nİyi günler dileriz 🙏\n_{firma}_',
   sifre: '',
 };
 
@@ -77,6 +85,11 @@ CREATE TABLE IF NOT EXISTS ziyaretler (id INTEGER PRIMARY KEY AUTOINCREMENT, tar
 CREATE INDEX IF NOT EXISTS ix_ziy_gun ON ziyaretler(gun, olay);
 CREATE INDEX IF NOT EXISTS ix_ziy_oturum ON ziyaretler(oturum);
 CREATE TABLE IF NOT EXISTS tel_kisit (tel TEXT PRIMARY KEY, bitis TEXT, seviye INTEGER DEFAULT 0, son TEXT);
+CREATE TABLE IF NOT EXISTS musteri_mesaj (id INTEGER PRIMARY KEY AUTOINCREMENT, talep_id INTEGER, tel TEXT, tur TEXT, zaman TEXT, durum TEXT DEFAULT 'bekliyor', deneme INTEGER DEFAULT 0, sonuc TEXT DEFAULT '', guncel TEXT);
+CREATE INDEX IF NOT EXISTS ix_mm_durum ON musteri_mesaj(durum, zaman);
+CREATE INDEX IF NOT EXISTS ix_mm_talep ON musteri_mesaj(talep_id);
+CREATE INDEX IF NOT EXISTS ix_mm_tel ON musteri_mesaj(tel);
+CREATE TABLE IF NOT EXISTS tel_ret (tel TEXT PRIMARY KEY, tarih TEXT, neden TEXT);
 CREATE INDEX IF NOT EXISTS ix_talep_durum ON talepler(durum);
 CREATE TABLE IF NOT EXISTS gorsel_parca (tur TEXT, ad TEXT, sira INTEGER, veri BLOB, PRIMARY KEY(tur, ad, sira));
 `;

@@ -2,7 +2,8 @@
 // WhatsApp, sunucunun gruplara mesaj atmasına izin vermiyor. Bunun yerine WhatsApp Web açık bir bilgisayardaki
 // "OTOKABUL Bildirim Köprüsü" Chrome eklentisi buradan yeni talepleri alır ve gruplara kendisi yazar.
 // Birden fazla bilgisayarda açık olsa bile her talep yalnızca bir kez alınır (sunucu tarafında "sahiplenme").
-import { simdi, int, str, kes, gizliAyar } from './db.js';
+import { simdi, int, str, kes, gizliAyar, ayarlar } from './db.js';
+import { mesajAl, mesajSonuc } from './musteri.js';
 import { json, rastgeleHex } from './yardim.js';
 import { PARCALAR, DURUMLAR } from './fiyat.js';
 
@@ -78,6 +79,9 @@ export async function kopru(req, D) {
   if (!a || q('anahtar') !== a) return json({ hata: 'yetkisiz' }, 401);
   const islem = q('islem');
   const id = int(q('id'));
+  // müşteriye WhatsApp mesajları
+  if (islem === 'mesaj_al') return json(await mesajAl(D, await ayarlar(D)));
+  if (islem === 'mesaj_sonuc' && id) { await mesajSonuc(D, id, q('s'), q('not')); return json({ ok: 1 }); }
   if (islem === 'onay' && id) {
     await D.prepare("UPDATE talepler SET grup_durum = ? WHERE id = ?").bind('gönderildi ' + simdi(), id).run();
     return json({ ok: 1 });

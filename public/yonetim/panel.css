@@ -188,3 +188,10 @@ table.parca-oran td{padding:3px 6px}
 .kb-iller span{background:#dcfce7;color:#166534;font-weight:600;font-size:12.5px;border-radius:7px;padding:3px 9px}
 .kb-iller em{font-size:12.5px;color:#4b5563;align-self:center;margin-left:4px}
 .kb-uyari{margin-top:8px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:8px;padding:6px 10px;font-size:12.5px}
+
+.mm-sablon{display:block;margin-top:8px}
+.mm-sablon span{display:block;font-weight:600;font-size:13px;margin-bottom:4px}
+.mm-sablon textarea{width:100%;font-family:inherit;line-height:1.45}
+.mm-tablo{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.mm-tablo td{border-top:1px solid #eee;padding:5px 6px;vertical-align:top}
+.kb-iller a{color:#b91c1c;text-decoration:none;margin-left:4px}
