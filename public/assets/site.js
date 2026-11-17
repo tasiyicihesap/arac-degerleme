@@ -147,12 +147,16 @@
       var hepsi = pop.concat(dig);
       k.innerHTML = '<p class="ipucu">En çok değerlenen markalar başta.</p><input class="ara" placeholder="Marka ara (ör. Renault)" autocomplete="off"><div class="izgara dort" id="ogeler"></div>';
       var kut = $('#ogeler', k), ara = $('.ara', k);
+      var acik = window.innerWidth > 520;
       var ciz = function (q) {
         q = (q || '').toLocaleLowerCase('tr');
         var f = hepsi.filter(function (o) { return !q || o.ad.toLocaleLowerCase('tr').indexOf(q) >= 0; });
-        kut.innerHTML = f.length ? f.map(function (o) {
+        // telefonda önce en çok değerlenen 12 marka; gerisi "Tüm markaları göster" ile (arama her zaman hepsinde)
+        var g = q || acik ? f : f.slice(0, 12);
+        kut.innerHTML = g.length ? g.map(function (o) {
           return '<button class="secenek logo-kart' + (S.marka === o.ad ? ' secili' : '') + '" data-v="' + esc(o.ad) + '">' + (o.logo ? '<img src="' + esc(o.logo) + '" alt="" loading="lazy">' : '<span class="harf">' + esc(o.ad.charAt(0)) + '</span>') + '<span>' + esc(o.ad) + '</span></button>';
-        }).join('') : '<div class="bos">Sonuç yok. Markanız listede yoksa bizi arayın.</div>';
+        }).join('') + (g.length < f.length ? '<button type="button" class="liste-daha" id="markaDaha">Tüm markaları göster (' + f.length + ') ▾</button>' : '') : '<div class="bos">Sonuç yok. Markanız listede yoksa bizi arayın.</div>';
+        var d = $('#markaDaha', k); if (d) d.onclick = function (e) { e.stopPropagation(); acik = true; ciz(ara.value); };
       };
       ciz(''); ara.oninput = function () { ciz(ara.value); }; if (window.innerWidth > 980) ara.focus();
       kut.onclick = function (e) { var b = e.target.closest('.secenek'); if (b) sec('marka', b.dataset.v, true); };
