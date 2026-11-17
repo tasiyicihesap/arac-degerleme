@@ -13,7 +13,7 @@
   window.addEventListener('message', function (e) {
     if (e.origin !== 'https://gemini.google.com') return;
     var d = e.data || {};
-    if (d.tip !== 'otk_gorsel' || !/^(manset|promo)\d{1,2}$/.test(d.ad || '') || !/^data:image\/(jpeg|png|webp);base64,/.test(d.veri || '')) return;
+    if (d.tip !== 'otk_gorsel' || !/^(manset|promo|film)\d{1,2}$/.test(d.ad || '') || !/^data:image\/(jpeg|png|webp);base64,/.test(d.veri || '')) return;
     if (!csrf && !d.anahtar) return;
     fetch(d.veri).then(function (r) { return r.blob(); }).then(function (b) {
       var fd = new FormData();
@@ -27,7 +27,7 @@
   (function () {
     var h = location.hash; if (h.indexOf('#otkimg=') !== 0) return;
     var p = decodeURIComponent(h.slice(8)).split('|'); history.replaceState(null, '', location.pathname);
-    if (p.length < 3 || !/^(manset|promo)\d{1,2}$/.test(p[0]) || !/^data:image\/(jpeg|png|webp);base64,/.test(p[2])) return;
+    if (p.length < 3 || !/^(manset|promo|film)\d{1,2}$/.test(p[0]) || !/^data:image\/(jpeg|png|webp);base64,/.test(p[2])) return;
     fetch(p[2]).then(function (r) { return r.blob(); }).then(function (b) {
       var fd = new FormData(); fd.append('ad', p[0]); fd.append('dosya', b, p[0] + '.jpg');
       return fetch('/api.php?a=kopru&islem=gorsel&anahtar=' + encodeURIComponent(p[1]), { method: 'POST', body: fd });

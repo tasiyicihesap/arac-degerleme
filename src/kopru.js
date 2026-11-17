@@ -94,7 +94,7 @@ export async function kopru(req, D) {
   if (islem === 'gorsel' && req.method === 'POST') {
     let fd; try { fd = await req.formData(); } catch (e) { return json({ hata: 'form' }, 400); }
     const ad = str(fd.get('ad')); const dosya = fd.get('dosya');
-    if (!/^(manset|promo)\d{1,2}$/.test(ad) || !dosya || typeof dosya === 'string' || !dosya.size || dosya.size > 3 * 1024 * 1024) return json({ hata: 'geçersiz' }, 400);
+    if (!/^(manset|promo|film)\d{1,2}$/.test(ad) || !dosya || typeof dosya === 'string' || !dosya.size || dosya.size > 3 * 1024 * 1024) return json({ hata: 'geçersiz' }, 400);
     const b = new Uint8Array(await dosya.arrayBuffer());
     const uz = b[0] === 0xff && b[1] === 0xd8 ? 'jpg' : b[0] === 0x89 && b[1] === 0x50 ? 'png' : b[8] === 0x57 && b[9] === 0x45 ? 'webp' : null;
     if (!uz) return json({ hata: 'biçim' }, 400);
