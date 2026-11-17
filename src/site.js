@@ -50,6 +50,11 @@ async function siteApiIc(req, env, ctx) {
       return json({ ad: A.firma_adi, alt: A.firma_alt, telefon: A.telefon, whatsapp: A.whatsapp, eposta: A.eposta, adres: A.adres, teklif_goster: A.teklif_goster === '1', iller: hizmetIlleri(A),
         donanimlar: donanimlar(A).map((d) => ({ ad: d.ad, kosul: d.kosul })) });
     }
+    case 'son_degerlemeler': { // ana sayfadaki "son değerlemeler" şeridi: kişisel bilgi yok
+      const { results } = await D.prepare("SELECT tarih, yil, marka, model, il FROM talepler WHERE ad NOT LIKE 'TEST%' ORDER BY id DESC LIMIT 14").all();
+      const simdiMs = Date.parse(simdi().replace(' ', 'T') + 'Z');
+      return json(results.map((r) => ({ arac: `${int(r.yil)} ${str(r.marka)} ${str(r.model)}`, il: str(r.il), dk: Math.max(0, Math.round((simdiMs - Date.parse(str(r.tarih).replace(' ', 'T') + 'Z')) / 60000)) })), 200, { 'Cache-Control': 'public, max-age=120' });
+    }
     case 'metinler': { // panelden değiştirilen site cümleleri
       const { results } = await D.prepare('SELECT k, v FROM metinler').all();
       const o = {}; for (const r of results) o[r.k] = r.v;

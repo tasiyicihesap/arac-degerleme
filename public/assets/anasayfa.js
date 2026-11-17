@@ -63,11 +63,40 @@
     document.querySelectorAll('[data-gorsel]').forEach(function (el) {
       var u = g[el.dataset.gorsel]; if (u) { el.innerHTML = '<img src="' + esc(u) + '" alt="" loading="lazy">'; el.classList.add('foto-var'); }
     });
+    document.querySelectorAll('[data-gorsel-arka]').forEach(function (el) {
+      var u = g[el.dataset.gorselArka]; if (u) { el.style.backgroundImage = 'url("' + u.replace(/"/g, '%22') + '")'; el.classList.add('foto-var'); }
+    });
     var gal = [], i; for (i = 1; i <= 8; i++) if (g['galeri' + i]) gal.push(g['galeri' + i]);
     if (gal.length) {
       $('#galeriIzgara').innerHTML = gal.map(function (u) { return '<figure><img src="' + esc(u) + '" alt="" loading="lazy"></figure>'; }).join('');
       $('#galeri').hidden = false;
     }
+  }).catch(function () {});
+
+  // dönen manşet: 6 sn'de bir kayar, dokunarak / oklarla geçilir
+  (function () {
+    var ray = $('#mansetRay'); if (!ray) return;
+    var kartlar = ray.children, n = kartlar.length, i = 0, zam = null, nokta = $('#mansetNokta');
+    nokta.innerHTML = Array.prototype.map.call(kartlar, function (_, j) { return '<button aria-label="' + (j + 1) + '. manşet"></button>'; }).join('');
+    var git = function (j) { i = (j + n) % n; ray.style.transform = 'translateX(' + (-100 * i) + '%)'; Array.prototype.forEach.call(nokta.children, function (b, k) { b.classList.toggle('aktif', k === i); }); };
+    var basla = function () { clearInterval(zam); if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) zam = setInterval(function () { git(i + 1); }, 6000); };
+    nokta.onclick = function (e) { var b = e.target.closest('button'); if (b) { git(Array.prototype.indexOf.call(nokta.children, b)); basla(); } };
+    $('#mansetGeri').onclick = function () { git(i - 1); basla(); };
+    $('#mansetIleri').onclick = function () { git(i + 1); basla(); };
+    var x0 = null;
+    ray.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; clearInterval(zam); }, { passive: true });
+    ray.addEventListener('touchend', function (e) { if (x0 === null) return; var dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) git(i + (dx < 0 ? 1 : -1)); x0 = null; basla(); });
+    var kap = ray.parentNode; kap.addEventListener('mouseenter', function () { clearInterval(zam); }); kap.addEventListener('mouseleave', basla);
+    ray.addEventListener('click', function (e) { var a = e.target.closest('a[href="#degerle"]'); if (a) { e.preventDefault(); if (window.OTK) window.OTK.basla(); } });
+    git(0); basla();
+  })();
+
+  // son değerlemeler şeridi (kişisel bilgi yok: araç, il, ne kadar önce)
+  fetch('api.php?a=son_degerlemeler').then(function (r) { return r.ok ? r.json() : []; }).then(function (l) {
+    if (!l || l.length < 3) return;
+    var once = function (dk) { return dk < 1 ? 'az önce' : dk < 60 ? dk + ' dk önce' : dk < 1440 ? Math.floor(dk / 60) + ' saat önce' : Math.floor(dk / 1440) + ' gün önce'; };
+    var h = l.map(function (x) { return '<span><small>' + once(x.dk) + '</small><b>' + esc(x.arac) + '</b>' + (x.il ? ' · ' + esc(x.il) : '') + '</span>'; }).join('');
+    $('#canliIc').innerHTML = h + h; $('#canliSerit').hidden = false;
   }).catch(function () {});
 
   // "Aracımı değerle" kartı: sihirbaza kaydır
