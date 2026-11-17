@@ -67,7 +67,7 @@ function sayfa({ baslik, aciklama, yol, kirinti, govde, ekLd = [] }) {
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1b2d'/%3E%3Ctext x='32' y='43' font-family='Arial' font-weight='900' font-size='30' text-anchor='middle' fill='%23ff5a1f'%3EO%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/site.css?v=1117zc"><link rel="stylesheet" href="/assets/anasayfa.css?v=1117za"><link rel="stylesheet" href="/assets/rehber.css?v=1117za">
+<link rel="stylesheet" href="/assets/site.css?v=1117zd"><link rel="stylesheet" href="/assets/anasayfa.css?v=1117za"><link rel="stylesheet" href="/assets/rehber.css?v=1117za">
 ${ld.map((x) => `<script type="application/ld+json">${JSON.stringify(x).replace(/</g, '\\u003c')}</script>`).join('\n')}
 </head>
 <body class="ana rehber">

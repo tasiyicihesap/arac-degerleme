@@ -74,6 +74,7 @@
   // telefonun / tarayıcının geri tuşu sihirbazda bir önceki adıma döner: her adım geçmişe bir kayıt ekler
   var gecmisVar = !!(window.history && history.pushState);
   function git(n, pop) {
+    document.querySelectorAll(".parca-pen").forEach(function (x) { x.remove(); });
     n = Math.max(0, Math.min(ADIMLAR.length - 1, n));
     if (gecmisVar && !pop && ilkCizildi) {
       var st = history.state;
@@ -366,7 +367,7 @@
       '</svg>';
   }
   function cizHasar(k) {
-    k.innerHTML = '<p class="ipucu">Şemada boyalı ya da değişen parçaya dokun, açılan pencereden durumunu seç. Dokunmadığın parçalar orijinal sayılır.</p>' +
+    k.innerHTML = '<p class="ipucu">Parçaya dokundukça durumu değişir: Lokal → Boyalı → Değişen → Orijinal. İstersen açılan pencereden de seçebilirsin. Dokunmadığın parçalar orijinal sayılır.</p>' +
       '<div class="hasar-kap"><div class="sema-kap">' + aracSvg() + '<div class="lejant"><span><i class="l-orijinal"></i>Orijinal</span><span><i class="l-lokal"></i>Lokal</span><span><i class="l-boyali"></i>Boyalı</span><span><i class="l-degisen"></i>Değişen</span></div>' +
       '<div class="hasar-ozet" id="hasarOzet"></div></div><div>' +
       '<div class="grup"><label>Tramer (hasar) kaydı</label><div class="cift" data-ev="tramerVar"><button class="secenek" data-v="0">Yok</button><button class="secenek" data-v="1">Var</button></div>' +
@@ -404,9 +405,30 @@
     ozet.onclick = function (e) { var b = e.target.closest('.ho-p'); if (b) penAc(b.dataset.p, b); };
     // parçaya dokununca küçük seçim penceresi: orijinal / lokal boyalı / boyalı / değişen
     var pen = null;
-    function penKapat() { if (pen) { pen.remove(); pen = null; } document.removeEventListener('pointerdown', disTik, true); }
+    function penKapat() { if (pen) { pen.remove(); pen = null; } document.removeEventListener('pointerdown', disTik, true); document.removeEventListener('scroll', penKaydir, true); window.removeEventListener('resize', penKaydir); }
     function disTik(e) { if (pen && !pen.contains(e.target) && !e.target.closest('.arac-svg .parca') && !e.target.closest('.ho-p')) penKapat(); }
-    svg.onclick = function (e) { var el = e.target.closest('.parca'); if (el) penAc(el.dataset.p, el); };
+    // parçaya her dokunuş durumu sırayla ilerletir (orijinal → lokal → boyalı → değişen → orijinal); pencere de açılır, istenirse oradan seçilir
+    svg.onclick = function (e) {
+      var el = e.target.closest('.parca'); if (!el) return;
+      var p = el.dataset.p, d = S.hasar[p] || 'orijinal', yeni = DURUM_SIRA[(DURUM_SIRA.indexOf(d) + 1) % DURUM_SIRA.length];
+      if (yeni === 'orijinal') delete S.hasar[p]; else S.hasar[p] = yeni;
+      boya(); penAc(p, el);
+    };
+    // pencere şemanın üstünü kapatmasın: yan tarafa, olmazsa şemanın altına/üstüne, o da olmazsa parçanın yanına konur
+    var penEl = null;
+    function penYerlestir(el) {
+      if (!pen) return; penEl = el = el || penEl; if (!el || !el.isConnected) return penKapat();
+      var W = window.innerWidth, H = window.innerHeight, pw = pen.offsetWidth, ph = pen.offsetHeight, m = 8;
+      var r = el.getBoundingClientRect(), sv = (el.closest('.arac-svg') || el).getBoundingClientRect();
+      var cy = Math.max(m, Math.min(H - ph - m, r.top + r.height / 2 - ph / 2)), x, y;
+      if (sv.right + m + pw <= W - m) { x = sv.right + m; y = cy; }
+      else if (sv.left - m - pw >= m) { x = sv.left - m - pw; y = cy; }
+      else if (sv.bottom + m + ph <= H - m && sv.bottom + m >= 60) { x = r.left + r.width / 2 - pw / 2; y = sv.bottom + m; }
+      else if (sv.top - m - ph >= 60) { x = r.left + r.width / 2 - pw / 2; y = sv.top - m - ph; }
+      else { x = r.left + r.width / 2 - pw / 2; y = r.bottom + m; if (y + ph > H - m) y = r.top - ph - m; if (y < m) y = Math.max(m, (H - ph) / 2); }
+      pen.style.left = Math.max(m, Math.min(W - pw - m, x)) + 'px'; pen.style.top = y + 'px';
+    }
+    function penKaydir() { penYerlestir(); }
     function penAc(p, el) {
       var d = S.hasar[p] || 'orijinal';
       penKapat();
@@ -414,11 +436,7 @@
       pen.innerHTML = '<div class="pp-bas"><b>' + esc(PARCA_AD_S[p] || p) + '</b><button type="button" class="pp-kapat" aria-label="Kapat">✕</button></div>' +
         DURUM_SIRA.map(function (x) { return '<label class="pp-sec k-' + x + (x === d ? ' secili' : '') + '"><input type="radio" name="pp" value="' + x + '"' + (x === d ? ' checked' : '') + '><i></i>' + DURUM_AD[x] + '</label>'; }).join('');
       document.body.appendChild(pen);
-      var r = el.getBoundingClientRect(), pw = pen.offsetWidth, ph = pen.offsetHeight;
-      var x = r.left + r.width / 2 - pw / 2, y = r.bottom + 8;
-      if (y + ph > window.innerHeight - 8) y = r.top - ph - 8;
-      if (y < 8) y = Math.max(8, (window.innerHeight - ph) / 2);
-      pen.style.left = Math.max(8, Math.min(window.innerWidth - pw - 8, x)) + 'px'; pen.style.top = y + 'px';
+      penYerlestir(el);
       // seçeneğe tıklamak yeter; zaten seçili olana tıklayınca da pencere kapanır
       pen.onclick = function (ev) {
         var lb = ev.target.closest('.pp-sec'); if (!lb) return;
@@ -428,7 +446,7 @@
         boya(); setTimeout(penKapat, 180);
       };
       $('.pp-kapat', pen).onclick = penKapat;
-      setTimeout(function () { document.addEventListener('pointerdown', disTik, true); document.addEventListener('scroll', penKapat, { capture: true, passive: true, once: true }); }, 0);
+      setTimeout(function () { document.addEventListener('pointerdown', disTik, true); document.addEventListener('scroll', penKaydir, { capture: true, passive: true }); window.addEventListener('resize', penKaydir); }, 0);
     }
 
     k.querySelectorAll('[data-ev]').forEach(function (g) {
