@@ -83,20 +83,18 @@
   var filmBasladi = false;
   function filmBasla() {
     var f = $('#film'); if (!f || filmBasladi) return; filmBasladi = true;
-    var sahneler = f.querySelectorAll('.film-sahne'), cubuk = $('#filmCubuk'), SURE = 3600, i = 0, t0 = 0, gorunur = true, raf = null;
-    var goster = function (k) { Array.prototype.forEach.call(sahneler, function (s, j) { s.classList.toggle('aktif', j === k); if (j === k) { var kb = s.querySelector('.kb-film'); if (kb) { kb.style.animation = 'none'; void kb.offsetWidth; kb.style.animation = ''; } } }); };
-    var adim = function (ts) {
-      if (!gorunur) { raf = null; return; }
-      if (!t0) t0 = ts;
-      var gecen = ts - t0, toplam = SURE * sahneler.length;
-      if (gecen >= SURE * (i + 1)) { i = (i + 1) % sahneler.length; if (i === 0) t0 = ts; goster(i); }
-      cubuk.style.width = Math.min(100, ((ts - t0) % toplam) / toplam * 100) + '%';
-      raf = requestAnimationFrame(adim);
+    var sahneler = f.querySelectorAll('.film-sahne'), n = sahneler.length, cubuk = $('#filmCubuk'), SURE = 3600, i = 0, zam = null, gorunur = true;
+    var goster = function (k) {
+      i = k;
+      Array.prototype.forEach.call(sahneler, function (s, j) { s.classList.toggle('aktif', j === k); if (j === k) { var kb = s.querySelector('.kb-film'); if (kb) { kb.style.animation = 'none'; void kb.offsetWidth; kb.style.animation = ''; } } });
+      cubuk.style.transition = 'none'; cubuk.style.width = (k / n * 100) + '%'; void cubuk.offsetWidth;
+      cubuk.style.transition = 'width ' + SURE + 'ms linear'; cubuk.style.width = ((k + 1) / n * 100) + '%';
     };
+    var oynat = function () { clearTimeout(zam); if (!gorunur) return; zam = setTimeout(function () { goster((i + 1) % n); oynat(); }, SURE); };
     goster(0);
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if ('IntersectionObserver' in window) new IntersectionObserver(function (e) { gorunur = e[0].isIntersecting; if (gorunur && !raf) { t0 = 0; i = 0; goster(0); raf = requestAnimationFrame(adim); } }, { threshold: 0.25 }).observe(f);
-    else raf = requestAnimationFrame(adim);
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (e) { var g = e[0].isIntersecting; if (g && !gorunur) { gorunur = true; goster(0); oynat(); } else if (!g) { gorunur = false; clearTimeout(zam); } }, { threshold: 0.25 }).observe(f);
+    oynat();
   }
   setTimeout(filmBasla, 2500); // görseller gelmese de çalışsın
 
