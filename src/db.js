@@ -60,11 +60,11 @@ export const VARSAYILAN_AYARLAR = {
   musteri_mesaj: '1',
   tel_dogrulama: '1', // müşteri numarasını WhatsApp'tan kod göndererek doğrular (köprü çalışıyorsa)
   musteri_saat: '9-20',
-  mm_kabul1: 'Merhaba {ad} 👋\n\n*{arac}* için randevu talebiniz bize ulaştı, teşekkür ederiz!\n\n_{firma}_',
-  mm_kabul2: '📞 Ekibimiz sizi en kısa sürede bu numaradan arayarak aracınızı görmek için uygun gün ve saati birlikte belirleyecek.\n\nBu arada sorunuz olursa bu mesaja yazabilir ya da *{tel}* numarasından bize ulaşabilirsiniz.',
-  mm_takip1: 'Merhaba {ad} 👋\n\nDün *{arac}* için OTOKABUL\'da değerleme yapmıştınız{teklif}. Teklifimizi düşünme fırsatınız oldu mu?\n\nSorunuz varsa bu mesaja yazmanız yeterli, hemen yardımcı olalım.\n\n_Bu mesajları almak istemiyorsanız *DUR* yazmanız yeterli._',
-  mm_takip2: 'Merhaba {ad},\n\n*{arac}* için ön teklifimiz hâlâ geçerli. Aracınızı yerinde görüp ekspertizini ücretsiz yapabilir, anlaşırsak aynı gün ödemeyle satın alabiliriz.\n\nSize uygun bir gün ayarlayalım mı? 🙂\n\n_Bu mesajları almak istemiyorsanız *DUR* yazmanız yeterli._',
-  mm_takip3: 'Merhaba {ad},\n\n*{arac}* için son kez yazıyoruz. Aracınızı satmayı düşünürseniz güncel teklifimiz için bu mesaja yazmanız ya da *{tel}* numarasını aramanız yeterli.\n\nİyi günler dileriz 🙏\n_{firma}_',
+  mm_kabul1: '✦ *OTOKABUL* ✦\n━━━━━━━━━━━━━━━━\n\nSayın *{ad}*,\n\n🚗 *{arac}* aracınız için oluşturduğunuz randevu talebi tarafımıza ulaşmıştır. Bize gösterdiğiniz ilgi ve güven için içtenlikle teşekkür ederiz.\n\n🌐 www.otokabul.com.tr',
+  mm_kabul2: '📅 *Randevu Süreci*\n\nUzman ekibimiz en kısa süre içinde bu numara üzerinden sizinle iletişime geçerek ekspertiz için size en uygun gün ve saati birlikte planlayacaktır.\n\n✔ Ekspertiz ücretsizdir\n✔ Noter işlemleri tarafımızca yürütülür\n✔ Ödeme, satış günü hesabınıza yapılır\n\nHer türlü sorunuz için bu mesajı yanıtlayabilir ya da 📞 *{tel}* numarasından bize ulaşabilirsiniz.\n\nSaygılarımızla,\n*OTOKABUL* · 🌐 www.otokabul.com.tr',
+  mm_takip1: '✦ *OTOKABUL* ✦\n━━━━━━━━━━━━━━━━\n\nSayın *{ad}*,\n\nDün 🚗 *{arac}* aracınız için www.otokabul.com.tr üzerinden değerleme yapmıştınız{teklif}.\n\nTeklifimizi değerlendirme fırsatınız olduysa, aracınızı ücretsiz ekspertiz için görmekten memnuniyet duyarız. Sorularınız için bu mesajı yanıtlamanız yeterlidir.\n\nSaygılarımızla,\n*OTOKABUL* · 🌐 www.otokabul.com.tr\n\n_Bu bilgilendirmeleri almak istemiyorsanız *DUR* yazmanız yeterlidir._',
+  mm_takip2: '✦ *OTOKABUL* ✦\n━━━━━━━━━━━━━━━━\n\nSayın *{ad}*,\n\n🚗 *{arac}* aracınız için ön teklifimiz geçerliliğini korumaktadır.\n\n✔ Aracınızı yerinde, ücretsiz ekspertizle değerlendiririz\n✔ Noter işlemlerini sizin yerinize yürütürüz\n✔ Anlaşmamız hâlinde ödemeyi aynı gün yaparız\n\nSize uygun bir gün belirlemek için bu mesajı yanıtlamanız yeterlidir.\n\nSaygılarımızla,\n*OTOKABUL* · 🌐 www.otokabul.com.tr\n\n_Bu bilgilendirmeleri almak istemiyorsanız *DUR* yazmanız yeterlidir._',
+  mm_takip3: '✦ *OTOKABUL* ✦\n━━━━━━━━━━━━━━━━\n\nSayın *{ad}*,\n\n🚗 *{arac}* aracınızla ilgili size son kez yazıyoruz. Aracınızı satmayı düşündüğünüz her an, güncel teklifimiz için bu mesajı yanıtlayabilir ya da 📞 *{tel}* numarasından bize ulaşabilirsiniz.\n\nGösterdiğiniz ilgi için teşekkür eder, iyi günler dileriz.\n\nSaygılarımızla,\n*OTOKABUL* · 🌐 www.otokabul.com.tr',
   sifre: '',
 };
 

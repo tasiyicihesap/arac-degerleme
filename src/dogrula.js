@@ -28,9 +28,12 @@ export async function dogrulamaGerekli(D, A) {
 }
 
 function mesajMetni(token, kod) {
-  return `*OTOKABUL* doğrulama kodunuz: *${kod}*\n\n` +
-    `Bu kodu sitedeki kutuya yazın ya da ön teklifinizi görmek için bu bağlantıya dokunun:\nhttps://otokabul.com.tr/#dg=${token}.${kod}\n\n` +
-    `_Kod 15 dakika geçerlidir. Bu talebi siz yapmadıysanız bu mesajı dikkate almayın._`;
+  return '✦ *OTOKABUL* ✦\n━━━━━━━━━━━━━━━━\n\n' +
+    `🔐 Telefon doğrulama kodunuz: *${kod}*\n\n` +
+    'Bu kodu www.otokabul.com.tr sayfasındaki doğrulama kutusuna yazabilir ya da ön teklifinizi görüntülemek için aşağıdaki bağlantıya dokunabilirsiniz:\n\n' +
+    `👉 https://otokabul.com.tr/#dg=${token}.${kod}\n\n` +
+    '_Kod 15 dakika süreyle geçerlidir. Bu talep size ait değilse mesajı dikkate almayınız._\n\n' +
+    'Saygılarımızla,\n*OTOKABUL* · 🌐 www.otokabul.com.tr';
 }
 
 // site: kod üret ve WhatsApp gönderim sırasına koy
