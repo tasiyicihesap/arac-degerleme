@@ -68,12 +68,12 @@ function sayfa({ baslik, aciklama, yol, kirinti, govde, ekLd = [] }) {
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1b2d'/%3E%3Ctext x='32' y='43' font-family='Arial' font-weight='900' font-size='30' text-anchor='middle' fill='%23ff5a1f'%3EO%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/site.css?v=1117zk"><link rel="stylesheet" href="/assets/anasayfa.css?v=1117zm"><link rel="stylesheet" href="/assets/rehber.css?v=1117zk">
+<link rel="stylesheet" href="/assets/site.css?v=1117zk"><link rel="stylesheet" href="/assets/anasayfa.css?v=1117zn"><link rel="stylesheet" href="/assets/rehber.css?v=1117zk">
 ${ld.map((x) => `<script type="application/ld+json">${JSON.stringify(x).replace(/</g, '\\u003c')}</script>`).join('\n')}
 </head>
 <body class="ana rehber">
 <header class="ust"><div class="kap ust-ic">
-  <div class="marka-blok"><a class="logo logo-gorsel" href="/" aria-label="OTOKABUL.COM.TR ana sayfa"><img src="/assets/logo-otokabul.png" alt="OTOKABUL.COM.TR" width="160" height="50"></a><span class="isbirligi" title="OTOCLASS işbirliği ile"><img src="/assets/logo-otoclass.png" alt="OTOCLASS" width="88" height="20"><em>işbirliği ile</em></span></div>
+  <div class="marka-blok"><a class="logo logo-gorsel" href="/" aria-label="OTOKABUL.COM.TR ana sayfa"><img src="/assets/logo-otokabul.png" alt="OTOKABUL.COM.TR" width="160" height="50"></a><span class="isbirligi" title="OTOCLASS işbirliği ile"><span class="oc-logo"><img src="/assets/logo-otoclass.png" alt="OTOCLASS.COM.TR" width="88" height="20"><b class="oc-com">.com.tr</b></span><em>işbirliği ile</em></span></div>
   <nav><a href="/arac-degerleme/">Markalar</a><a href="/rehber/">Rehber</a><a href="/hesaplamalar/">Hesaplamalar</a><a href="/#nasil">Nasıl işliyor?</a><a href="/#sss">Sorular</a><a class="ust-tel" href="tel:${ILETISIM.telLink}">☎ <span>${ILETISIM.tel}</span></a><a class="ust-cta" href="/#degerle">Aracımı değerle</a></nav>
 </div></header>
 <main class="kap rh-ana">
@@ -227,7 +227,7 @@ export async function seoSayfa(req, env, ctx, dbAl, yol) {
   const aracYol = (y) => y === '/hesaplamalar' || ARAC_SLUGLAR.includes(y.replace(/^\/|\/$/g, ''));
   if ((yol.startsWith('/arac-degerleme') || yol.startsWith('/rehber') || aracYol(yol)) && !yol.endsWith('/')) return Response.redirect(url.origin + yol + '/' + url.search, 301);
   if (yol.startsWith('/noter-masrafi-hesaplama')) return Response.redirect(url.origin + '/', 301); // sayfa kaldırıldı
-  const anahtar = SITE + yol + '?s=13'; // sürüm: içerik değişince artır
+  const anahtar = SITE + yol + '?s=14'; // sürüm: içerik değişince artır
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { try { const c = await cache.match(anahtar); if (c) return c; } catch (e) {} }
   let govde, tur = 'text/html; charset=utf-8';

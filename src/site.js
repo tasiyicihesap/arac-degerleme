@@ -72,7 +72,8 @@ async function siteApiIc(req, env, ctx) {
     case 'son_degerlemeler': { // ana sayfadaki "son değerlemeler" şeridi: kişisel bilgi yok; yalnızca son 24 saat
       const { results } = await D.prepare("SELECT tarih, yil, marka, model, il FROM talepler WHERE ad NOT LIKE 'TEST%' AND tarih >= ? ORDER BY id DESC LIMIT 14").bind(simdi(Date.now() - 864e5)).all();
       const simdiMs = Date.parse(simdi().replace(' ', 'T') + 'Z');
-      return json(results.map((r) => ({ arac: `${int(r.yil)} ${str(r.marka)} ${str(r.model)}`, il: str(r.il), dk: Math.max(0, Math.round((simdiMs - Date.parse(str(r.tarih).replace(' ', 'T') + 'Z')) / 60000)) })), 200, { 'Cache-Control': 'public, max-age=120' });
+      const tek = new Set(); // aynı araç birden çok kez değerlendiyse şeritte bir kez görünsün
+      return json(results.filter((r) => { const k = `${r.yil}|${r.marka}|${r.model}`; if (tek.has(k)) return false; tek.add(k); return true; }).map((r) => ({ arac: `${int(r.yil)} ${str(r.marka)} ${str(r.model)}`, il: str(r.il), dk: Math.max(0, Math.round((simdiMs - Date.parse(str(r.tarih).replace(' ', 'T') + 'Z')) / 60000)) })), 200, { 'Cache-Control': 'public, max-age=120' });
     }
     case 'metinler': { // panelden değiştirilen site cümleleri
       const { results } = await D.prepare('SELECT k, v FROM metinler').all();
