@@ -46,3 +46,35 @@ $('mHacim').onchange=function(){dilimler();hesap()};['mTescil','mYil','mDeger'].
 ${cta('Aracını satmayı düşünüyorsan değerini de öğren', '/#degerle')}
 <section class="rh-bas"><h2>MTV nasıl hesaplanır?</h2><p>MTV bir formülle değil, kanun ekindeki tablolardan okunarak bulunur. 1 Ocak 2018 ve sonrasında tescil edilen otomobillerde motor hacmi, araç yaşı ve aracın ilk alındığındaki KDV hariç değeri birlikte dikkate alınır. 2017 ve öncesinde tescil edilen araçlarda yalnızca motor hacmi ve yaş belirleyicidir. Vergi yılda iki eşit taksitle, Ocak ve Temmuz aylarında ödenir.</p></section>`;
 }
+
+// 2026 ikinci el araç satışında noter masrafı (1 Ocak 2026'dan itibaren nispi harç):
+// harç = satış bedeli ile kasko değerinden yüksek olanın binde 2'si (en az 1.000 TL); yetki belgeli galeriye satışta harç alınmaz.
+// noter ücreti = harcın %30'u; motorlu araç tescil belgesi (değerli kağıt) 1.511 TL. Yazı ücreti ve kağıt bedelleri notere göre eklenir.
+export const NOTER = { yil: 2026, oran: 0.002, asgari: 1000, ucretOran: 0.30, tescilBelgesi: 1511, yaziSayfa: 80.68 };
+
+export function noterSayfaGovde(h, cta) {
+  const v = JSON.stringify(NOTER);
+  return `<section class="rh-bas"><h1>${NOTER.yil} Noter Araç Satış Masrafı Hesaplama</h1><p>İkinci el aracını noterde satarken ödenecek harcı, noter ücretini ve tescil belgesi bedelini hemen hesapla. ${NOTER.yil} yılından itibaren araç satışlarında satış bedeline bağlı harç alınıyor.</p></section>
+<div class="hs-kutu">
+  <div class="hs-alanlar">
+    <label>Satış bedeli (TL)<input id="nBedel" inputmode="numeric" placeholder="ör. 750.000" value="750.000"></label>
+    <label>Aracın güncel kasko değeri (TL) <small style="font-weight:500;color:#6b7280">biliyorsan</small><input id="nKasko" inputmode="numeric" placeholder="boş bırakabilirsin"></label>
+    <label class="hs-tek"><span><input type="checkbox" id="nGaleri"> Aracı yetki belgeli bir galeriye satıyorum (ör. OTOKABUL)</span></label>
+  </div>
+  <div class="hs-sonuc" id="nSonuc"></div>
+  <p class="hs-not">Harç, satış bedeli ile kasko değerinden hangisi yüksekse onun binde 2'si olarak alınır ve en az ${NOTER.asgari.toLocaleString('tr-TR')} TL'dir. Yetki belgesi olan ikinci el araç ticareti işletmelerine (galerilere) yapılan satışlarda bu harç alınmaz. Noter ücreti harcın %30'udur; motorlu araç tescil belgesi bedeli ${NOTER.tescilBelgesi.toLocaleString('tr-TR')} TL'dir. Bunlara noterin yazı ücreti (sayfa başına ${NOTER.yaziSayfa.toLocaleString('tr-TR')} TL) ve kağıt bedelleri eklenir; bu yüzden toplam tutar notere göre birkaç yüz TL değişebilir. Kesin tutarı işlem yapacağın noterden öğrenebilirsin.</p>
+</div>
+<script>(function(){var N=${v};var $=function(i){return document.getElementById(i)};var nf=new Intl.NumberFormat('tr-TR',{maximumFractionDigits:2});
+var sayi=function(e){return parseInt(String(e.value).replace(/[^0-9]/g,''),10)||0};
+var bicim=function(e){var n=sayi(e);e.value=n?n.toLocaleString('tr-TR'):''};
+function hesap(){var b=sayi($('nBedel')),k=sayi($('nKasko')),esas=Math.max(b,k),galeri=$('nGaleri').checked;
+var harc=galeri?0:Math.max(N.asgari,esas*N.oran),ucret=harc*N.ucretOran,top=harc+ucret+N.tescilBelgesi;
+$('nSonuc').innerHTML=(esas?'':'<p class="hs-not">Satış bedelini yaz.</p>')+'<div class="hs-buyuk"><span>Tahmini noter masrafı</span><b>'+nf.format(Math.round(top))+' TL +</b></div>'+
+'<div class="hs-satir"><span>Harç (binde 2'+(k>b?', kasko değeri üzerinden':'')+')</span><b>'+(galeri?'Alınmaz':nf.format(harc)+' TL')+'</b></div>'+
+'<div class="hs-satir"><span>Noter ücreti (harcın %30\\'u)</span><b>'+nf.format(ucret)+' TL</b></div>'+
+'<div class="hs-satir"><span>Motorlu araç tescil belgesi</span><b>'+nf.format(N.tescilBelgesi)+' TL</b></div>'+
+'<div class="hs-satir"><span>Yazı ücreti ve kağıt bedelleri</span><b>notere göre</b></div>';}
+['nBedel','nKasko'].forEach(function(i){$(i).addEventListener('input',function(){bicim($(i));hesap()})});$('nGaleri').onchange=hesap;hesap();})();</script>
+${cta('Aracını OTOKABUL\'a sat: noter işlemlerini biz ayarlarız', '/#degerle')}
+<section class="rh-bas"><h2>Noterde araç satışı nasıl yapılır?</h2><p>Alıcı ve satıcı kimlikleriyle notere gider; aracın ruhsatı ve geçerli trafik sigortası gerekir. Satış bedeli sözleşmeye yazılır, harç ve ücretler ödenir ve devir aynı gün tamamlanır. OTOKABUL'a satışta noter randevusunu ve devir işlemlerini biz ayarlarız; ödeme imza günü hesabına geçer.</p></section>`;
+}

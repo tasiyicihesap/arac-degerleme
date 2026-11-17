@@ -1,7 +1,7 @@
 // OTOKABUL — arama motorları için marka/model sayfaları ve site haritası
 // Sayfalar sunucuda üretilir ve 1 gün önbellekte tutulur (ücretsiz plandaki okuma kotası için).
 import { gorselSlug, int, str, buYil } from './db.js';
-import { mtvSayfaGovde, MTV_YIL } from './hesap.js';
+import { mtvSayfaGovde, MTV_YIL, noterSayfaGovde, NOTER } from './hesap.js';
 import { YAZILAR } from './rehber.js';
 
 const SITE = 'https://otokabul.com.tr';
@@ -67,7 +67,7 @@ function sayfa({ baslik, aciklama, yol, kirinti, govde, ekLd = [] }) {
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1b2d'/%3E%3Ctext x='32' y='43' font-family='Arial' font-weight='900' font-size='30' text-anchor='middle' fill='%23ff5a1f'%3EO%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/site.css?v=1117y"><link rel="stylesheet" href="/assets/anasayfa.css?v=1117y"><link rel="stylesheet" href="/assets/rehber.css?v=1117y">
+<link rel="stylesheet" href="/assets/site.css?v=1117z"><link rel="stylesheet" href="/assets/anasayfa.css?v=1117z"><link rel="stylesheet" href="/assets/rehber.css?v=1117z">
 ${ld.map((x) => `<script type="application/ld+json">${JSON.stringify(x).replace(/</g, '\\u003c')}</script>`).join('\n')}
 </head>
 <body class="ana rehber">
@@ -86,7 +86,7 @@ ${govde}
   <div><h4>İletişim</h4><a href="tel:${ILETISIM.telLink}">☎ ${ILETISIM.tel}</a><a href="https://wa.me/${ILETISIM.wa}" target="_blank" rel="noopener">WhatsApp</a><a href="mailto:${ILETISIM.eposta}">${ILETISIM.eposta}</a><span>${ILETISIM.adres}</span></div>
 </div><div class="kap alt-son"><span>© ${buYil()} <b>OTOKABUL</b>.COM.TR · Tüm hakları saklıdır.</span><span>otokabul.com.tr</span></div></footer>
 <a class="wa-sabit" href="https://wa.me/${ILETISIM.wa}?text=${encodeURIComponent('Merhaba, aracımı satmak istiyorum.')}" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Z"/></svg></a>
-<script src="/assets/iz.js?v=1117y" defer></script>
+<script src="/assets/iz.js?v=1117z" defer></script>
 </body>
 </html>`;
 }
@@ -200,10 +200,15 @@ function mtvSayfa() {
     kirinti: [['Ana sayfa', '/'], ['MTV hesaplama', '/mtv-hesaplama/']], govde: mtvSayfaGovde(h, cta) });
 }
 
+function noterSayfa() {
+  return sayfa({ baslik: `${NOTER.yil} Noter Araç Satış Masrafı Hesaplama — Binde 2 Harç | OTOKABUL`, aciklama: `${NOTER.yil} noter araç satış ücreti hesaplama: binde 2 harç, noter ücreti ve tescil belgesi bedeliyle ikinci el araç devir masrafını hemen öğren.`, yol: '/noter-masrafi-hesaplama/',
+    kirinti: [['Ana sayfa', '/'], ['Noter masrafı hesaplama', '/noter-masrafi-hesaplama/']], govde: noterSayfaGovde(h, cta) });
+}
+
 function siteHaritasi(v) {
   const bugun = new Date().toISOString().slice(0, 10);
   const u = [[SITE + '/', '1.0'], [SITE + '/arac-degerleme/', '0.8']];
-  u.push([SITE + '/mtv-hesaplama/', '0.7']);
+  u.push([SITE + '/mtv-hesaplama/', '0.7']); u.push([SITE + '/noter-masrafi-hesaplama/', '0.7']);
   u.push([SITE + '/rehber/', '0.7']); for (const y of YAZILAR) u.push([`${SITE}/rehber/${y.slug}/`, '0.7']);
   for (const m of v) { u.push([`${SITE}/arac-degerleme/${m.slug}/`, '0.7']); for (const x of m.liste) u.push([`${SITE}/arac-degerleme/${m.slug}/${x.slug}/`, '0.6']); }
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${u.map(([l, p]) => `<url><loc>${l}</loc><lastmod>${bugun}</lastmod><priority>${p}</priority></url>`).join('\n')}\n</urlset>\n`;
@@ -214,13 +219,14 @@ const bulunamadi = () => new Response(sayfa({ baslik: 'Sayfa bulunamadı | OTOKA
 export async function seoSayfa(req, env, ctx, dbAl, yol) {
   const url = new URL(req.url);
   // sonda / olmayan adresleri tek biçime getir
-  if ((yol.startsWith('/arac-degerleme') || yol.startsWith('/rehber') || yol.startsWith('/mtv-hesaplama')) && !yol.endsWith('/')) return Response.redirect(url.origin + yol + '/' + url.search, 301);
-  const anahtar = SITE + yol + '?s=8'; // sürüm: içerik değişince artır
+  if ((yol.startsWith('/arac-degerleme') || yol.startsWith('/rehber') || yol.startsWith('/mtv-hesaplama') || yol.startsWith('/noter-masrafi-hesaplama')) && !yol.endsWith('/')) return Response.redirect(url.origin + yol + '/' + url.search, 301);
+  const anahtar = SITE + yol + '?s=9'; // sürüm: içerik değişince artır
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { try { const c = await cache.match(anahtar); if (c) return c; } catch (e) {} }
   let govde, tur = 'text/html; charset=utf-8';
   // rehber yazıları veritabanına hiç dokunmaz
   if (yol === '/mtv-hesaplama/') govde = mtvSayfa();
+  else if (yol === '/noter-masrafi-hesaplama/') govde = noterSayfa();
   else if (yol.startsWith('/rehber/')) {
     const p = yol.split('/').filter(Boolean);
     if (p.length === 1) govde = rehberListe();
