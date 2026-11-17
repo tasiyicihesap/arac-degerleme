@@ -805,4 +805,6 @@
   if (gecmisVar) { try { history.replaceState({ sb: 0, d: 0 }, ''); } catch (e) {} }
   git(0);
   dgBaglanti();
+  // bağlantı, site zaten açıkken aynı sekmede açılırsa sayfa yenilenmez; adres değişimi yakalanır
+  window.addEventListener('hashchange', function () { if (/^#dg=/.test(location.hash)) dgBaglanti(); });
 })();
