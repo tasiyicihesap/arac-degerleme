@@ -70,7 +70,7 @@ var bicim=function(e){var n=sayi(e);e.value=n?n.toLocaleString('tr-TR'):''};
 function hesap(){var b=sayi($('nBedel')),k=sayi($('nKasko')),esas=Math.max(b,k),galeri=$('nGaleri').checked;
 var harc=galeri?0:Math.max(N.asgari,esas*N.oran),ucret=harc*N.ucretOran,top=harc+ucret+N.tescilBelgesi;
 $('nSonuc').innerHTML=(esas?'':'<p class="hs-not">Satış bedelini yaz.</p>')+'<div class="hs-buyuk"><span>Tahmini noter masrafı</span><b>'+nf.format(Math.round(top))+' TL +</b></div>'+
-'<div class="hs-satir"><span>Harç (binde 2'+(k>b?', kasko değeri üzerinden':'')+')</span><b>'+(galeri?'Alınmaz':nf.format(harc)+' TL')+'</b></div>'+
+'<div class="hs-satir"><span>Harç (binde 2'+(k>b&&!galeri?', kasko değeri üzerinden':'')+')</span><b>'+(galeri?'Alınmaz':nf.format(harc)+' TL')+'</b></div>'+
 '<div class="hs-satir"><span>Noter ücreti (harcın %30\\'u)</span><b>'+nf.format(ucret)+' TL</b></div>'+
 '<div class="hs-satir"><span>Motorlu araç tescil belgesi</span><b>'+nf.format(N.tescilBelgesi)+' TL</b></div>'+
 '<div class="hs-satir"><span>Yazı ücreti ve kağıt bedelleri</span><b>notere göre</b></div>';}
