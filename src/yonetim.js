@@ -1,5 +1,6 @@
 // OTOKABUL — yönetim paneli API'si (eski yonetim/api.php)
 import { kopruCanli } from './dogrula.js';
+import { driveAyar, driveGonder, driveYedekle } from './drive.js';
 import {
   db, R, ayarlar, ayarKaydet, gizliAyar, simdi, bugun, buYil, buAy, int, flt, str, kes, yuvar, nf, VARSAYILAN_AYARLAR,
   piyasaYaz, katalogTemizle, katalogParcaYaz, kaskoFiyatlariniGuncelle, MODEL_EKLE, gorselSlug, gorselHaritasi, logoUrl, modelGorselUrl,
@@ -477,6 +478,11 @@ export async function yonetimApi(req, env) {
     }
     case 'talep_sil': {
       const g = await girdi();
+      const dv = await driveAyar(D);
+      if (dv) { // silmeden önce fotoğrafları Drive'a al
+        let y; do { y = await driveYedekle(D, dv, { talepId: int(g.id), adet: 8 }); } while (y.yedeklenen && y.kalan);
+        if (y.kalan) return json({ hata: 'Fotoğraflar Drive\'a yedeklenemediği için talep silinmedi' + (y.hata ? ': ' + y.hata : '') }, 502);
+      }
       await D.batch([D.prepare('DELETE FROM talep_foto WHERE talep_id = ?').bind(int(g.id)), D.prepare('DELETE FROM talepler WHERE id = ?').bind(int(g.id))]);
       return json({ ok: 1 });
     }
@@ -491,18 +497,40 @@ export async function yonetimApi(req, env) {
       if (!f) return json({ hata: 'Fotoğraf bulunamadı' }, 404);
       return new Response(new Uint8Array(f.veri), { headers: { 'Content-Type': f.mime, 'Cache-Control': 'private, max-age=86400' } });
     }
-    case 'eski_foto_sil': { // depolama dolmasın diye: X günden eski taleplerin fotoğrafları
+    case 'eski_foto_sil': { // depolama dolmasın diye: X günden eski taleplerin fotoğrafları (Drive bağlıysa yalnızca yedeklenenler)
       const g = await girdi(); const gun = Math.max(7, int(g.gun) || 90);
       const sinir = simdi(Date.now() - gun * 86400000);
+      const dv = await driveAyar(D);
+      const yk = dv ? ' AND drive IS NOT NULL' : '';
       const r = await D.batch([
-        D.prepare('DELETE FROM talep_foto WHERE talep_id IN (SELECT id FROM talepler WHERE tarih < ?)').bind(sinir),
-        D.prepare('UPDATE talepler SET foto_sayi = 0 WHERE tarih < ? AND foto_sayi > 0').bind(sinir),
+        D.prepare('DELETE FROM talep_foto WHERE talep_id IN (SELECT id FROM talepler WHERE tarih < ?)' + yk).bind(sinir),
+        D.prepare('UPDATE talepler SET foto_sayi = (SELECT COUNT(*) FROM talep_foto WHERE talep_id = talepler.id) WHERE tarih < ? AND foto_sayi > 0').bind(sinir),
       ]);
       return json({ ok: 1, silinen: int(r[0].meta.changes) });
     }
     case 'foto_durum': {
-      const r = await D.prepare('SELECT COUNT(*) n, COALESCE(SUM(boyut), 0) b FROM talep_foto').first();
-      return json({ adet: int(r.n), boyut: int(r.b) });
+      const r = await D.prepare('SELECT COUNT(*) n, COALESCE(SUM(boyut), 0) b, COALESCE(SUM(drive IS NOT NULL), 0) y FROM talep_foto').first();
+      const dv = await driveAyar(D);
+      return json({ adet: int(r.n), boyut: int(r.b), yedekli: int(r.y), drive: dv ? 1 : 0, klasor: dv ? str(await gizliAyar(D, '_drive_klasor')) : '' });
+    }
+    case 'drive_bagla': { // Apps Script web uygulaması adresi + anahtarı
+      const g = await girdi(); const url = str(g.url).trim(); const anahtar = str(g.anahtar).trim();
+      if (!url && !anahtar) { await D.prepare("DELETE FROM ayarlar WHERE k IN ('_drive_url','_drive_anahtar','_drive_klasor')").run(); return json({ ok: 1, kaldirildi: 1 }); }
+      if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)) return json({ hata: 'Adres https://script.google.com/macros/s/…/exec biçiminde olmalı' }, 400);
+      if (anahtar.length < 16) return json({ hata: 'Anahtar en az 16 karakter olmalı' }, 400);
+      const r = await driveGonder({ url, anahtar }, { islem: 'ping' });
+      if (!r || !r.ok) return json({ hata: 'Drive bağlantısı denendi ama olmadı: ' + str(r && r.hata) }, 400);
+      const yaz = (k, v) => D.prepare('INSERT INTO ayarlar(k, v) VALUES(?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v').bind(k, v);
+      await D.batch([yaz('_drive_url', url), yaz('_drive_anahtar', anahtar), yaz('_drive_klasor', str(r.klasor))]);
+      return json({ ok: 1, klasor: str(r.klasor) });
+    }
+    case 'drive_yedekle': { // panel döngüyle çağırır; gun verilirse yalnızca o günden eski talepler
+      const g = await girdi(); const dv = await driveAyar(D);
+      if (!dv) return json({ hata: 'Google Drive bağlı değil' }, 400);
+      const gun = int(g.gun);
+      const y = await driveYedekle(D, dv, { sinir: gun ? simdi(Date.now() - Math.max(7, gun) * 86400000) : '', adet: 6 });
+      if (y.hata && !y.yedeklenen) return json({ hata: 'Drive yedeği başarısız: ' + y.hata }, 502);
+      return json(y);
     }
     // --- site metinleri (panelden düzenlenir) ---
     case 'metinler': {

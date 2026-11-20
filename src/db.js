@@ -177,6 +177,8 @@ async function kur(D) {
   if (!dS.has('gonderim_zaman')) ek.push(D.prepare("ALTER TABLE tel_dogrula ADD COLUMN gonderim_zaman TEXT DEFAULT ''"));
   if (!dS.has('deneme')) ek.push(D.prepare('ALTER TABLE tel_dogrula ADD COLUMN deneme INTEGER DEFAULT 0'));
   if (!dS.has('talep_sonuc')) ek.push(D.prepare("ALTER TABLE tel_dogrula ADD COLUMN talep_sonuc TEXT DEFAULT ''"));
+  const { results: fk } = await D.prepare('PRAGMA table_info(talep_foto)').all();
+  if (!fk.some((c) => c.name === 'drive')) ek.push(D.prepare('ALTER TABLE talep_foto ADD COLUMN drive TEXT')); // Google Drive dosya kimliği (yedeklendiyse)
   if (ek.length) await D.batch(ek);
   // müşteri rehberi: her talep ve mesajda telefon/e-posta ayrı tabloya da yazılır (talep silinse bile kalır)
   const tr = await D.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type = 'trigger' AND name IN ('tr_rehber_talep','tr_rehber_mesaj')").first();

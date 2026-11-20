@@ -1023,8 +1023,9 @@
       '<div><div class="kutu"><h2>Donanım seçenekleri</h2><p class="soluk" style="margin-top:0">Müşteri değerleme sırasında bunları işaretleyebilir. <b>Etki %</b>: teklife eklenecek oran (0 = fiyatı değiştirmez). <b>Koşul</b>: boş = her araçta, <b>otomatik</b> = sadece otomatik vitesli araçlarda, ya da marka listesi (ör. BMW, MINI).</p>' +
       '<div class="tablo-kap" style="max-height:none"><table class="xl" id="dTablo"></table></div><div class="satirlar" style="margin-top:10px"><button class="btn" id="dEkle">+ Satır ekle</button><button class="btn ana" id="dKaydetD">Donanımları kaydet</button></div></div>' +
       '<div class="kutu"><h2>Sitedeki fotoğraflar</h2><p class="soluk" style="margin-top:0">Kendi galerinden gerçek araç fotoğrafları yükle. Adım kartlarındaki çizimlerin yerine geçer; galeri fotoğrafı yüklersen ana sayfada "Galerimizden" bölümü açılır. PNG/JPG/WEBP, en fazla 3 MB.</p><div class="site-gorsel" id="sgListe">Yükleniyor…</div></div>' +
-      '<div class="kutu"><h2>Talep fotoğrafları</h2><p class="soluk" style="margin-top:0">Müşterilerin yüklediği fotoğraflar veritabanında yer kaplar (ücretsiz planda toplam 500 MB). Eski taleplerin fotoğraflarını buradan silebilirsin.</p><div id="fDurum" class="soluk">…</div>' +
-      '<div class="satirlar" style="margin-top:8px"><select class="girdi" id="fGun" style="width:auto"><option value="30">30 günden eski</option><option value="60">60 günden eski</option><option value="90" selected>90 günden eski</option><option value="180">180 günden eski</option></select><button class="btn kirmizi" id="fSil">Fotoğrafları sil</button></div></div></div></div>';
+      '<div class="kutu"><h2>Talep fotoğrafları</h2><p class="soluk" style="margin-top:0">Müşterilerin yüklediği fotoğraflar veritabanında yer kaplar (ücretsiz planda toplam 500 MB). Google Drive bağlıysa fotoğraflar silinmeden önce Drive\'ındaki <b>OTOKABUL Yedekleri › Talep Fotoğrafları</b> klasörüne ay ay ve talep talep yedeklenir; Drive\'da klasöre sağ tıklayıp <b>İndir</b> dersen hepsi tek ZIP olarak iner.</p><div id="fDurum" class="soluk">…</div>' +
+      '<div class="satirlar" style="margin-top:8px"><select class="girdi" id="fGun" style="width:auto"><option value="30">30 günden eski</option><option value="60">60 günden eski</option><option value="90" selected>90 günden eski</option><option value="180">180 günden eski</option></select><button class="btn kirmizi" id="fSil">Fotoğrafları sil</button><button class="btn" id="fYedek">☁️ Tümünü şimdi Drive\'a yedekle</button></div>' +
+      '<details id="fDrive" style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">Google Drive bağlantısı</summary><div class="satirlar" style="margin-top:8px"><input class="girdi" id="fDUrl" placeholder="https://script.google.com/macros/s/…/exec" style="flex:2;min-width:260px"><input class="girdi" id="fDAnah" placeholder="Anahtar" style="flex:1;min-width:160px"><button class="btn ana" id="fDBagla">Bağla</button><button class="btn" id="fDKaldir">Bağlantıyı kaldır</button></div></details></div></div></div>';
 
     // cümleler
     Promise.all([fetch('../index.html', { cache: 'no-store' }).then(function (r) { return r.text(); }), api('metinler')]).then(function (x) {
@@ -1084,11 +1085,39 @@
     sgCiz();
 
     // talep fotoğrafları
-    var fDurum = function () { api('foto_durum').then(function (d) { $('#fDurum', k).textContent = NF.format(d.adet) + ' fotoğraf · ' + (d.boyut / 1048576).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' MB'; }); };
-    $('#fSil', k).onclick = function () {
-      if (!confirm($('#fGun', k).value + ' günden eski taleplerin fotoğrafları silinsin mi? Talepler silinmez.')) return;
-      api('eski_foto_sil', { gun: +$('#fGun', k).value }).then(function (r) { bildir(NF.format(r.silinen) + ' fotoğraf silindi'); fDurum(); });
+    var fDurum = function () {
+      api('foto_durum').then(function (d) {
+        var el = $('#fDurum', k);
+        el.innerHTML = NF.format(d.adet) + ' fotoğraf · ' + (d.boyut / 1048576).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' MB · ' +
+          (d.drive ? '<b style="color:#16a34a">Drive bağlı</b> · ' + NF.format(d.yedekli) + ' / ' + NF.format(d.adet) + ' yedekli' + (d.klasor ? ' · <a href="' + esc(d.klasor) + '" target="_blank" rel="noopener">Drive klasörünü aç ↗</a>' : '') : '<b style="color:#b45309">Drive bağlı değil</b> (silinen fotoğraflar geri gelmez)');
+        $('#fYedek', k).hidden = !d.drive; $('#fSil', k).textContent = d.drive ? 'Drive\'a yedekle ve sil' : 'Fotoğrafları sil';
+        if (!d.drive) $('#fDrive', k).open = true;
+      });
     };
+    var yedekle = function (gun) { // bitene kadar parça parça yedekler
+      var top = 0, b = $('#fYedek', k), s = $('#fSil', k); b.disabled = s.disabled = true;
+      var tur = function () {
+        return api('drive_yedekle', { gun: gun || 0 }).then(function (r) {
+          top += r.yedeklenen; $('#fDurum', k).textContent = 'Drive\'a yedekleniyor… ' + NF.format(top) + ' fotoğraf aktarıldı, ' + NF.format(r.kalan) + ' kaldı';
+          if (r.kalan && r.yedeklenen) return tur();
+          if (r.kalan) throw new Error(r.hata || 'Yedek yarım kaldı');
+          return top;
+        });
+      };
+      return tur().finally(function () { b.disabled = s.disabled = false; });
+    };
+    $('#fYedek', k).onclick = function () { yedekle(0).then(function (n) { bildir(NF.format(n) + ' fotoğraf Drive\'a yedeklendi'); fDurum(); }, function (e) { bildir(e.message, true); fDurum(); }); };
+    $('#fSil', k).onclick = function () {
+      var gun = +$('#fGun', k).value, drive = $('#fSil', k).textContent.indexOf('Drive') >= 0;
+      if (!confirm(gun + ' günden eski taleplerin fotoğrafları ' + (drive ? 'önce Google Drive\'a yedeklenip sonra ' : '') + 'siteden silinsin mi? Talepler silinmez.')) return;
+      (drive ? yedekle(gun) : Promise.resolve(0)).then(function () {
+        return api('eski_foto_sil', { gun: gun }).then(function (r) { bildir(NF.format(r.silinen) + ' fotoğraf ' + (drive ? 'Drive\'da yedekli, siteden ' : '') + 'silindi'); fDurum(); });
+      }, function (e) { bildir('Silinmedi: ' + e.message, true); fDurum(); });
+    };
+    $('#fDBagla', k).onclick = function () {
+      api('drive_bagla', { url: $('#fDUrl', k).value, anahtar: $('#fDAnah', k).value }).then(function () { bildir('Google Drive bağlandı'); $('#fDUrl', k).value = $('#fDAnah', k).value = ''; $('#fDrive', k).open = false; fDurum(); });
+    };
+    $('#fDKaldir', k).onclick = function () { if (confirm('Drive bağlantısı kaldırılsın mı? Drive\'daki yedekler silinmez.')) api('drive_bagla', { url: '', anahtar: '' }).then(function () { bildir('Drive bağlantısı kaldırıldı'); fDurum(); }); };
     fDurum();
   }
 
