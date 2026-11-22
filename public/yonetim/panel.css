@@ -195,3 +195,12 @@ table.parca-oran td{padding:3px 6px}
 .mm-tablo{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
 .mm-tablo td{border-top:1px solid #eee;padding:5px 6px;vertical-align:top}
 .kb-iller a{color:#b91c1c;text-decoration:none;margin-left:4px}
+/* Teklif talepleri: bekleyen işler renkli ve üstte */
+table.xl tr.sat-acil td{background:#fee2e2}
+table.xl tr.sat-acil td:first-child{box-shadow:inset 5px 0 0 #dc2626}
+table.xl tr.sat-randevu td{background:#dcfce7}
+table.xl tr.sat-randevu td:first-child{box-shadow:inset 5px 0 0 #16a34a}
+table.xl tr.sat-yeni td{background:#fff7ed}
+table.xl tr.sat-yeni td:first-child{box-shadow:inset 5px 0 0 #f97316}
+table.xl tr.sat-acil:hover td,table.xl tr.sat-randevu:hover td,table.xl tr.sat-yeni:hover td{filter:brightness(.97)}
+.rozet.ACİL{background:#dc2626;color:#fff}

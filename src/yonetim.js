@@ -412,7 +412,7 @@ export async function yonetimApi(req, env) {
       const g = await girdi(); const w = ['1=1']; const p = [];
       if (str(g.durum) !== '') { w.push('durum = ?'); p.push(str(g.durum)); }
       if (str(g.ara) !== '') { w.push("(ad || ' ' || tel || ' ' || marka || ' ' || model || ' ' || il) LIKE ?"); p.push('%' + str(g.ara) + '%'); }
-      const { results } = await D.prepare(`SELECT * FROM talepler WHERE ${w.join(' AND ')} ORDER BY ${str(g.sira) === 'oncelik' ? "CASE WHEN durum = 'ACİL SAT' THEN 0 WHEN durum = 'Randevu İstedi' THEN 1 ELSE 2 END, " : ''}id DESC LIMIT 1000`).bind(...p).all();
+      const { results } = await D.prepare(`SELECT * FROM talepler WHERE ${w.join(' AND ')} ORDER BY ${str(g.sira) === 'tarih' ? '' : "CASE WHEN durum IN ('ACİL SAT', 'Randevu İstedi', 'Yeni') THEN 0 ELSE 1 END, "}id DESC LIMIT 1000`).bind(...p).all();
       for (const r of results) delete r.anahtar;
       return json(results);
     }

@@ -208,7 +208,8 @@
     if (!l.length) return '<p class="soluk">Henüz talep yok.</p>';
     return '<div class="tablo-kap" style="max-height:none"><table class="xl"><tr><th>No</th><th>Tarih</th><th>Ad</th><th>Telefon</th>' + (kisa ? '' : '<th>İl</th>') + '<th>Araç</th><th>Km</th>' + (kisa ? '' : '<th>Hasar</th><th>Tramer</th>') + '<th>Ön teklif</th><th>Durum</th></tr>' +
       l.map(function (t) {
-        return '<tr data-id="' + t.id + '" style="cursor:pointer"><td class="sat-no">' + t.id + '</td><td>' + esc(String(t.tarih).slice(5, 16)) + '</td><td>' + esc(t.ad) + '</td><td>' + esc(t.tel) + (t.tel_dogru == 1 ? ' <span title="WhatsApp ile doğrulandı" style="color:#16a34a">✓</span>' : '') + '</td>' + (kisa ? '' : '<td>' + esc(t.il) + '</td>') +
+        var sc = t.durum === 'ACİL SAT' ? 'sat-acil' : t.durum === 'Randevu İstedi' ? 'sat-randevu' : t.durum === 'Yeni' ? 'sat-yeni' : '';
+        return '<tr data-id="' + t.id + '" class="' + sc + '" style="cursor:pointer"><td class="sat-no">' + t.id + '</td><td>' + esc(String(t.tarih).slice(5, 16)) + '</td><td>' + esc(t.ad) + '</td><td>' + esc(t.tel) + (t.tel_dogru == 1 ? ' <span title="WhatsApp ile doğrulandı" style="color:#16a34a">✓</span>' : '') + '</td>' + (kisa ? '' : '<td>' + esc(t.il) + '</td>') +
           '<td>' + esc(t.yil + ' ' + t.marka + ' ' + t.model) + '</td><td class="s">' + tl(t.km) + '</td>' + (kisa ? '' : '<td>' + hasarOzet(t.hasar) + (t.agir == 1 ? ' <b class="azl">AĞIR</b>' : '') + '</td><td class="s">' + (t.tramer ? tl(t.tramer) : '—') + '</td>') +
           '<td class="s">' + (t.teklif_min ? tl(t.teklif_min) + ' – ' + tl(t.teklif_max) : '<span class="soluk">ekspertiz</span>') + '</td><td><span class="rozet ' + esc(String(t.durum).split(' ')[0]) + '">' + esc(t.durum) + '</span></td></tr>';
       }).join('') + '</table></div>';
@@ -216,7 +217,7 @@
   function cizTalepler(k) {
     k.innerHTML = '<h1 class="bas">Teklif Talepleri</h1><p class="bas-alt">Sitedeki değerleme formunu dolduran müşteriler. Satıra tıklayınca detay açılır.</p>' +
       '<div class="satirlar"><input class="girdi" id="tAra" placeholder="Ad, telefon, marka ara…" style="width:260px"><select class="girdi" id="tDurum"><option value="">Tüm durumlar</option>' + DURUMLAR.map(function (d) { return '<option>' + d + '</option>'; }).join('') + '</select>' +
-      '<select class="girdi" id="tSira"><option value="">En yeni üstte</option><option value="oncelik">Önce acil / randevu</option></select><button class="btn" id="tCsv">Excel\'e aktar (CSV)</button></div><div id="tListe">Yükleniyor…</div>';
+      '<select class="girdi" id="tSira"><option value="">Acil · Randevu · Yeni üstte</option><option value="tarih">Hepsi tarihe göre</option></select><button class="btn" id="tCsv">Excel\'e aktar (CSV)</button></div><div id="tListe">Yükleniyor…</div>';
     var yukle = function () {
       api('talepler', { ara: $('#tAra', k).value, durum: $('#tDurum', k).value, sira: $('#tSira', k).value }).then(function (l) {
         talepCache = l; $('#tListe', k).innerHTML = talepTablosu(l);
