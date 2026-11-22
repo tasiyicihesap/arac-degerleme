@@ -5,6 +5,7 @@
 // Köprü çalışmıyorsa ya da kod 75 sn içinde gönderilemezse doğrulama atlanır; müşteri hiçbir zaman takılı kalmaz.
 import { simdi, int, str, gizliAyar } from './db.js';
 import { rastgeleHex } from './yardim.js';
+import { anlikBildir } from './bildirim.js';
 
 const KOD_GECERLI_DK = 15;     // kod bu kadar dakika geçerli
 const KOPRU_CANLI_SN = 150;    // köprü son bu kadar saniyede haber verdiyse "çalışıyor" sayılır
@@ -37,10 +38,21 @@ function mesajMetni(token, kod) {
 }
 
 // site: kod üret ve WhatsApp gönderim sırasına koy
+// Köprü kapalıyken müşteri gelirse sahibine haber ver (en fazla 3 saatte bir): doğrulama, grup bildirimi ve müşteri mesajları durmuş demektir
+export async function kopruUyar(D, A) {
+  try {
+    const t = Math.floor(Date.now() / 1000);
+    const r = await D.prepare("INSERT INTO ayarlar(k, v) VALUES('_kopru_uyari', ?1) ON CONFLICT(k) DO UPDATE SET v = excluded.v WHERE CAST(ayarlar.v AS INTEGER) < ?1 - 10800").bind(String(t)).run();
+    if (!r.meta.changes) return;
+    const son = int(await gizliAyar(D, '_kopru_son'));
+    const sure = son ? Math.round((t - son) / 3600) : 0;
+    await anlikBildir(A, `⚠️ OTOKABUL Bildirim Köprüsü çalışmıyor${sure ? ' (yaklaşık ' + sure + ' saattir)' : ''}.\nSitede müşteri var ama telefon doğrulama kodu, WhatsApp grup bildirimleri ve müşteri mesajları gönderilemiyor.\n\nÇözüm: eklentinin kurulu olduğu bilgisayarda Chrome'u açıp web.whatsapp.com sekmesini açık bırak.`);
+  } catch (e) { console.error('köprü uyarısı', e); }
+}
 export async function dogrulaBaslat(D, A, ip, tel, yeniden) {
   const n = telN(tel);
   if (n.length !== 10 || n[0] !== '5') return { hata: 'Lütfen geçerli bir cep telefonu numarası gir (05xx xxx xx xx).' };
-  if (!(await dogrulamaGerekli(D, A))) return { gerekmez: 1 };
+  if (!(await dogrulamaGerekli(D, A))) { if (A.tel_dogrulama === '1') await kopruUyar(D, A); return { gerekmez: 1 }; }
   // aynı numaranın son 15 dk'daki kodu varsa yenisi gönderilmez (müşteri geri dönüp tekrar basarsa)
   const eski = await D.prepare('SELECT token, durum, olusma FROM tel_dogrula WHERE tel = ? AND ip = ? AND olusma > ? ORDER BY olusma DESC LIMIT 1')
     .bind(n, ip, gecerliSinir()).first();
