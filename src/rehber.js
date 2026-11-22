@@ -2,6 +2,36 @@
 // Her yazı: slug, baslik, aciklama, ozet, tarih, govde (HTML), sss
 export const YAZILAR = [
   {
+    slug: 'aracini-sattiktan-sonra-yapman-gerekenler',
+    baslik: 'Aracını Sattıktan Sonra Yapman Gereken 8 İş',
+    aciklama: 'Araç satışından sonra trafik sigortası ve kasko iadesi, HGS/OGS etiketi, e-Devlet kontrolü, kişisel verilerin silinmesi ve diğer adımlar. Noterden çıktıktan sonra kontrol listesi.',
+    ozet: 'Sigorta iadesinden HGS etiketine, telefon eşleşmelerinden e-Devlet kontrolüne: noterden çıktıktan sonraki kontrol listesi.',
+    tarih: '2026-11-22',
+    govde: `
+<p>Noterde imzalar atıldı, ödeme hesabına geçti; satış bitti sanılır. Oysa birkaç küçük iş daha var. Bunları ihmal etmek, hiç kullanmayacağın bir sigortanın primini boşa bırakmana ya da eski aracından gelen bir bildirimle uğraşmana yol açabilir. Aşağıdaki sekiz adım, OTOKABUL olarak satış sonrası müşterilerimize hatırlattığımız kontrol listesidir.</p>
+<h2>1. Trafik sigortanın kullanılmayan süresini geri iste</h2>
+<p>Zorunlu trafik sigortası araca bağlıdır ve satışla birlikte sona erer. Poliçenin dolmamış süresine ait primin iadesi için sigorta şirketine ya da acentene noter satış belgesiyle başvurman yeterlidir. Başvurmazsan iade kendiliğinden yatmayabilir.</p>
+<h2>2. Kaskonu iptal ettir ya da yeni aracına aktar</h2>
+<p>Kasko poliçesi de satışla birlikte anlamını yitirir. Sigorta şirketin, kullanılmayan süreye karşılık gelen tutarı iade edebilir ya da yeni bir araç alacaksan poliçeyi o araca uyarlama seçeneği sunabilir. Hangisinin senin için daha avantajlı olduğunu acentene sor.</p>
+<h2>3. HGS ya da OGS etiketini iptal ettir</h2>
+<p>Geçiş etiketleri plakaya tanımlıdır. Etiket iptal edilmezse yeni sahibin geçişleri senin bakiyenden düşebilir. Etiketi aldığın kurumun uygulamasından ya da şubesinden iptal ettirip kalan bakiyeni yeni etiketine veya hesabına aktarabilirsin.</p>
+<h2>4. e-Devlet'te aracın adından çıktığını kontrol et</h2>
+<p>Satıştan kısa bir süre sonra e-Devlet'teki "Adıma Kayıtlı Araç Sorgulama" ekranına bakarak aracın kaydının senden çıktığını görebilirsin. Bu, satışın resmî olarak tamamlandığının en kolay teyididir.</p>
+<h2>5. Telefon ve multimedya kayıtlarını sil</h2>
+<p>Bluetooth ile eşleştirdiğin telefonlar, rehberinden aktarılan kişiler, navigasyondaki ev ve iş adresleri aracın ekranında kalabilir. Teslimden önce multimedya sisteminden fabrika ayarlarına dönmek ya da kayıtları tek tek silmek kişisel bilgilerini korur. Unuttuysan uzmanlarımıza söylemen yeterli.</p>
+<h2>6. Bağlı uygulama ve hizmetleri kapat</h2>
+<p>Bazı araçlar üreticinin mobil uygulamasına, uzaktan kilit ya da konum hizmetine bağlıdır. Bu hesaplardan aracı kaldır. Araç takip cihazı, otopark aboneliği ya da site giriş kartı gibi plakaya veya araca bağlı kayıtları da iptal ettirmeyi unutma.</p>
+<h2>7. Araçta kişisel eşya ve belge kalmadığından emin ol</h2>
+<p>Torpido, kapı cepleri, koltuk altları ve bagajın altındaki stepne bölmesi en sık eşya unutulan yerlerdir. Yedek anahtarın, servis kitapçığının ve varsa kışlık lastiklerin teslim edildiğini de kontrol et.</p>
+<h2>8. Satış belgelerini sakla</h2>
+<p>Noter satış sözleşmesini ve ödeme dekontunu bir süre saklamak, ileride çıkabilecek bir trafik cezası ya da bildirim karşısında satış tarihini kanıtlamanı kolaylaştırır. Satış tarihinden sonraki cezalar yeni sahibine aittir; belgen bunu göstermenin en kısa yoludur.</p>
+<p>OTOKABUL'a aracını satan müşterilerimize bu listeyi teslim günü hatırlatıyoruz. Aracını satmayı düşünüyorsan önce ücretsiz ön teklifini gör, gerisini birlikte planlayalım.</p>`,
+    sss: [
+      ['Araç satılınca trafik sigortası parası geri alınır mı?', 'Trafik sigortası satışla sona erer; dolmamış süreye ait prim için sigorta şirketine noter satış belgesiyle başvurman gerekir. İade tutarını ve süresini sigorta şirketin belirler.'],
+      ['Satıştan sonra gelen trafik cezasını kim öder?', 'Satış tarihinden sonraki cezalar aracın yeni sahibine aittir. Noter satış sözleşmen, cezanın satıştan sonra yazıldığını gösteren belgedir; bu yüzden sözleşmeni saklamanı öneririz.'],
+    ],
+  },
+  {
     slug: 'aracini-satmadan-once-yapman-gerekenler',
     baslik: 'Aracını Satmadan Önce Yapman Gereken 7 Şey',
     aciklama: 'Aracını satmadan önce hazırlaman gerekenler: bakım kayıtları, temizlik, küçük kusurlar, piyasa değeri ve doğru alıcıyı seçmek. Daha iyi fiyat için kısa kontrol listesi.',
