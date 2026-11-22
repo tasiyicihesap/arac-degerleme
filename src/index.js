@@ -43,6 +43,8 @@ export default {
     const konu = baslikCoz(message.headers.get('subject') || '(konusuz)');
     const adres = (kimden.match(/<([^>]+)>/) || [, message.from])[1];
     const ad = kimden.replace(/<[^>]*>/, '').replace(/"/g, '').trim() || adres;
+    // Apple (iCloud/Apple Kimliği) e-postaları: yalnızca Gmail'e iletilir; panele ve WhatsApp'a düşmez
+    if (/(^|[@.])apple\.com$/i.test(str(adres).trim())) return;
     if (D) ctx.waitUntil((async () => {
       const r = await D.prepare("INSERT INTO mesajlar(tarih, kaynak, ad, eposta, konu, mesaj, eposta_durum) VALUES(?, 'eposta', ?, ?, ?, ?, ?)")
         .bind(simdi(), kes(ad, 120), kes(adres, 120), kes(konu, 200), 'Tam metni ' + hedef + ' adresinde.', 'iletildi: ' + hedef).run();
