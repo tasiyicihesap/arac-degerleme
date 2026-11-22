@@ -543,3 +543,37 @@ body.ana{background:#fff;color:var(--murekkep)}
   .mk-rozet{font-size:11px;padding:7px 11px}
 }
 @media (prefers-reduced-motion:reduce){.ib-hale,.ib-ok,.ib-oc{animation:none}}
+/* Müşteri yorumları (yalnızca onaylı gerçek yorumlar) */
+.yorum-bolum{padding:80px 0;background:linear-gradient(180deg,#fff 0,#fbfaf7 100%)}
+#yorumOzet .yr-y{font-size:19px}
+.yr-y{color:#f5b400;letter-spacing:2px;font-size:17px;white-space:nowrap}
+.yr-y i{font-style:normal;color:#d9d4c7}
+.yr-izgara{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:20px}
+.yr-kart{background:#fff;border:1px solid var(--cizgi);border-radius:18px;padding:22px 22px 18px;box-shadow:0 14px 34px -26px rgba(15,27,45,.45);display:flex;flex-direction:column;gap:10px}
+.yr-metin{margin:0;color:#334155;line-height:1.6;font-size:15.5px;white-space:pre-line}
+.yr-yanit{margin:0;background:#fff4ee;border-left:3px solid var(--vurgu);padding:9px 12px;border-radius:8px;font-size:14px;color:#7c2d12}
+.yr-kart footer{margin-top:auto;font-size:14px;color:#475569;border-top:1px dashed var(--cizgi);padding-top:10px}
+.yr-kart footer span{color:#94a3b8;font-size:13px}
+.yr-kart footer em{display:block;font-style:normal;color:#16a34a;font-weight:700;font-size:12.5px;margin-top:4px}
+.yr-bos{text-align:center;color:#64748b;max-width:560px;margin:0 auto;font-size:16px}
+.yr-alt{text-align:center;margin-top:28px}
+.yr-btn,.yr-gonder{background:var(--murekkep);color:#fff;border:0;border-radius:12px;padding:14px 24px;font:800 15.5px Manrope,Inter,sans-serif;cursor:pointer;transition:transform .15s}
+.yr-btn:hover,.yr-gonder:hover{transform:translateY(-2px)}
+.yr-gonder{background:var(--vurgu);width:100%}
+.yr-gonder:disabled{opacity:.6;cursor:wait}
+.yr-form{max-width:640px;margin:26px auto 0;background:#fff;border:1px solid var(--cizgi);border-radius:20px;padding:26px;box-shadow:var(--golge)}
+.yr-form h3{margin:0 0 6px;font:800 22px Manrope,sans-serif}
+.yr-not{background:#ecfdf3;color:#166534;border-radius:10px;padding:9px 12px;font-size:14px;margin:6px 0 10px}
+.yr-yildiz{display:flex;gap:4px;margin:8px 0 14px}
+.yr-yildiz button{background:none;border:0;font-size:36px;line-height:1;color:#d9d4c7;cursor:pointer;padding:0 2px;transition:transform .1s,color .1s}
+.yr-yildiz button:hover{transform:scale(1.12)}
+.yr-yildiz button.dolu{color:#f5b400}
+.yr-alanlar{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.yr-alanlar label{display:flex;flex-direction:column;gap:5px;font-weight:700;font-size:13.5px;color:#334155}
+.yr-alanlar .genis{grid-column:1/-1}
+.yr-alanlar input,.yr-alanlar textarea{font:500 15px Inter,sans-serif;border:1.5px solid var(--cizgi);border-radius:10px;padding:11px 12px;background:#fdfcf9;resize:vertical}
+.yr-alanlar input:focus,.yr-alanlar textarea:focus{outline:none;border-color:var(--vurgu);background:#fff}
+.yr-kucuk{font-size:12.5px;color:#64748b;margin:12px 0}
+.yr-hata{color:#b91c1c;font-weight:700;font-size:14px;margin:0 0 10px}
+.yr-tesekkur{text-align:center;font-size:17px;color:#166534;background:#ecfdf3;border-radius:14px;padding:18px;max-width:640px;margin:24px auto 0}
+@media (max-width:620px){.yorum-bolum{padding:56px 0}.yr-alanlar{grid-template-columns:1fr}.yr-form{padding:20px}}

@@ -95,6 +95,8 @@ CREATE INDEX IF NOT EXISTS ix_mm_tel ON musteri_mesaj(tel);
 CREATE TABLE IF NOT EXISTS tel_ret (tel TEXT PRIMARY KEY, tarih TEXT, neden TEXT);
 CREATE TABLE IF NOT EXISTS ilanlar (id TEXT PRIMARY KEY, magaza TEXT, url TEXT, baslik TEXT, marka TEXT, seri TEXT, model TEXT, yil INTEGER, km INTEGER, renk TEXT, fiyat INTEGER, kategori TEXT, foto TEXT, ilan_tarihi TEXT, ilk_gorulme TEXT, son_gorulme TEXT, aktif INTEGER DEFAULT 1);
 CREATE INDEX IF NOT EXISTS ix_ilan_aktif ON ilanlar(aktif);
+CREATE TABLE IF NOT EXISTS yorumlar (id INTEGER PRIMARY KEY AUTOINCREMENT, tarih TEXT, ad TEXT, il TEXT, arac TEXT, puan INTEGER, metin TEXT, durum TEXT DEFAULT 'bekliyor', talep_id INTEGER DEFAULT 0, dogrulanmis INTEGER DEFAULT 0, ip TEXT, yanit TEXT DEFAULT '');
+CREATE INDEX IF NOT EXISTS ix_yorum_durum ON yorumlar(durum, id);
 CREATE TABLE IF NOT EXISTS musteri_rehber (anahtar TEXT PRIMARY KEY, ad TEXT, tel TEXT, eposta TEXT, ilk TEXT, son TEXT, talep INTEGER DEFAULT 0, mesaj INTEGER DEFAULT 0, son_arac TEXT DEFAULT '');
 CREATE INDEX IF NOT EXISTS ix_talep_durum ON talepler(durum);
 CREATE TABLE IF NOT EXISTS gorsel_parca (tur TEXT, ad TEXT, sira INTEGER, veri BLOB, PRIMARY KEY(tur, ad, sira));

@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/site.css?v=1117zk">
-<link rel="stylesheet" href="assets/anasayfa.css?v=1120a">
+<link rel="stylesheet" href="assets/anasayfa.css?v=1122a">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Ön teklif nasıl hesaplanıyor?", "acceptedAnswer": {"@type": "Answer", "text": "Ön teklif, OTOKABUL olarak kendi geliştirdiğimiz fiyatlama algoritmasıyla hesaplanır. Sistem her gün güncellenen piyasa verisini esas alır; aracının motoru, paketi, kilometresi, boya-değişen ve tramer bilgisi de bu değere göre fiyata yansıtılır."}}, {"@type": "Question", "name": "Ön teklif ile kesin teklif neden farklı olabilir?", "acceptedAnswer": {"@type": "Answer", "text": "Ön teklif senin verdiğin bilgilere dayanır. Ekspertizde bildirilmemiş bir hasar, mekanik arıza ya da kayıt çıkarsa teklif güncellenir. Bilgiler doğruysa kesin teklif, ön teklif aralığında kalır."}}, {"@type": "Question", "name": "Ekspertiz için ücret ödüyor muyum?", "acceptedAnswer": {"@type": "Answer", "text": "Hayır, ekspertiz tamamen ücretsiz. Teklifimizi kabul etmek zorunda da değilsin."}}, {"@type": "Question", "name": "Paramı ne zaman alırım?", "acceptedAnswer": {"@type": "Answer", "text": "Teklifi onaylayıp noter satışını yaptığımız gün ödeme hesabına geçer."}}, {"@type": "Question", "name": "Hangi araçları satın alıyorsunuz?", "acceptedAnswer": {"@type": "Answer", "text": "Her marka ve modeli değerlendiriyoruz. Çok eski, ağır hasar kayıtlı ya da çok yüksek kilometreli araçlarda fiyatı uzmanımız ekspertizden sonra belirler."}}, {"@type": "Question", "name": "Ön teklif almak için hangi bilgiler gerekiyor?", "acceptedAnswer": {"@type": "Answer", "text": "Aracının marka, model, yıl, motor-paket, kilometre ve boya-değişen bilgilerini girmen yeterli. Birkaç dakikada ön teklifin ekranda; ad ve telefon bırakırsan uzmanımız seni arayıp randevu oluşturur."}}, {"@type": "Question", "name": "Ekspertizde neler kontrol ediliyor?", "acceptedAnswer": {"@type": "Answer", "text": "Motor ve mekanik aksam, kaporta ve boya durumu, değişen parçalar, elektronik sistemler ve tramer kaydı kontrol edilir. Sonuçları raporla birlikte açıkça paylaşırız; kesin teklif bu rapora dayanır."}}, {"@type": "Question", "name": "Şirket filomdaki araçları toplu satabilir miyim?", "acceptedAnswer": {"@type": "Answer", "text": "Evet. Filo ve toplu satışlarda araçların tamamını tek seferde değerlendirir, ekspertiz ve noter planını birlikte çıkarırız. Araç listeni bize yazman ya da telefonla iletmen yeterli."}}, {"@type": "Question", "name": "Bilgilerim ne için kullanılıyor?", "acceptedAnswer": {"@type": "Answer", "text": "Ad ve telefon bilgin yalnızca teklifimizi sana iletmek ve randevu oluşturmak için kullanılır; üçüncü kişilerle paylaşılmaz."}}]}</script>
 </head>
 <body class="ana">
@@ -306,6 +306,36 @@
   </div>
 </section>
 
+<section class="yorum-bolum" id="yorumlar">
+  <div class="kap">
+    <div class="bolum-bas">
+      <p class="ust-etiket">Müşterilerimiz ne diyor?</p>
+      <h2>Aracını bize satanların sözü</h2>
+      <p id="yorumOzet">Burada yalnızca aracını OTOKABUL'a satmış gerçek müşterilerimizin, ekibimizin onayından geçen yorumları yer alır.</p>
+    </div>
+    <div class="yr-izgara" id="yorumIzgara"></div>
+    <p class="yr-bos" id="yorumBos" hidden>Henüz yayınlanmış yorum yok. Aracını bize satan ilk müşterilerimizden biriysen deneyimini paylaşarak bu bölümü sen başlatabilirsin.</p>
+    <div class="yr-alt"><button class="yr-btn" id="yorumAc" type="button">⭐ Yorum bırak</button></div>
+    <form class="yr-form" id="yorumForm" hidden novalidate>
+      <h3>Deneyimini paylaş</h3>
+      <p class="yr-not" id="yorumDogru" hidden>✅ Bu yorum, OTOKABUL'daki işleminle eşleşecek ve "Doğrulanmış müşteri" rozetiyle yayınlanacak.</p>
+      <div class="yr-yildiz" id="yorumPuan" role="radiogroup" aria-label="Puan">
+        <button type="button" data-p="1" aria-label="1 yıldız">★</button><button type="button" data-p="2" aria-label="2 yıldız">★</button><button type="button" data-p="3" aria-label="3 yıldız">★</button><button type="button" data-p="4" aria-label="4 yıldız">★</button><button type="button" data-p="5" aria-label="5 yıldız">★</button>
+      </div>
+      <div class="yr-alanlar">
+        <label>Adın soyadın<input name="ad" maxlength="60" autocomplete="name" required></label>
+        <label>İlin<input name="il" maxlength="40" autocomplete="address-level1"></label>
+        <label class="genis">Sattığın araç (isteğe bağlı)<input name="arac" maxlength="80" placeholder="Örn. 2018 sedan dizel"></label>
+        <label class="genis">Yorumun<textarea name="metin" rows="4" maxlength="1200" required placeholder="Süreç nasıl geçti? Teklif, ekspertiz, noter ve ödeme…"></textarea></label>
+      </div>
+      <p class="yr-kucuk">Yorumlar ekibimizin onayından sonra yayınlanır. Sitede soyadın yalnızca baş harfiyle görünür, telefonun ve e-postan hiçbir zaman gösterilmez.</p>
+      <p class="yr-hata" id="yorumHata" hidden></p>
+      <button class="yr-gonder" type="submit">Yorumu gönder</button>
+    </form>
+    <p class="yr-tesekkur" id="yorumTesekkur" hidden>🙏 Teşekkür ederiz! Yorumun bize ulaştı; onaylandıktan sonra burada yayınlanacak. <b>www.otokabul.com.tr</b></p>
+  </div>
+</section>
+
 <section class="promo-bolum">
   <div class="kap">
     <a class="promo-serit" href="#degerle" data-gorsel-arka="promo4">
@@ -391,7 +421,7 @@
 </a>
 
 <script src="assets/site.js?v=1117zl"></script>
-<script src="assets/anasayfa.js?v=1117zm"></script>
+<script src="assets/anasayfa.js?v=1122a"></script>
 <script src="assets/iz.js?v=1117za" defer></script>
 </body>
 </html>

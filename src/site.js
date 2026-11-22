@@ -15,7 +15,7 @@ const hizmetIlleri = (A) => str(A.hizmet_illeri).split(',').map((x) => x.trim())
 import { epostaGonder, anlikBildir } from './bildirim.js';
 
 // Sık okunan, nadiren değişen cevaplar bellekte ve Cloudflare önbelleğinde tutulur (ücretsiz plandaki günlük okuma kotası için)
-const ONBELLEK_SURE = { firma: 60, metinler: 60, site_gorselleri: 60, markalar: 600, markayillar: 600, yilmodeller: 600, secenekler: 600, modeller: 600, yillar: 600, versiyonlar: 600 };
+const ONBELLEK_SURE = { yorumlar: 120, firma: 60, metinler: 60, site_gorselleri: 60, markalar: 600, markayillar: 600, yilmodeller: 600, secenekler: 600, modeller: 600, yillar: 600, versiyonlar: 600 };
 const bellek = new Map();
 
 export async function siteApi(req, env, ctx) {
@@ -74,6 +74,39 @@ async function siteApiIc(req, env, ctx) {
       const simdiMs = Date.parse(simdi().replace(' ', 'T') + 'Z');
       const tek = new Set(); // aynı araç birden çok kez değerlendiyse şeritte bir kez görünsün
       return json(results.filter((r) => { const k = `${r.yil}|${r.marka}|${r.model}`; if (tek.has(k)) return false; tek.add(k); return true; }).map((r) => ({ arac: `${int(r.yil)} ${str(r.marka)} ${str(r.model)}`, il: str(r.il), dk: Math.max(0, Math.round((simdiMs - Date.parse(str(r.tarih).replace(' ', 'T') + 'Z')) / 60000)) })), 200, { 'Cache-Control': 'public, max-age=120' });
+    }
+    case 'yorumlar': { // yalnızca panelde onaylanmış gerçek müşteri yorumları
+      const { results } = await D.prepare("SELECT id, tarih, ad, il, arac, puan, metin, dogrulanmis, yanit FROM yorumlar WHERE durum = 'onayli' ORDER BY id DESC LIMIT 24").all();
+      const o = await D.prepare("SELECT COUNT(*) n, AVG(puan) p FROM yorumlar WHERE durum = 'onayli'").first();
+      const gizle = (ad) => { const p = str(ad).trim().split(/\s+/).filter(Boolean); return p.length > 1 ? p[0] + ' ' + p.slice(1).map((x) => x[0].toLocaleUpperCase('tr') + '.').join(' ') : (p[0] || 'Müşterimiz'); };
+      return json({ adet: int(o && o.n), ort: o && o.p ? Math.round(o.p * 10) / 10 : 0, liste: results.map((r) => ({ ...r, ad: gizle(r.ad), tarih: str(r.tarih).slice(0, 10) })) });
+    }
+    case 'yorum_talep': { // yorum bağlantısıyla gelen müşterinin talep bilgisi (formu doldurmak için)
+      const t = await D.prepare('SELECT ad, il, yil, marka, model FROM talepler WHERE id = ? AND anahtar = ?').bind(int(url.searchParams.get('no')), str(url.searchParams.get('t')) || '-').first();
+      if (!t) return json({ hata: 'bulunamadı' }, 404);
+      return json({ ad: str(t.ad), il: str(t.il), arac: [t.yil, t.marka, t.model].filter(Boolean).join(' ') });
+    }
+    case 'yorum_gonder': {
+      if (req.method !== 'POST') return json({ hata: 'POST gerekli' }, 405);
+      let g = {}; try { g = (await req.json()) || {}; } catch (e) {}
+      const ad = kes(str(g.ad).trim(), 60), il = kes(str(g.il).trim(), 40), arac = kes(str(g.arac).trim(), 80), metin = kes(str(g.metin).trim(), 1200);
+      const puan = Math.min(5, Math.max(1, int(g.puan)));
+      if (Array.from(ad).length < 2) return json({ hata: 'Lütfen adını yaz.' }, 400);
+      if (!int(g.puan)) return json({ hata: 'Lütfen 1 ile 5 arasında puan ver.' }, 400);
+      if (Array.from(metin).length < 15) return json({ hata: 'Yorumun biraz daha uzun olsun (en az 15 karakter).' }, 400);
+      if (/https?:\/\/|www\./i.test(metin)) return json({ hata: 'Yoruma bağlantı eklenemez.' }, 400);
+      const ip = req.headers.get('CF-Connecting-IP') || '';
+      const c = await D.prepare('SELECT COUNT(*) n FROM yorumlar WHERE ip = ? AND tarih > ?').bind(ip, simdi(Date.now() - 864e5)).first();
+      if (int(c.n) >= 3) return json({ hata: 'Bugün yeterince yorum gönderildi, teşekkür ederiz.' }, 429);
+      let talepId = 0, dogru = 0;
+      if (int(g.no) && str(g.t)) {
+        const t = await D.prepare('SELECT id FROM talepler WHERE id = ? AND anahtar = ?').bind(int(g.no), str(g.t)).first();
+        if (t) { talepId = int(t.id); dogru = 1; const v = await D.prepare('SELECT id FROM yorumlar WHERE talep_id = ?').bind(talepId).first(); if (v) return json({ hata: 'Bu işlem için yorumun daha önce alınmış, teşekkür ederiz.' }, 409); }
+      }
+      await D.prepare('INSERT INTO yorumlar(tarih, ad, il, arac, puan, metin, talep_id, dogrulanmis, ip) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(simdi(), ad, il, arac, puan, metin, talepId, dogru, ip).run();
+      const A = await ayarlar(D);
+      arkada(anlikBildir(A, `⭐ Yeni müşteri yorumu (onay bekliyor)\n${'★'.repeat(puan)}${'☆'.repeat(5 - puan)} · ${ad}${arac ? ' · ' + arac : ''}${dogru ? ' · ✅ talep #' + talepId : ''}\n\n${kes(metin, 400)}\n\nPanel → Yorumlar bölümünden onaylayabilirsin.`).catch(() => {}));
+      return json({ ok: 1 });
     }
     case 'metinler': { // panelden değiştirilen site cümleleri
       const { results } = await D.prepare('SELECT k, v FROM metinler').all();

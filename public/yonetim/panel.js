@@ -79,7 +79,7 @@
   });
 
   // ---------- gezinme ----------
-  var SAYFALAR = { ozet: cizOzet, talepler: cizTalepler, mesajlar: cizMesajlar, istatistik: cizIstatistik, rehber: cizRehber, fiyatlar: cizFiyatlar, toplu: cizToplu, robot: cizRobot, katalog: cizKatalog, icerik: cizIcerik, ayarlar: cizAyarlar };
+  var SAYFALAR = { ozet: cizOzet, talepler: cizTalepler, mesajlar: cizMesajlar, yorumlar: cizYorumlar, istatistik: cizIstatistik, rehber: cizRehber, fiyatlar: cizFiyatlar, toplu: cizToplu, robot: cizRobot, katalog: cizKatalog, icerik: cizIcerik, ayarlar: cizAyarlar };
   var markaListesi = [];
   function sayfa(ad, veri) {
     $$('#menu a').forEach(function (a) { a.classList.toggle('aktif', a.dataset.s === ad); });
@@ -106,6 +106,7 @@
       document.title = (o.talep_randevu ? '(' + o.talep_randevu + ' randevu) ' : n ? '(' + n + ') ' : '') + 'Yönetim — OTOKABUL Araç Alım';
       if (sonRandevu !== null && o.talep_randevu > sonRandevu) bildir('📅 Yeni randevu isteği geldi!');
       sonRandevu = o.talep_randevu;
+      var yr = $('#yorumRozet'); if (yr) { var yn = +o.yorum_yeni || 0; yr.hidden = !yn; yr.textContent = yn; yr.title = yn + ' yorum onay bekliyor'; }
       var mr = $('#mesajRozet'), mn = +o.mesaj_yeni || 0; mr.hidden = !mn; mr.textContent = mn; mr.title = mn + ' okunmamış mesaj';
       if (sonMesaj !== null && mn > sonMesaj) bildir('✉️ Yeni mesaj geldi!');
       sonMesaj = mn;
@@ -261,6 +262,36 @@
     $('#mHepsi', k).onclick = function () { api('mesaj_okundu', { hepsi: 1 }).then(function () { yukle(); rozetGuncelle(); }); };
     yukle();
   }
+  // ---------- YORUMLAR (müşterinin bıraktığı gerçek yorumlar; yalnızca onaylananlar sitede görünür) ----------
+  function cizYorumlar(k) {
+    k.innerHTML = '<h1 class="bas">Müşteri Yorumları</h1><p class="bas-alt">Müşterilerin sitede bıraktığı yorumlar. Yalnızca <b>onayladıkların</b> ana sayfadaki "Müşterilerimiz ne diyor" bölümünde görünür. Satış sonrası müşteriye yorum bağlantısı göndermek için: Teklif Talepleri → talebi aç → <b>⭐ Yorum iste</b>. O bağlantıyla gelen yorumlara "Doğrulanmış müşteri" rozeti eklenir.</p>' +
+      '<div class="satirlar"><select class="girdi" id="yFiltre"><option value="bekliyor">Onay bekleyenler</option><option value="onayli">Yayında</option><option value="red">Reddedilenler</option><option value="">Tümü</option></select></div><div id="yListe">Yükleniyor…</div>';
+    var liste = [];
+    var DUR = { bekliyor: '<span class="rozet Yeni">onay bekliyor</span>', onayli: '<b style="color:#16a34a">✓ yayında</b>', red: '<span class="soluk">reddedildi</span>' };
+    var ciz = function () {
+      var f = $('#yFiltre', k).value, l = liste.filter(function (y) { return !f || y.durum === f; });
+      $('#yListe', k).innerHTML = !l.length ? '<p class="soluk">Bu listede yorum yok.</p>' : l.map(function (y) {
+        return '<div class="kutu" data-yid="' + y.id + '"><div class="satirlar" style="justify-content:space-between"><div><b>' + esc(y.ad) + '</b> <span style="color:#f59e0b;letter-spacing:1px">' + '★★★★★'.slice(0, y.puan) + '<span style="color:#cbd5e1">' + '★★★★★'.slice(y.puan) + '</span></span> ' + (+y.dogrulanmis ? '<b style="color:#16a34a">✅ Doğrulanmış müşteri (talep #' + y.talep_id + ')</b> ' : '') + DUR[y.durum] + '</div><span class="soluk">' + esc(y.tarih) + (y.il ? ' · ' + esc(y.il) : '') + (y.arac ? ' · ' + esc(y.arac) : '') + '</span></div>' +
+          '<p style="white-space:pre-wrap;margin:10px 0">' + esc(y.metin) + '</p>' +
+          '<label class="soluk" style="display:block">OTOKABUL yanıtı (isteğe bağlı, sitede yorumun altında görünür)<textarea class="girdi y-yanit" rows="2" style="width:100%;margin-top:4px">' + esc(y.yanit || '') + '</textarea></label>' +
+          '<div class="satirlar" style="margin-top:8px">' + (y.durum !== 'onayli' ? '<button class="btn ana" data-is="onayli">✓ Onayla, yayınla</button>' : '<button class="btn" data-is="bekliyor">Yayından kaldır</button>') + (y.durum !== 'red' ? '<button class="btn" data-is="red">Reddet</button>' : '') + '<button class="btn" data-is="yanit">Yanıtı kaydet</button><button class="btn kirmizi" data-is="sil">Sil</button></div></div>';
+      }).join('');
+      $$('[data-yid]', k).forEach(function (kt) {
+        var id = +kt.dataset.yid;
+        $$('button[data-is]', kt).forEach(function (b) {
+          b.onclick = function () {
+            var is = b.dataset.is;
+            if (is === 'sil') { if (!confirm('Bu yorum kalıcı olarak silinsin mi?')) return; api('yorum_sil', { id: id }).then(function () { bildir('Yorum silindi'); yukle(); }); return; }
+            var g = is === 'yanit' ? { id: id, yanit: $('.y-yanit', kt).value } : { id: id, durum: is, yanit: $('.y-yanit', kt).value };
+            api('yorum_durum', g).then(function () { bildir(is === 'onayli' ? 'Yorum yayında (sitede 2 dakika içinde görünür)' : is === 'yanit' ? 'Yanıt kaydedildi' : 'Güncellendi'); yukle(); });
+          };
+        });
+      });
+    };
+    var yukle = function () { api('yorumlar_panel').then(function (l) { liste = l; ciz(); rozetGuncelle(); }); };
+    $('#yFiltre', k).onchange = ciz;
+    yukle();
+  }
   function mesajDetay(id) {
     var m = mesajCache.find(function (x) { return +x.id === id; }); if (!m) return;
     var tel = waNo(m.tel);
@@ -288,7 +319,7 @@
       var arac = t.yil + ' ' + t.marka + ' ' + t.model + (t.versiyon ? ' ' + t.versiyon : '');
       var wa = 'https://wa.me/' + tel + '?text=' + encodeURIComponent('Merhaba ' + t.ad + ', OTOKABUL\'dan yazıyoruz. ' + arac + ' aracınız için talebinizi aldık' + (t.teklif_min ? ' (ön teklif: ' + tl(t.teklif_min) + ' – ' + tl(t.teklif_max) + ' TL)' : '') + '. Ekspertiz randevusu için uygun olduğunuz zamanı yazabilir misiniz?');
       $('#cekmeceIc').innerHTML = '<div class="satirlar" style="justify-content:space-between"><h2>#' + t.id + ' · ' + esc(t.ad) + '</h2><button class="btn kucuk" id="kapat">Kapat ✕</button></div>' +
-        '<div class="satirlar"><a class="btn koyu" href="tel:' + esc(t.tel) + '">📞 Ara</a><a class="btn" style="background:#25d366;color:#fff;border-color:#25d366" target="_blank" href="' + wa + '">Müşteriye WhatsApp</a><button class="btn koyu" id="dPaylas">📤 Talebi paylaş</button></div>' +
+        '<div class="satirlar"><a class="btn koyu" href="tel:' + esc(t.tel) + '">📞 Ara</a><a class="btn" style="background:#25d366;color:#fff;border-color:#25d366" target="_blank" href="' + wa + '">Müşteriye WhatsApp</a><button class="btn koyu" id="dPaylas">📤 Talebi paylaş</button><button class="btn" id="dYorum">⭐ Yorum iste</button></div>' +
         '<dl class="bilgi"><dt>Tarih</dt><dd>' + esc(t.tarih) + '</dd><dt>Telefon</dt><dd>' + esc(t.tel) + (t.tel_dogru == 1 ? ' <b style="color:#16a34a">✓ WhatsApp ile doğrulandı</b>' : '') + '</dd><dt>İl</dt><dd>' + esc(t.il) + '</dd>' +
         '<dt>Araç</dt><dd>' + esc(arac) + '</dd><dt>Yakıt / vites</dt><dd>' + esc(t.yakit + ' / ' + t.vites) + (t.kasa ? ' · ' + esc(t.kasa) : '') + '</dd><dt>Kilometre</dt><dd>' + tl(t.km) + ' km</dd><dt>Renk</dt><dd>' + esc(t.renk || '—') + '</dd>' +
         '<dt>Boya / değişen</dt><dd>' + (Object.keys(h).length ? Object.keys(h).map(function (p) { return esc(PARCA_AD[p] || p) + ': ' + DURUM_AD[h[p]]; }).join('<br>') : 'Hatasız') + '</dd>' +
@@ -305,6 +336,14 @@
       $('#cekmece').hidden = false;
       $('#kapat').onclick = kapat;
       $('#dPaylas').onclick = function () { paylasimAc(t, h); };
+      $('#dYorum').onclick = function () {
+        api('yorum_baglanti', { id: t.id }).then(function (r) {
+          var metin = '✦ OTOKABUL ✦\n\nSayın ' + t.ad + ',\n\n' + arac + ' aracınızın satış sürecinde bize duyduğunuz güven için içtenlikle teşekkür ederiz. Deneyiminizi birkaç cümleyle paylaşırsanız, aracını satmayı düşünen başka kişilere yol göstermiş olursunuz.\n\n⭐ Yorumunuzu buradan bırakabilirsiniz:\n' + r.url + '\n\nSaygılarımızla,\n*OTOKABUL* · 🌐 www.otokabul.com.tr';
+          window.open('https://wa.me/' + tel + '?text=' + encodeURIComponent(metin), '_blank');
+          if (navigator.clipboard) navigator.clipboard.writeText(r.url).catch(function () {});
+          bildir('Yorum bağlantısı WhatsApp mesajına eklendi (bağlantı panoya da kopyalandı)');
+        });
+      };
       if (+t.foto_sayi > 0) {
         var fk = document.createElement('div'); fk.className = 'kutu'; fk.innerHTML = '<h2>Fotoğraflar (' + t.foto_sayi + ')</h2><div class="talep-foto">Yükleniyor…</div>';
         var dl = $('#cekmeceIc dl.bilgi'); dl.parentNode.insertBefore(fk, dl.nextSibling);

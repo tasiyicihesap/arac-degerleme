@@ -198,4 +198,45 @@
     var pr = new URLSearchParams(location.search);
     if (pr.get('marka') && window.OTK && window.OTK.hazirla) window.OTK.hazirla({ marka: pr.get('marka'), model: pr.get('model') || '', yil: pr.get('yil') || '' });
   } catch (e) {}
+
+  // ---------- müşteri yorumları: yalnızca panelde onaylanan gerçek yorumlar ----------
+  (function () {
+    var izg = $('#yorumIzgara'); if (!izg) return;
+    var yildiz = function (n) { n = Math.round(n); return '<span class="yr-y">' + '★★★★★'.slice(0, n) + '<i>' + '★★★★★'.slice(n) + '</i></span>'; };
+    fetch('api.php?a=yorumlar').then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d || !d.adet) { $('#yorumBos').hidden = false; return; }
+      $('#yorumOzet').innerHTML = yildiz(d.ort) + ' <b>' + String(d.ort).replace('.', ',') + ' / 5</b> · ' + d.adet + ' gerçek müşteri yorumu. Hepsi aracını OTOKABUL\'a satmış müşterilerimize ait ve ekibimizin onayından geçti.';
+      izg.innerHTML = d.liste.map(function (y) {
+        return '<article class="yr-kart">' + yildiz(y.puan) + '<p class="yr-metin">' + esc(y.metin) + '</p>' +
+          (y.yanit ? '<p class="yr-yanit"><b>OTOKABUL:</b> ' + esc(y.yanit) + '</p>' : '') +
+          '<footer><b>' + esc(y.ad) + '</b>' + (y.il ? ' · ' + esc(y.il) : '') + (y.arac ? '<br><span>' + esc(y.arac) + '</span>' : '') + (+y.dogrulanmis ? '<em>✅ Doğrulanmış müşteri</em>' : '') + '</footer></article>';
+      }).join('');
+    }).catch(function () {});
+
+    var form = $('#yorumForm'), puan = 0, no = 0, tk = '';
+    var puanYaz = function (p) { puan = p; Array.prototype.forEach.call($('#yorumPuan').children, function (b) { b.classList.toggle('dolu', +b.dataset.p <= p); }); };
+    $('#yorumPuan').onclick = function (e) { var b = e.target.closest('button'); if (b) puanYaz(+b.dataset.p); };
+    var ac = function () { form.hidden = false; $('#yorumAc').hidden = true; setTimeout(function () { form.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60); };
+    $('#yorumAc').onclick = ac;
+    var hashBak = function () {
+      var m = /^#yorum=(\d+)\.([a-f0-9]+)$/i.exec(location.hash); if (!m) { if (location.hash === '#yorum') ac(); return; }
+      no = +m[1]; tk = m[2]; ac();
+      fetch('api.php?a=yorum_talep&no=' + no + '&t=' + tk).then(function (r) { return r.ok ? r.json() : null; }).then(function (t) {
+        if (!t) { no = 0; tk = ''; return; }
+        $('#yorumDogru').hidden = false;
+        if (!form.ad.value) form.ad.value = t.ad; if (!form.il.value) form.il.value = t.il; if (!form.arac.value) form.arac.value = t.arac;
+      });
+    };
+    window.addEventListener('hashchange', hashBak); hashBak();
+    form.onsubmit = function (e) {
+      e.preventDefault();
+      var h = $('#yorumHata'), btn = form.querySelector('.yr-gonder'); h.hidden = true;
+      if (!puan) { h.textContent = 'Lütfen yıldızlardan puanını seç.'; h.hidden = false; return; }
+      btn.disabled = true; btn.textContent = 'Gönderiliyor…';
+      fetch('api.php?a=yorum_gonder', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ad: form.ad.value, il: form.il.value, arac: form.arac.value, metin: form.metin.value, puan: puan, no: no, t: tk }) })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.hata || 'Gönderilemedi'); return j; }); })
+        .then(function () { form.hidden = true; $('#yorumTesekkur').hidden = false; if (history.replaceState && /^#yorum/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search); })
+        .catch(function (er) { h.textContent = er.message; h.hidden = false; btn.disabled = false; btn.textContent = 'Yorumu gönder'; });
+    };
+  })();
 })();

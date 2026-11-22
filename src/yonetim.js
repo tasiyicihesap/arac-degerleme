@@ -110,8 +110,8 @@ export async function yonetimApi(req, env) {
         robot: r[5].results[0] || null, son_talepler: r[6].results, islem: r[7].results, mesaj_yeni: n(8) });
     }
     case 'rozet': { // menüdeki sayaçlar (panel açıkken dakikada bir) — hafif sorgu
-      const r = await D.prepare("SELECT (SELECT COUNT(*) FROM talepler WHERE durum = 'Yeni') y, (SELECT COUNT(*) FROM talepler WHERE durum = 'Randevu İstedi') r, (SELECT COUNT(*) FROM mesajlar WHERE okundu = 0) m").first();
-      return json({ talep_yeni: int(r.y), talep_randevu: int(r.r), mesaj_yeni: int(r.m) });
+      const r = await D.prepare("SELECT (SELECT COUNT(*) FROM talepler WHERE durum = 'Yeni') y, (SELECT COUNT(*) FROM talepler WHERE durum = 'Randevu İstedi') r, (SELECT COUNT(*) FROM mesajlar WHERE okundu = 0) m, (SELECT COUNT(*) FROM yorumlar WHERE durum = 'bekliyor') yo").first();
+      return json({ talep_yeni: int(r.y), talep_randevu: int(r.r), mesaj_yeni: int(r.m), yorum_yeni: int(r.yo) });
     }
 
     // --- fiyat tablosu ---
@@ -441,6 +441,28 @@ export async function yonetimApi(req, env) {
     case 'mesajlar': {
       const { results } = await D.prepare('SELECT id, tarih, kaynak, ad, tel, eposta, konu, mesaj, okundu, eposta_durum, wa_durum FROM mesajlar ORDER BY id DESC LIMIT 500').all();
       return json(results);
+    }
+    case 'yorumlar_panel': {
+      const { results } = await D.prepare('SELECT * FROM yorumlar ORDER BY id DESC LIMIT 300').all();
+      return json(results);
+    }
+    case 'yorum_durum': { // onayli | red | bekliyor ; yanit: firmanın cevabı
+      const g = await girdi();
+      if (g.durum !== undefined && !['onayli', 'red', 'bekliyor'].includes(g.durum)) return json({ hata: 'geçersiz durum' }, 400);
+      if (g.durum !== undefined) await D.prepare('UPDATE yorumlar SET durum = ? WHERE id = ?').bind(g.durum, int(g.id)).run();
+      if (g.yanit !== undefined) await D.prepare('UPDATE yorumlar SET yanit = ? WHERE id = ?').bind(kes(str(g.yanit).trim(), 600), int(g.id)).run();
+      return json({ ok: 1 });
+    }
+    case 'yorum_sil': {
+      const g = await girdi();
+      await D.prepare('DELETE FROM yorumlar WHERE id = ?').bind(int(g.id)).run();
+      return json({ ok: 1 });
+    }
+    case 'yorum_baglanti': { // talebe özel yorum bağlantısı (müşteri doğrulanmış rozetiyle yorum bırakır)
+      const g = await girdi();
+      const t = await D.prepare('SELECT id, anahtar, ad FROM talepler WHERE id = ?').bind(int(g.id)).first();
+      if (!t || !t.anahtar) return json({ hata: 'Talep bulunamadı' }, 404);
+      return json({ url: 'https://otokabul.com.tr/#yorum=' + t.id + '.' + t.anahtar, ad: str(t.ad) });
     }
     case 'mesaj_okundu': {
       const g = await girdi();
