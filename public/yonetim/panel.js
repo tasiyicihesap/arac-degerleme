@@ -216,15 +216,15 @@
   function cizTalepler(k) {
     k.innerHTML = '<h1 class="bas">Teklif Talepleri</h1><p class="bas-alt">Sitedeki değerleme formunu dolduran müşteriler. Satıra tıklayınca detay açılır.</p>' +
       '<div class="satirlar"><input class="girdi" id="tAra" placeholder="Ad, telefon, marka ara…" style="width:260px"><select class="girdi" id="tDurum"><option value="">Tüm durumlar</option>' + DURUMLAR.map(function (d) { return '<option>' + d + '</option>'; }).join('') + '</select>' +
-      '<button class="btn" id="tCsv">Excel\'e aktar (CSV)</button></div><div id="tListe">Yükleniyor…</div>';
+      '<select class="girdi" id="tSira"><option value="">En yeni üstte</option><option value="oncelik">Önce acil / randevu</option></select><button class="btn" id="tCsv">Excel\'e aktar (CSV)</button></div><div id="tListe">Yükleniyor…</div>';
     var yukle = function () {
-      api('talepler', { ara: $('#tAra', k).value, durum: $('#tDurum', k).value }).then(function (l) {
+      api('talepler', { ara: $('#tAra', k).value, durum: $('#tDurum', k).value, sira: $('#tSira', k).value }).then(function (l) {
         talepCache = l; $('#tListe', k).innerHTML = talepTablosu(l);
         $$('tr[data-id]', k).forEach(function (t) { t.onclick = function () { talepDetay(+t.dataset.id); }; });
       });
     };
     var zaman; $('#tAra', k).oninput = function () { clearTimeout(zaman); zaman = setTimeout(yukle, 250); };
-    $('#tDurum', k).onchange = yukle;
+    $('#tDurum', k).onchange = yukle; $('#tSira', k).onchange = yukle;
     $('#tCsv', k).onclick = function () {
       var bas = ['No', 'Tarih', 'Ad', 'Telefon', 'İl', 'Marka', 'Model', 'Yıl', 'Versiyon', 'Yakıt', 'Vites', 'Km', 'Renk', 'Hasar', 'Tramer', 'Ağır hasar', 'Teklif min', 'Teklif max', 'Durum', 'Not'];
       var sat = talepCache.map(function (t) { return [t.id, t.tarih, t.ad, t.tel, t.il, t.marka, t.model, t.yil, t.versiyon, t.yakit, t.vites, t.km, t.renk, hasarOzet(t.hasar), t.tramer, t.agir == 1 ? 'Evet' : 'Hayır', t.teklif_min, t.teklif_max, t.durum, t.notlar]; });
