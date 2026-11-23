@@ -43,6 +43,12 @@ const BAZ = (elle, ayar) => `CASE WHEN ${elle} THEN ${elle} ELSE CAST(${R(`piyas
 
 const sayi = (x) => { const n = Number(x); return Number.isFinite(n) ? String(n) : '0'; };
 
+
+// Teklif talepleri arşivi: 7 günden eski ve üzerinde çalışılmayan talepler kendiliğinden "Arşiv"e geçer.
+// Acil / Randevu / Arandı / Ekspertiz durumundakiler işlem bitene kadar aktif listede kalır; elle taşınabilir.
+const ARSIV_GUN = 7;
+const arsivSinir = () => simdi(Date.now() - ARSIV_GUN * 864e5);
+const ARSIV_KOSUL = "(arsiv = 1 OR (arsiv = 0 AND tarih < ?1 AND durum NOT IN ('ACİL SAT', 'Randevu İstedi', 'Arandı', 'Ekspertiz')))";
 export async function yonetimApi(req, env) {
   const url = new URL(req.url);
   const a = url.searchParams.get('a') ?? '';
@@ -97,7 +103,7 @@ export async function yonetimApi(req, env) {
       const r = await D.batch([
         D.prepare("SELECT COUNT(*) n, COUNT(DISTINCT marka) m, COUNT(DISTINCT marka || '|' || model) mm FROM fiyatlar"),
         D.prepare('SELECT COUNT(*) n FROM talepler WHERE tarih >= ?').bind(b),
-        D.prepare("SELECT COUNT(*) n FROM talepler WHERE durum = 'Yeni'"),
+        D.prepare(`SELECT COUNT(*) n FROM talepler WHERE durum = 'Yeni' AND NOT ${ARSIV_KOSUL}`).bind(arsivSinir()),
         D.prepare("SELECT COUNT(*) n FROM talepler WHERE durum = 'Randevu İstedi'"),
         D.prepare('SELECT COUNT(*) n FROM talepler'),
         D.prepare('SELECT * FROM robot_log ORDER BY id DESC LIMIT 1'),
@@ -110,7 +116,7 @@ export async function yonetimApi(req, env) {
         robot: r[5].results[0] || null, son_talepler: r[6].results, islem: r[7].results, mesaj_yeni: n(8) });
     }
     case 'rozet': { // menüdeki sayaçlar (panel açıkken dakikada bir) — hafif sorgu
-      const r = await D.prepare("SELECT (SELECT COUNT(*) FROM talepler WHERE durum = 'Yeni') y, (SELECT COUNT(*) FROM talepler WHERE durum = 'Randevu İstedi') r, (SELECT COUNT(*) FROM mesajlar WHERE okundu = 0) m, (SELECT COUNT(*) FROM yorumlar WHERE durum = 'bekliyor') yo").first();
+      const r = await D.prepare(`SELECT (SELECT COUNT(*) FROM talepler WHERE durum = 'Yeni' AND NOT ${ARSIV_KOSUL}) y, (SELECT COUNT(*) FROM talepler WHERE durum = 'Randevu İstedi') r, (SELECT COUNT(*) FROM mesajlar WHERE okundu = 0) m, (SELECT COUNT(*) FROM yorumlar WHERE durum = 'bekliyor') yo`).bind(arsivSinir()).first();
       return json({ talep_yeni: int(r.y), talep_randevu: int(r.r), mesaj_yeni: int(r.m), yorum_yeni: int(r.yo) });
     }
 
@@ -409,17 +415,30 @@ export async function yonetimApi(req, env) {
 
     // --- talepler ---
     case 'talepler': {
-      const g = await girdi(); const w = ['1=1']; const p = [];
-      if (str(g.durum) !== '') { w.push('durum = ?'); p.push(str(g.durum)); }
-      if (str(g.ara) !== '') { w.push("(ad || ' ' || tel || ' ' || marka || ' ' || model || ' ' || il) LIKE ?"); p.push('%' + str(g.ara) + '%'); }
-      const { results } = await D.prepare(`SELECT * FROM talepler WHERE ${w.join(' AND ')} ORDER BY ${str(g.sira) === 'tarih' ? '' : "CASE WHEN durum IN ('ACİL SAT', 'Randevu İstedi', 'Yeni') THEN 0 ELSE 1 END, "}id DESC LIMIT 1000`).bind(...p).all();
+      const g = await girdi(); const w = ['1=1']; const p = [arsivSinir()];
+      const gor = str(g.gorunum) || 'aktif', ara = str(g.ara) !== '';
+      // arama yapılırken arşiv dahil hepsinde aranır
+      if (!ara && gor === 'aktif') w.push('NOT ' + ARSIV_KOSUL);
+      if (!ara && gor === 'arsiv') w.push(ARSIV_KOSUL);
+      if (str(g.durum) !== '') { w.push('durum = ?' + (p.length + 1)); p.push(str(g.durum)); }
+      if (ara) { w.push("(ad || ' ' || tel || ' ' || marka || ' ' || model || ' ' || il) LIKE ?" + (p.length + 1)); p.push('%' + str(g.ara) + '%'); }
+      const [{ results }, say] = await D.batch([
+        D.prepare(`SELECT *, CASE WHEN ${ARSIV_KOSUL} THEN 1 ELSE 0 END arsivde FROM talepler WHERE ${w.join(' AND ')} ORDER BY ${str(g.sira) === 'tarih' || gor === 'arsiv' ? '' : "CASE WHEN durum IN ('ACİL SAT', 'Randevu İstedi', 'Yeni') THEN 0 ELSE 1 END, "}id DESC LIMIT 2000`).bind(...p),
+        D.prepare(`SELECT COALESCE(SUM(CASE WHEN ${ARSIV_KOSUL} THEN 1 ELSE 0 END), 0) a, COUNT(*) t FROM talepler`).bind(arsivSinir()),
+      ]);
       for (const r of results) delete r.anahtar;
-      return json(results);
+      const sy = say.results[0];
+      return json({ liste: results, aktif: int(sy.t) - int(sy.a), arsiv: int(sy.a), gun: ARSIV_GUN });
     }
     case 'talep_kaydet': {
       const g = await girdi();
       await D.prepare('UPDATE talepler SET durum = ?, notlar = ? WHERE id = ?').bind(kes(g.durum ?? 'Yeni', 30), kes(g.notlar ?? '', 2000), int(g.id)).run();
       await durumDegisti(D, int(g.id), kes(g.durum ?? 'Yeni', 30));
+      return json({ ok: 1 });
+    }
+    case 'talep_arsiv': { // elle arşive taşı (1) / aktife geri al (2) / otomatiğe bırak (0)
+      const g = await girdi();
+      await D.prepare('UPDATE talepler SET arsiv = ? WHERE id = ?').bind([0, 1, 2].includes(int(g.arsiv)) ? int(g.arsiv) : 0, int(g.id)).run();
       return json({ ok: 1 });
     }
     case 'talep_mesajlar': { const g = await girdi(); return json(await talepMesajlari(D, int(g.id))); }

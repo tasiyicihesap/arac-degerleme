@@ -157,6 +157,7 @@ async function kur(D) {
   const varS = new Set(tk.map((c) => c.name)); const ek = [];
   if (!varS.has('donanim')) ek.push(D.prepare("ALTER TABLE talepler ADD COLUMN donanim TEXT DEFAULT ''"));
   if (!varS.has('aciklama')) ek.push(D.prepare("ALTER TABLE talepler ADD COLUMN aciklama TEXT DEFAULT ''"));
+  if (!varS.has('arsiv')) ek.push(D.prepare('ALTER TABLE talepler ADD COLUMN arsiv INTEGER DEFAULT 0')); // 0 otomatik, 1 elle arşivde, 2 elle aktifte
   if (!varS.has('foto_sayi')) ek.push(D.prepare('ALTER TABLE talepler ADD COLUMN foto_sayi INTEGER DEFAULT 0'));
   if (!varS.has('tel_n')) {
     // sorgulama sınırı için telefonun son 10 hanesi

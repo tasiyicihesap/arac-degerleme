@@ -214,16 +214,35 @@
           '<td class="s">' + (t.teklif_min ? tl(t.teklif_min) + ' – ' + tl(t.teklif_max) : '<span class="soluk">ekspertiz</span>') + '</td><td><span class="rozet ' + esc(String(t.durum).split(' ')[0]) + '">' + esc(t.durum) + '</span></td></tr>';
       }).join('') + '</table></div>';
   }
+  var talepYenile = null;
   function cizTalepler(k) {
     k.innerHTML = '<h1 class="bas">Teklif Talepleri</h1><p class="bas-alt">Sitedeki değerleme formunu dolduran müşteriler. Satıra tıklayınca detay açılır.</p>' +
       '<div class="satirlar"><input class="girdi" id="tAra" placeholder="Ad, telefon, marka ara…" style="width:260px"><select class="girdi" id="tDurum"><option value="">Tüm durumlar</option>' + DURUMLAR.map(function (d) { return '<option>' + d + '</option>'; }).join('') + '</select>' +
-      '<select class="girdi" id="tSira"><option value="">Acil · Randevu · Yeni üstte</option><option value="tarih">Hepsi tarihe göre</option></select><button class="btn" id="tCsv">Excel\'e aktar (CSV)</button></div><div id="tListe">Yükleniyor…</div>';
+      '<select class="girdi" id="tSira"><option value="">Acil · Randevu · Yeni üstte</option><option value="tarih">Hepsi tarihe göre</option></select><button class="btn" id="tCsv">Excel\'e aktar (CSV)</button></div><div class="talep-sekme"><button id="tSekAktif" class="secili">📋 Aktif talepler</button><button id="tSekArsiv">📁 Arşiv</button><span class="soluk" id="tAcik"></span></div><div id="tListe">Yükleniyor…</div>';
+    var gorunum = 'aktif';
+    var haftaBas = function (tar) { var d = new Date(String(tar).slice(0, 10) + 'T12:00:00'); var g = (d.getDay() + 6) % 7; d.setDate(d.getDate() - g); return d; };
+    var AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    var haftaAd = function (d) { var e = new Date(d); e.setDate(e.getDate() + 6); return d.getDate() + (d.getMonth() !== e.getMonth() ? ' ' + AYLAR[d.getMonth()] : '') + ' – ' + e.getDate() + ' ' + AYLAR[e.getMonth()] + ' ' + e.getFullYear(); };
     var yukle = function () {
-      api('talepler', { ara: $('#tAra', k).value, durum: $('#tDurum', k).value, sira: $('#tSira', k).value }).then(function (l) {
-        talepCache = l; $('#tListe', k).innerHTML = talepTablosu(l);
+      var ara = $('#tAra', k).value;
+      api('talepler', { ara: ara, durum: $('#tDurum', k).value, sira: $('#tSira', k).value, gorunum: gorunum }).then(function (r) {
+        var l = r.liste; talepCache = l;
+        $('#tSekAktif', k).innerHTML = '📋 Aktif talepler <b>' + r.aktif + '</b>'; $('#tSekArsiv', k).innerHTML = '📁 Arşiv <b>' + r.arsiv + '</b>';
+        $('#tSekAktif', k).classList.toggle('secili', gorunum === 'aktif'); $('#tSekArsiv', k).classList.toggle('secili', gorunum === 'arsiv');
+        $('#tAcik', k).textContent = ara ? 'Arama tüm talepler içinde (arşiv dahil) yapılıyor.' : gorunum === 'aktif' ? r.gun + ' günden eski ve üzerinde işlem olmayan talepler kendiliğinden arşive geçer. Acil, Randevu, Arandı ve Ekspertiz durumundakiler iş bitene kadar burada kalır.' : 'Arşiv haftalık klasörlere ayrılmıştır. Klasör başlığına tıklayarak açıp kapatabilirsin.';
+        if (gorunum === 'arsiv' && !ara) {
+          var gr = [], idx = {};
+          l.forEach(function (t) { var hb = haftaBas(t.tarih), key = hb.toISOString().slice(0, 10); if (!(key in idx)) { idx[key] = gr.length; gr.push({ ad: haftaAd(hb), l: [] }); } gr[idx[key]].l.push(t); });
+          $('#tListe', k).innerHTML = !gr.length ? '<p class="soluk">Arşivde talep yok.</p>' : gr.map(function (g, i) {
+            return '<details class="arsiv-klasor"' + (i === 0 ? ' open' : '') + '><summary>📁 ' + g.ad + ' <span class="soluk">· ' + g.l.length + ' talep</span></summary>' + talepTablosu(g.l) + '</details>';
+          }).join('');
+        } else $('#tListe', k).innerHTML = talepTablosu(l);
         $$('tr[data-id]', k).forEach(function (t) { t.onclick = function () { talepDetay(+t.dataset.id); }; });
       });
     };
+    talepYenile = yukle;
+    $('#tSekAktif', k).onclick = function () { gorunum = 'aktif'; yukle(); };
+    $('#tSekArsiv', k).onclick = function () { gorunum = 'arsiv'; yukle(); };
     var zaman; $('#tAra', k).oninput = function () { clearTimeout(zaman); zaman = setTimeout(yukle, 250); };
     $('#tDurum', k).onchange = yukle; $('#tSira', k).onchange = yukle;
     $('#tCsv', k).onclick = function () {
@@ -320,7 +339,7 @@
       var arac = t.yil + ' ' + t.marka + ' ' + t.model + (t.versiyon ? ' ' + t.versiyon : '');
       var wa = 'https://wa.me/' + tel + '?text=' + encodeURIComponent('Merhaba ' + t.ad + ', OTOKABUL\'dan yazıyoruz. ' + arac + ' aracınız için talebinizi aldık' + (t.teklif_min ? ' (ön teklif: ' + tl(t.teklif_min) + ' – ' + tl(t.teklif_max) + ' TL)' : '') + '. Ekspertiz randevusu için uygun olduğunuz zamanı yazabilir misiniz?');
       $('#cekmeceIc').innerHTML = '<div class="satirlar" style="justify-content:space-between"><h2>#' + t.id + ' · ' + esc(t.ad) + '</h2><button class="btn kucuk" id="kapat">Kapat ✕</button></div>' +
-        '<div class="satirlar"><a class="btn koyu" href="tel:' + esc(t.tel) + '">📞 Ara</a><a class="btn" style="background:#25d366;color:#fff;border-color:#25d366" target="_blank" href="' + wa + '">Müşteriye WhatsApp</a><button class="btn koyu" id="dPaylas">📤 Talebi paylaş</button><button class="btn" id="dYorum">⭐ Yorum iste</button></div>' +
+        '<div class="satirlar"><a class="btn koyu" href="tel:' + esc(t.tel) + '">📞 Ara</a><a class="btn" style="background:#25d366;color:#fff;border-color:#25d366" target="_blank" href="' + wa + '">Müşteriye WhatsApp</a><button class="btn koyu" id="dPaylas">📤 Talebi paylaş</button><button class="btn" id="dYorum">⭐ Yorum iste</button><button class="btn" id="dArsiv">' + (+t.arsivde ? '↩ Aktif listeye al' : '📁 Arşive taşı') + '</button></div>' +
         '<dl class="bilgi"><dt>Tarih</dt><dd>' + esc(t.tarih) + '</dd><dt>Telefon</dt><dd>' + esc(t.tel) + (t.tel_dogru == 1 ? ' <b style="color:#16a34a">✓ WhatsApp ile doğrulandı</b>' : '') + '</dd><dt>İl</dt><dd>' + esc(t.il) + '</dd>' +
         '<dt>Araç</dt><dd>' + esc(arac) + '</dd><dt>Yakıt / vites</dt><dd>' + esc(t.yakit + ' / ' + t.vites) + (t.kasa ? ' · ' + esc(t.kasa) : '') + '</dd><dt>Kilometre</dt><dd>' + tl(t.km) + ' km</dd><dt>Renk</dt><dd>' + esc(t.renk || '—') + '</dd>' +
         '<dt>Boya / değişen</dt><dd>' + (Object.keys(h).length ? Object.keys(h).map(function (p) { return esc(PARCA_AD[p] || p) + ': ' + DURUM_AD[h[p]]; }).join('<br>') : 'Hatasız') + '</dd>' +
@@ -337,6 +356,14 @@
       $('#cekmece').hidden = false;
       $('#kapat').onclick = kapat;
       $('#dPaylas').onclick = function () { paylasimAc(t, h); };
+      $('#dArsiv').onclick = function () {
+        var ar = +t.arsivde ? 2 : 1;
+        api('talep_arsiv', { id: t.id, arsiv: ar }).then(function () {
+          t.arsivde = ar === 1 ? 1 : 0; t.arsiv = ar; bildir(ar === 1 ? 'Talep arşive taşındı' : 'Talep aktif listeye alındı');
+          $('#dArsiv').textContent = ar === 1 ? '↩ Aktif listeye al' : '📁 Arşive taşı';
+          if (talepYenile) talepYenile();
+        });
+      };
       $('#dYorum').onclick = function () {
         api('yorum_baglanti', { id: t.id }).then(function (r) {
           var metin = '✦ OTOKABUL ✦\n\nSayın ' + t.ad + ',\n\n' + arac + ' aracınızın satış sürecinde bize duyduğunuz güven için içtenlikle teşekkür ederiz. Deneyiminizi birkaç cümleyle paylaşırsanız, aracını satmayı düşünen başka kişilere yol göstermiş olursunuz.\n\n⭐ Yorumunuzu buradan bırakabilirsiniz:\n' + r.url + '\n\nSaygılarımızla,\n*OTOKABUL* · 🌐 www.otokabul.com.tr';
@@ -370,7 +397,7 @@
       $('#dSil').onclick = function () { if (confirm('#' + t.id + ' numaralı talep silinsin mi?')) api('talep_sil', { id: t.id }).then(function () { bildir('Silindi'); kapat(); yenile(); }); };
     };
     var t = talepCache.find(function (x) { return +x.id === id; });
-    if (t) go(t); else api('talepler', { ara: '' }).then(function (l) { talepCache = l; var x = l.find(function (y) { return +y.id === id; }); if (x) go(x); });
+    if (t) go(t); else api('talepler', { gorunum: 'hepsi' }).then(function (r) { var l = r.liste; talepCache = l; var x = l.find(function (y) { return +y.id === id; }); if (x) go(x); });
   }
   // ---------- TALEBİ PAYLAŞ (WhatsApp vb.) ----------
   // Varsayılan GİZLİ: ad, telefon, il ve plakalar paylaşılmaz; sadece talep no ile işaretlenir.
