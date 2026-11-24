@@ -696,7 +696,7 @@
       '<label>Yıl (en az – en çok)<span class="satirlar" style="margin:0"><input class="girdi" id="tYil1" style="width:48%" value="' + esc(tFiltre.yil1) + '"><input class="girdi" id="tYil2" style="width:48%" value="' + esc(tFiltre.yil2) + '"></span></label>' +
       '<label>Baz fiyat (en az – en çok TL)<span class="satirlar" style="margin:0"><input class="girdi" id="tF1" style="width:48%" value="' + esc(tFiltre.fiyat1) + '"><input class="girdi" id="tF2" style="width:48%" value="' + esc(tFiltre.fiyat2) + '"></span></label>' +
       '<label>Satır durumu<select class="girdi" id="tDurum"><option value="">Hepsi</option><option value="ayarli">Ayarlı olanlar</option><option value="elle">Elle fiyatlılar</option><option value="kilit">Kilitliler</option><option value="az">Az ilanlılar</option><option value="kasko">Kaskodan (ilansız)</option><option value="ilan">İlandan</option></select></label></div></div>' +
-      '<div class="kutu"><h2>2. Ne yapılsın?</h2>' +
+      '<div class="kutu"><h2>2. Ne yapılsın?</h2><div id="tSonYuzde" class="son-yuzde" hidden></div>' +
       '<div class="alanlar" style="grid-template-columns:1fr 1fr"><label>İşlem<select class="girdi" id="tTip"><option value="yuzde">Yüzde değiştir (%)</option><option value="sabit">Tutar ekle / çıkar (TL)</option><option value="sifirla">Ayarları sıfırla (piyasaya dön)</option></select></label>' +
       '<label>Değer <small>(azaltmak için eksi yazın)</small><input class="girdi" id="tOran" placeholder="ör. 3 veya -2,5"></label></div>' +
       '<div id="hizli" style="margin:10px 0">' + [[-15, -1], [1, 15]].map(function (a) { var b = []; for (var i = a[0]; i <= a[1]; i++) b.push('<button class="btn kucuk ' + (i < 0 ? 'eksi' : 'arti') + '" data-v="' + i + '">' + (i > 0 ? '+' : '') + i + '%</button>'); return '<div class="hizli">' + b.join('') + '</div>'; }).join('') + '</div>' +
@@ -748,8 +748,23 @@
         return api('toplu_uygula', g).then(function (r) { bildir(NF.format(r.adet) + ' satır güncellendi'); $('#tSonuc', k).innerHTML = '<p class="art" style="margin-top:12px">✓ ' + NF.format(r.adet) + ' satır güncellendi.</p>'; gecmisCiz(); });
       }, function () { b.disabled = false; });
     };
+    var yuzdeOku = function (a) { var m = /^\s*([+-−]?\d+(?:[.,]\d+)?)\s*%/.exec(String(a || '')); return m ? parseFloat(m[1].replace('−', '-').replace(',', '.')) : null; };
+    var sonYuzdeCiz = function (l) {
+      var kut = $('#tSonYuzde', k);
+      $$('#hizli button', k).forEach(function (b) { b.classList.remove('son-secim'); });
+      var son = null, top = 1, adet = 0;
+      l.forEach(function (i) { var y = yuzdeOku(i.aciklama); if (y === null || i.geri_alindi == 1) return; if (!son) son = { y: y, i: i }; top *= 1 + y / 100; adet++; });
+      if (!son) { kut.hidden = true; return; }
+      var tp = Math.round((top - 1) * 1000) / 10, yaz = function (v) { return (v > 0 ? '+' : v < 0 ? '−' : '') + String(Math.abs(v)).replace('.', ',') + '%'; };
+      kut.hidden = false;
+      kut.className = 'son-yuzde ' + (son.y < 0 ? 'eksi' : 'arti');
+      kut.innerHTML = '<div><small>EN SON UYGULANAN</small><b>' + yaz(son.y) + '</b></div><div class="sy-bilgi">' + esc(String(son.i.tarih).slice(0, 16)) + ' · ' + NF.format(son.i.etkilenen) + ' satır<br><span>' + esc(son.i.aciklama) + '</span>' +
+        (adet > 1 ? '<br><span>Geri alınmamış ' + adet + ' yüzde işleminin toplam etkisi: <b>' + yaz(tp) + '</b></span>' : '') + '</div>';
+      $$('#hizli button', k).forEach(function (b) { if (+b.dataset.v === son.y) b.classList.add('son-secim'); });
+    };
     var gecmisCiz = function () {
       api('islemler').then(function (l) {
+        sonYuzdeCiz(l);
         $('#tGecmis', k).innerHTML = l.length ? '<div class="tablo-kap" style="max-height:340px"><table class="xl"><tr><th>Tarih</th><th>İşlem</th><th>Satır</th><th></th></tr>' + l.map(function (i) {
           return '<tr><td>' + esc(i.tarih) + '</td><td>' + esc(i.aciklama) + '</td><td class="s">' + NF.format(i.etkilenen) + '</td><td>' + (i.geri_alindi == 1 ? '<span class="rozet">geri alındı</span>' : '<button class="btn kucuk" data-geri="' + i.id + '">↶ Geri al</button>') + '</td></tr>';
         }).join('') + '</table></div><div class="alt-not">Geri alma, o işlemden önceki değerlere döndürür. Sonraki işlemleri etkileyebileceği için en yeniden eskiye doğru geri almanız önerilir.</div>' : '<p class="soluk">Henüz işlem yok.</p>';
