@@ -203,6 +203,7 @@ export async function yonetimApi(req, env) {
       const c = await D.prepare(`SELECT COUNT(*) n FROM fiyatlar WHERE ${w}`).bind(...p).first();
       if (!int(c.n)) return json({ hata: 'Filtreye uyan satır yok.' }, 400);
       let acik = str(g.aciklama).trim();
+      if (acik !== '' && tip === 'yuzde') acik = (oran > 0 ? '+' : '') + oran + '% · ' + acik; // yüzde her zaman başta (panel son yüzdeyi buradan okur)
       if (acik === '') acik = tip === 'sifirla' ? 'Ayarları sıfırla' : tip === 'yuzde' ? (oran > 0 ? '+' : '') + oran + '% toplu değişim' : (oran > 0 ? '+' : '') + nf(oran) + ' TL toplu değişim';
       const t = simdi();
       const r = await D.batch([
