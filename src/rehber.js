@@ -2,6 +2,46 @@
 // Her yazı: slug, baslik, aciklama, ozet, tarih, govde (HTML), sss
 export const YAZILAR = [
   {
+    slug: 'galeriye-satis-mi-ilana-satis-mi',
+    baslik: 'Aracını Galeriye mi Satmalısın, İlanla mı? Artıları ve Eksileri',
+    aciklama: 'Aracını galeriye satmak ile ilan verip kendin satmak arasındaki farklar: fiyat, süre, güvenlik, zahmet ve ödeme. Hangi yolun sana uygun olduğunu bu rehberle seç.',
+    ozet: 'Fiyat, süre, güvenlik ve zahmet açısından galeriye satış ile ilanla satışı karşılaştırıp sana uygun yolu seçmen için rehber.',
+    tarih: '2026-11-24',
+    govde: `
+<p>Aracını satmaya karar verdiğinde önündeki ilk soru genellikle şudur: İlan verip alıcıyı kendim mi bulayım, yoksa aracı doğrudan bir galeriye mi satayım? İki yolun da kendine göre avantajları var ve "doğru" cevap herkes için aynı değil. Bu yazıda, OTOKABUL olarak her gün konuştuğumuz satıcıların deneyimlerinden yola çıkarak iki seçeneği dürüstçe karşılaştırıyoruz; sonunda hangisinin sana uyduğuna kendin karar verebilmen için.</p>
+<h2>1. Fiyat: İlan daha yüksek görünür, ama hesabın tamamına bak</h2>
+<p>İlanla satışta, aracı doğrudan kullanacak kişiye sattığın için teorik olarak daha yüksek bir rakam elde edebilirsin. Galeri ise aracı yeniden satışa hazırlayacak, bir süre elinde tutacak ve bunun maliyetini teklife yansıtacaktır; bu yüzden galeri teklifi çoğu zaman ilan fiyatından bir miktar düşük olur.</p>
+<p>Ancak ilandaki fiyat, eline geçecek fiyat değildir. Pazarlıkta verdiğin indirimi, aracın satılana kadar bekleyen süresini, bu sürede yaptığın küçük masrafları ve ilan beklerken aracın değerinin değişebileceğini de hesaba katmalısın. Karşılaştırmayı "ilan fiyatı ile galeri teklifi" arasında değil, "elime net geçecek tutar ile galeri teklifi" arasında yapmak çok daha sağlıklı bir sonuç verir.</p>
+<h2>2. Süre: Günler mi, haftalar mı?</h2>
+<p>İlanla satışın ne kadar süreceğini önceden bilmek zordur. Aracın modeli, rengi, kilometresi ve fiyatı piyasanın beklentisiyle örtüşüyorsa hızlı satılabilir; örtüşmüyorsa haftalarca telefon bekleyebilirsin. Galeriye satışta ise süreç genellikle çok daha kısadır: teklif, inceleme, anlaşma ve noter işlemleri çoğu zaman aynı gün ya da birkaç gün içinde tamamlanır.</p>
+<p>Yeni bir araç almak, taşınmak ya da nakde hızlı ihtiyaç duymak gibi bir takvimin varsa, süre fiyattan daha önemli hâle gelebilir.</p>
+<h2>3. Zahmet: Telefonlar, randevular, test sürüşleri</h2>
+<p>İlan vermek; fotoğraf çekmek, açıklama yazmak, gelen soruları yanıtlamak, randevu ayarlamak ve aracı tanımadığın kişilere göstermek demektir. Gelen aramaların bir kısmı yalnızca fiyat yoklayan ya da çok düşük teklif veren kişilerden olur. Test sürüşleri, ekspertiz randevuları ve son dakikada vazgeçen alıcılar da işin doğal parçasıdır.</p>
+<p>Galeriye satışta muhatabın tektir. Aracı bir kez gösterirsin, teklifi alırsın ve kararını verirsin. Vaktin kısıtlıysa ya da bu süreçle uğraşmak istemiyorsan bu fark tek başına belirleyici olabilir.</p>
+<h2>4. Güvenlik: Ödeme ve kimlik konusunda dikkat</h2>
+<p>Bireysel satışta en hassas konu ödemedir. Sahte dekont gösterme, ödemeyi noterden sonraya bırakma ya da aracı "denemek için" götürüp geri getirmeme gibi dolandırıcılık yöntemleri hâlâ karşılaşılan durumlardır. İlanla satacaksan ödemenin hesabına geçtiğini kendi bankandan teyit etmeden noter işlemine başlamamalı, test sürüşüne aracın yanında olmadan izin vermemelisin.</p>
+<p>Kurumsal bir galeriyle çalıştığında ödeme ve evrak süreci belli bir düzende ilerler. Yine de hangi galeriyle çalıştığını araştırmak, adresini ve geçmişini kontrol etmek senin hakkındır; güvenilir bir alıcı bu sorulardan rahatsız olmaz.</p>
+<h2>5. Aracın durumu: Kusurlar nerede daha sorun olur?</h2>
+<p>Boyası, değişeni ya da hasar kaydı olan araçlar ilanda daha uzun süre bekleyebilir; bireysel alıcılar bu tür kayıtlar karşısında genellikle daha temkinlidir ve pazarlıkta daha sert davranır. Galeriler ise aracı ekspertiz sonucuna göre değerlendirdiği için kusurlu bir aracın fiyatını daha öngörülebilir biçimde belirleyebilir.</p>
+<p>Öte yandan bakımlı, düşük kilometreli, aranan bir renk ve donanımdaki araçlar ilanda kısa sürede alıcı bulabilir. Aracın piyasada ne kadar "aranan" olduğu, hangi yolu seçeceğini doğrudan etkiler.</p>
+<h2>6. Evrak ve borç durumu</h2>
+<p>Hangi yolu seçersen seç, satış noterde yapılır ve aracın üzerinde satışa engel bir kayıt olmamalıdır. Aracın üzerinde kredi, rehin ya da haciz varsa önce bu durumu çözmen gerekir. OTOKABUL olarak kredili veya rehinli araç almıyoruz; bu tür bir kayıt varsa, kapatıldıktan sonra seninle süreci yeniden konuşmaktan memnuniyet duyarız.</p>
+<p>Ruhsat, kimlik ve varsa servis kayıtları ile yedek anahtarı hazır bulundurmak her iki yolda da süreci hızlandırır ve alıcıya güven verir.</p>
+<h2>7. Hangisi sana uygun? Kısa bir karar listesi</h2>
+<ul>
+<li><strong>İlan senin için uygun olabilir:</strong> Acelen yoksa, aracın aranan bir model ve temiz geçmişe sahipse, alıcılarla görüşmek için vaktin varsa ve ödeme güvenliği konusunda dikkatli davranabileceğini düşünüyorsan.</li>
+<li><strong>Galeri senin için uygun olabilir:</strong> Hızlı ve planlı bir satış istiyorsan, aracında boya, değişen ya da hasar kaydı varsa, tanımadığın kişilerle uğraşmak istemiyorsan ve tek muhatapla net bir sonuca ulaşmayı tercih ediyorsan.</li>
+<li><strong>İkisini birlikte değerlendirmek de bir seçenek:</strong> İlana çıkmadan önce bir galeri teklifi almak, elinde bir referans rakam olmasını sağlar. Böylece ilandaki pazarlıklarda nerede durman gerektiğini daha iyi bilirsin.</li>
+</ul>
+<h2>8. OTOKABUL ile satış nasıl ilerler?</h2>
+<p>OTOKABUL'da teklifimizi kendi geliştirdiğimiz fiyatlama sistemiyle, aracının modeli, yılı, kilometresi ve durumu üzerinden hazırlıyoruz. Önce sana ücretsiz bir ön teklif sunuyoruz; uygun bulursan aracını inceliyor, sonucu seninle açıkça paylaşıyor ve anlaşırsak noter işlemlerini birlikte tamamlıyoruz. Teklifi almak seni hiçbir şeye bağlamaz.</p>
+<p>Aracını ilanla mı satacaksın, galeriye mi, henüz karar vermediysen bile ücretsiz ön teklifini şimdi al; elinde gerçek bir rakam olduğunda doğru kararı vermek çok daha kolay.</p>`,
+    sss: [
+      ['Galeri teklifi neden ilan fiyatından düşük olur?', 'Galeri aracı yeniden satışa hazırlar, bir süre elinde tutar ve bunun maliyetini teklife yansıtır. Buna karşılık sen pazarlık, bekleme ve alıcılarla görüşme zahmetinden kurtulur, satışı kısa sürede tamamlarsın.'],
+      ['İlana çıkmadan önce galeriden teklif almak mantıklı mı?', 'Evet. Bir galeri teklifi, aracının piyasada en az ne kadar ettiğine dair somut bir referans verir. OTOKABUL ön teklifi ücretsizdir ve seni satışa bağlamaz; ilanla satmaya karar verirsen bu rakamı pazarlıkta alt sınır olarak kullanabilirsin.'],
+    ],
+  },
+  {
     slug: 'aracini-sattiktan-sonra-yapman-gerekenler',
     baslik: 'Aracını Sattıktan Sonra Yapman Gereken 8 İş',
     aciklama: 'Araç satışından sonra trafik sigortası ve kasko iadesi, HGS/OGS etiketi, e-Devlet kontrolü, kişisel verilerin silinmesi ve diğer adımlar. Noterden çıktıktan sonra kontrol listesi.',

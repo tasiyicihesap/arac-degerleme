@@ -227,7 +227,7 @@ export async function seoSayfa(req, env, ctx, dbAl, yol) {
   const aracYol = (y) => y === '/hesaplamalar' || ARAC_SLUGLAR.includes(y.replace(/^\/|\/$/g, ''));
   if ((yol.startsWith('/arac-degerleme') || yol.startsWith('/rehber') || aracYol(yol)) && !yol.endsWith('/')) return Response.redirect(url.origin + yol + '/' + url.search, 301);
   if (yol.startsWith('/noter-masrafi-hesaplama')) return Response.redirect(url.origin + '/', 301); // sayfa kaldırıldı
-  const anahtar = SITE + yol + '?s=16'; // sürüm: içerik değişince artır
+  const anahtar = SITE + yol + '?s=17'; // sürüm: içerik değişince artır
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { try { const c = await cache.match(anahtar); if (c) return c; } catch (e) {} }
   let govde, tur = 'text/html; charset=utf-8';
