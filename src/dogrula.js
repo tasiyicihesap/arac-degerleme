@@ -9,7 +9,7 @@ import { anlikBildir } from './bildirim.js';
 
 const KOD_GECERLI_DK = 15;     // kod bu kadar dakika geçerli
 const KOPRU_CANLI_SN = 150;    // köprü son bu kadar saniyede haber verdiyse "çalışıyor" sayılır
-const GONDERIM_BEKLE_SN = 90;  // kod bu sürede gönderilemezse doğrulama atlanır
+const GONDERIM_BEKLE_SN = 25;  // kod bu sürede gönderilemezse doğrulama atlanır (müşteri bekletilmez)
 
 const telN = (t) => str(t).replace(/\D/g, '').slice(-10);
 export const telGoster = (t) => { const d = telN(t); return d.length === 10 ? `0${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6, 8)} ${d.slice(8)}` : str(t); };
@@ -101,6 +101,15 @@ export async function dogrulaKod(D, token, kod) {
 }
 
 // köprü: gönderilecek kodlar (en fazla 3); alınanlar "gonderiliyor" olur, 60 sn'de sonuç gelmezse yeniden verilir
+// uzun bekleme (long-poll): köprü bağlantıyı açık tutar, yeni kod düşer düşmez (≤0,4 sn) döner — tarayıcı zamanlayıcı kısıtlamasından etkilenmez
+export async function dogrulaBekle(D, sn) {
+  const son = Date.now() + Math.min(25, Math.max(0, sn)) * 1000;
+  for (;;) {
+    const r = await dogrulaAl(D);
+    if (r.kodlar.length || Date.now() >= son) return r;
+    await new Promise((ok) => setTimeout(ok, 400));
+  }
+}
 export async function dogrulaAl(D) {
   const { results } = await D.prepare(`UPDATE tel_dogrula SET gonderim = 'gonderiliyor', gonderim_zaman = ?1
     WHERE token IN (SELECT token FROM tel_dogrula WHERE durum = 'bekliyor' AND olusma > ?2 AND (gonderim = 'sira' OR (gonderim = 'gonderiliyor' AND gonderim_zaman < ?3)) ORDER BY olusma LIMIT 3)

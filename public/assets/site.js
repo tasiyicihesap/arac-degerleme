@@ -598,7 +598,7 @@
     b.hidden = false;
     b.innerHTML = '<div class="dg-bas">📱 Son adım: numaranı doğrula</div>' +
       '<p><b>' + esc(tel) + '</b> numaralı WhatsApp\'ına 6 haneli bir kod gönderiyoruz. Kodu aşağıya yaz; ya da mesajdaki bağlantıya dokun, ön teklifin açılsın.</p>' +
-      '<div class="dg-durum" id="dgDurum"><span class="dg-nokta"></span><span>Kod gönderiliyor… en geç <b class="dg-sayac" id="dgSayac">0:45</b> içinde WhatsApp\'ına gelir</span></div>' +
+      '<div class="dg-durum" id="dgDurum"><span class="dg-nokta"></span><span>Kod gönderiliyor… en geç <b class="dg-sayac" id="dgSayac">0:15</b> içinde WhatsApp\'ına gelir</span></div>' +
       '<input class="alan dg-kod-giris" id="dgKod" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="• • • • • •" aria-label="Doğrulama kodu">' +
       '<button type="button" class="dg-btn" id="dgOnay" disabled>Kodu doğrula ve teklifimi göster</button>' +
       '<div class="dg-alt"><a href="#" id="dgNo">Numarayı değiştir</a><a href="#" id="dgTekrar" hidden>Kodu tekrar gönder</a></div>' +
@@ -606,7 +606,7 @@
     btnI.textContent = 'Kod bekleniyor…'; btnI.disabled = true;
     // geri sayım: kod gelene kadar
     if (dgSayacZ) clearInterval(dgSayacZ);
-    var bitis = Date.now() + 45000;
+    var bitis = Date.now() + 15000;
     dgSayacZ = setInterval(function () {
       var e = $('#dgSayac'); if (!e) { clearInterval(dgSayacZ); dgSayacZ = null; return; }
       var kal = Math.max(0, Math.ceil((bitis - Date.now()) / 1000));
@@ -620,7 +620,7 @@
     o.onclick = kodGonder;
     $('#dgNo', b).onclick = function (e) { e.preventDefault(); dogrulaKapat(); btnI.textContent = 'Teklifimi göster →'; guncelleBtn(); var t = $('#tel'); if (t) { t.focus(); t.select(); } };
     $('#dgTekrar', b).onclick = function (e) { e.preventDefault(); this.hidden = true; dogrulaBaslat(true); };
-    setTimeout(function () { var t = $('#dgTekrar'); if (t && dgToken) t.hidden = false; }, 60000);
+    setTimeout(function () { var t = $('#dgTekrar'); if (t && dgToken) t.hidden = false; }, 30000);
   }
   var kodGidiyor = false;
   function kodGonder() {

@@ -4,7 +4,7 @@
 // Birden fazla bilgisayarda açık olsa bile her talep yalnızca bir kez alınır (sunucu tarafında "sahiplenme").
 import { simdi, int, str, kes, gizliAyar, ayarlar } from './db.js';
 import { mesajAl, mesajSonuc } from './musteri.js';
-import { kopruNabiz, dogrulaAl, dogrulaSonuc } from './dogrula.js';
+import { kopruNabiz, dogrulaAl, dogrulaBekle, dogrulaSonuc } from './dogrula.js';
 import { json, rastgeleHex } from './yardim.js';
 import { PARCALAR, DURUMLAR } from './fiyat.js';
 
@@ -140,7 +140,7 @@ export async function kopru(req, D) {
   }
   // müşteriye WhatsApp mesajları
   // müşteriye WhatsApp'tan gönderilecek doğrulama kodları
-  if (islem === 'dogrula_al') { await kopruNabiz(D).catch(() => {}); return json(await dogrulaAl(D)); }
+  if (islem === 'dogrula_al') { await kopruNabiz(D).catch(() => {}); return json(int(q('bekle')) ? await dogrulaBekle(D, int(q('bekle'))) : await dogrulaAl(D)); }
   if (islem === 'dogrula_sonuc') { await dogrulaSonuc(D, q('t'), q('s')); return json({ ok: 1 }); }
   if (islem === 'nabiz') { await kopruNabiz(D); return json({ ok: 1 }); }
   if (islem === 'mesaj_al') return json(await mesajAl(D, await ayarlar(D)));
