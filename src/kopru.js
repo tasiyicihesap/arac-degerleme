@@ -140,7 +140,14 @@ export async function kopru(req, D) {
   }
   // müşteriye WhatsApp mesajları
   // müşteriye WhatsApp'tan gönderilecek doğrulama kodları
-  if (islem === 'dogrula_al') { await kopruNabiz(D).catch(() => {}); return json(int(q('bekle')) ? await dogrulaBekle(D, int(q('bekle'))) : await dogrulaAl(D)); }
+  if (islem === 'dogrula_al') {
+    await kopruNabiz(D).catch(() => {});
+    const uzun = int(q('bekle'));
+    if (uzun) await D.prepare("INSERT INTO ayarlar(k, v) VALUES('_kopru_uzun', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(simdi()).run().catch(() => {}); // v1.6+ çalışıyor mu (tanı)
+    const r = uzun ? await dogrulaBekle(D, uzun) : await dogrulaAl(D);
+    if (r.kodlar.length) await D.prepare("INSERT INTO ayarlar(k, v) VALUES('_kopru_son_alan', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(simdi() + (uzun ? ' v1.6' : ' eski')).run().catch(() => {});
+    return json(r);
+  }
   if (islem === 'dogrula_sonuc') { await dogrulaSonuc(D, q('t'), q('s')); return json({ ok: 1 }); }
   if (islem === 'nabiz') { await kopruNabiz(D); return json({ ok: 1 }); }
   if (islem === 'mesaj_al') return json(await mesajAl(D, await ayarlar(D)));
